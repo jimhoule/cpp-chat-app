@@ -1,0 +1,14 @@
+services:
+  server:
+    container_name: server
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    ports:
+      - 5000:5000
+    restart: always
+    deploy:
+      mode: replicated
+      replicas: 1
+    environment:
+      - PORT=5000

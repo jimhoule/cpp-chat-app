@@ -1,0 +1,2 @@
+# Disables all checks in this folder
+Checks: '-*'

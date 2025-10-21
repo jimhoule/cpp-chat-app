@@ -1,0 +1,19 @@
+make lint
+lint_result=$?
+
+if [[ $lint_result -ne 0 ]]; then
+	echo "LINT FAILED!"
+	echo 'Please fix linting problems before committing.'
+	exit 1
+fi
+
+make format
+format_result=$?
+
+if [[ $format_result -ne 0 ]]; then
+	echo "FORMAT FAILED!"
+	echo 'Please fix formatting problems before committing.'
+	exit 1
+fi
+
+exit 0

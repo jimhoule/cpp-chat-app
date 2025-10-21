@@ -1,0 +1,15 @@
+﻿---
+BasedOnStyle: Microsoft
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLambdasOnASingleLine: None
+AllowShortLoopsOnASingleLine: 'false'
+IndentWidth: '4'
+IndentWrappedFunctionNames: 'false'
+JavaScriptQuotes: Single
+Language: Cpp
+SortIncludes: 'true'
+TabWidth: '4'
+UseTab: ForIndentation
+
+...

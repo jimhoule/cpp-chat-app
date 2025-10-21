@@ -1,0 +1,3 @@
+# Disables all formats in this folder
+DisableFormat: true
+SortIncludes: Never

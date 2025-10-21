@@ -1,0 +1,7 @@
+# Git
+.git
+.github
+.gitignore
+
+*.md
+build
