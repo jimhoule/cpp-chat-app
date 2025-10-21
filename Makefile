@@ -40,6 +40,6 @@ lint:
 
 setup:
 	@echo "Setting up project"
-	cp .github/hooks/pre-commit .git/hooks/pre-commit
+	cp .githooks/pre-commit .git/hooks/pre-commit
 	chmod +x .git/hooks/pre-commit
 	@echo "Setting up complete"
