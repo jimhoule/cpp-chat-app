@@ -17,14 +17,14 @@ RUN apk update
 # Installs the newer versions of already installed packages
 RUN apk upgrade
 # Installs necessary packages without caching anything
-RUN apk add --no -cache g++ make cmake>4.1.2
+RUN apk add --no-cache clang make cmake>4.1.2
 # Copies necessary root files and directories
 COPY CMakeLists.txt CMakeLists.txt
+COPY Makefile Makefile
 COPY core core
 COPY server server
 # Creates build
-RUN cmake -S . -B build
-RUN cmake --build build
+RUN make build
 
 
 # RUNNER STAGE
