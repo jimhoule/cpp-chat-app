@@ -13,7 +13,7 @@ jobs:
     container: alpine:edge
     steps:
     - name: Add pacakges
-	  # NOTE: clang-extra-tools includes clangd, clang-format and clang-tidy
+      # NOTE: clang-extra-tools includes clangd, clang-format and clang-tidy
       run: |
         apk update
         apk upgrade
