@@ -15,7 +15,7 @@ jobs:
       run: |
         apk update
         apk upgrade
-        apk add --no-cache clang make cmake>4.1.2
+        apk add --no-cache clang clang-tidy clang-format make cmake>4.1.2
     - uses: actions/checkout@v4
     - name: Build
       run: make build
