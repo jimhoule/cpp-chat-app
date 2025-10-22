@@ -13,9 +13,9 @@ jobs:
         runs-on: ubuntu-latest
         container: alpine:edge
         steps:
+            - uses: actions/checkout@v4
             - name: Setup aline:edge container
               uses: ./.github/actions/setup.yml
-            - uses: actions/checkout@v4
             - name: Build
               run: make build
             - name: Lint
