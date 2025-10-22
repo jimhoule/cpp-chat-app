@@ -7,13 +7,13 @@ on:
     branches: [dev]
 
 jobs:
-  lint:
+  ci:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+    - name: Build
+      run: make build
     - name: Lint
       run: make lint
     - name: Format
       run: make format
-    - name: Build
-      run: make build
