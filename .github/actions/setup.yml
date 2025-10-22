@@ -1,0 +1,12 @@
+name: 'Setup'
+description: 'Reusable composite action to setup alpine:edge container image'
+
+runs:
+    using: "composite"
+    steps:
+        - name: Add packages
+          # NOTE: clang-extra-tools includes clangd, clang-format and clang-tidy
+          run: |
+            apk update
+            apk upgrade
+            apk add --no-cache clang clang-extra-tools make cmake>4.1.2

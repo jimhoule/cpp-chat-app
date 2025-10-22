@@ -1,27 +1,24 @@
-name: ci
+name: CI
+description: 'Workflow to build, lint and format'
 
 on:
-  push:
-    branches: ['**']
-  pull_request:
-    types: [opened, reopened]
-    branches: [dev]
+    push:
+        branches: ['**']
+    pull_request:
+        types: [opened, reopened]
+        branches: ['**']
 
 jobs:
-  ci:
-    runs-on: ubuntu-latest
-    container: alpine:edge
-    steps:
-    - name: Add pacakges
-      # NOTE: clang-extra-tools includes clangd, clang-format and clang-tidy
-      run: |
-        apk update
-        apk upgrade
-        apk add --no-cache clang clang-extra-tools make cmake>4.1.2
-    - uses: actions/checkout@v4
-    - name: Build
-      run: make build
-    - name: Lint
-      run: make lint
-    - name: Format
-      run: make format
+    ci:
+        runs-on: ubuntu-latest
+        container: alpine:edge
+        steps:
+            - name: Setup aline:edge container
+              uses: ./.github/actions/setup.yml
+            - uses: actions/checkout@v4
+            - name: Build
+              run: make build
+            - name: Lint
+              run: make lint
+            - name: Format
+              run: make format
