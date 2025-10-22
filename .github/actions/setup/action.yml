@@ -1,10 +1,11 @@
 name: 'Setup'
-description: 'Reusable composite action to setup alpine:edge container image'
+description: 'Composite action to setup alpine:edge container image'
 
 runs:
     using: "composite"
     steps:
         - name: Add packages
+          shell: bash
           # NOTE: clang-extra-tools includes clangd, clang-format and clang-tidy
           run: |
             apk update
