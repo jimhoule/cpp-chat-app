@@ -1,5 +1,19 @@
-set(VENDOR_LIB_NAME Vendor)
+set(GLAD_SUBDIRECTORY_NAME glad)
+set(GLFW_SUBDIRECTORY_NAME glfw)
+set(GLM_SUBDIRECTORY_NAME glm)
+set(IMGUI_SUBDIRECTORY_NAME imgui)
 
-add_library(${VENDOR_LIB_NAME} INTERFACE)
+# glad
+add_subdirectory(${GLAD_SUBDIRECTORY_NAME})
 
-target_include_directories(${VENDOR_LIB_NAME} INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+# glfw
+set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+add_subdirectory(${GLFW_SUBDIRECTORY_NAME})
+
+# glm
+add_subdirectory(${GLM_SUBDIRECTORY_NAME})
+
+# imgui
+add_subdirectory(${IMGUI_SUBDIRECTORY_NAME})
