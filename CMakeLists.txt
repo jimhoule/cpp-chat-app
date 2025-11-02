@@ -24,6 +24,7 @@ endif()
 
 set(PROJECT_NAME Chat)
 set(CORE_SUBDIRECTORY_NAME core)
+set(GUI_SUBDIRECTORY_NAME gui)
 set(VENDOR_SUBDIRECTORY_NAME vendor)
 set(TEST_SUBDIRECTORY_NAME test)
 set(CLIENT_SUBDIRECTORY_NAME client)
@@ -32,6 +33,7 @@ set(SERVER_SUBDIRECTORY_NAME server)
 project(${PROJECT_NAME})
 
 add_subdirectory(${CORE_SUBDIRECTORY_NAME})
+add_subdirectory(${GUI_SUBDIRECTORY_NAME})
 add_subdirectory(${VENDOR_SUBDIRECTORY_NAME})
 add_subdirectory(${TEST_SUBDIRECTORY_NAME})
 
