@@ -9,7 +9,12 @@ SRCS = \
 	$(wildcard test/src/*.cpp)
 
 # Forces command to run every time (even if target already exits)
-.PHONY: build test
+.PHONY: build test start_client
+
+start_client:
+	@echo "Starting client"
+	cd build/client && ./Client
+	@echo "Starting complete"
 
 build:
 	@echo "Building project"
