@@ -1,5 +1,5 @@
 ---
-Checks: clang-diagnostic-*,clang-analyzer-*,cppcoreguidelines-*,-cppcoreguidelines-pro-type-reinterpret-cast,-cppcoreguidelines-pro-type-vararg,modernize-*,-modernize-use-trailing-return-type,-modernize-use-auto
+Checks: clang-diagnostic-*,clang-analyzer-*,cppcoreguidelines-*,-cppcoreguidelines-pro-type-reinterpret-cast,-cppcoreguidelines-pro-type-vararg,modernize-*,-modernize-use-trailing-return-type,-modernize-use-auto,-modernize-return-braced-init-list
 WarningsAsErrors: cppcoreguidelines-pro-type-member-init
 HeaderFileExtensions: [h]
 ImplementationFileExtensions: [cpp]
