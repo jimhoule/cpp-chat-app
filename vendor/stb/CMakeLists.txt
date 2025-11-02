@@ -1,0 +1,4 @@
+set(STB_VENDOR_NAME Stb)
+
+add_library(${STB_VENDOR_NAME} INTERFACE)
+target_include_directories(${STB_VENDOR_NAME} INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})

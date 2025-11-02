@@ -2,6 +2,7 @@ set(GLAD_SUBDIRECTORY_NAME glad)
 set(GLFW_SUBDIRECTORY_NAME glfw)
 set(GLM_SUBDIRECTORY_NAME glm)
 set(IMGUI_SUBDIRECTORY_NAME imgui)
+set(STB_SUBDIRECTORY_NAME stb)
 
 # glad
 add_subdirectory(${GLAD_SUBDIRECTORY_NAME})
@@ -17,3 +18,6 @@ add_subdirectory(${GLM_SUBDIRECTORY_NAME})
 
 # imgui
 add_subdirectory(${IMGUI_SUBDIRECTORY_NAME})
+
+#stb
+add_subdirectory(${STB_SUBDIRECTORY_NAME})
