@@ -14,7 +14,7 @@ jobs:
         container: alpine:edge
         steps:
             - uses: actions/checkout@v4
-            - name: Setup aline:edge container
+            - name: Setup alpine:edge container
               uses: ./.github/actions/setup
             - name: Build
               run: make build
