@@ -20,7 +20,7 @@ struct Vector2
 		return Vector2(X - Subtrahend.X, Y - Subtrahend.Y);
 	}
 
-    Vector2 operator*(float Multiplier) const
+	Vector2 operator*(float Multiplier) const
 	{
 		return Vector2(X * Multiplier, Y * Multiplier);
 	}
@@ -30,7 +30,7 @@ struct Vector2
 		return Vector2(X * Multiplier.X, Y * Multiplier.Y);
 	}
 
-    Vector2 operator/(float Divisor) const
+	Vector2 operator/(float Divisor) const
 	{
 		return Vector2(X / Divisor, Y / Divisor);
 	}
@@ -63,7 +63,7 @@ struct Vector4
 		return Vector4(X - Subtrahend.X, Y - Subtrahend.Y, Z - Subtrahend.Z, W - Subtrahend.W);
 	}
 
-    Vector4 operator*(float Multiplier) const
+	Vector4 operator*(float Multiplier) const
 	{
 		return Vector4(X * Multiplier, Y * Multiplier, Z * Multiplier, W * Multiplier);
 	}
@@ -73,7 +73,7 @@ struct Vector4
 		return Vector4(X * Multiplier.X, Y * Multiplier.Y, Z * Multiplier.Z, W * Multiplier.W);
 	}
 
-    Vector4 operator/(float Divisor) const
+	Vector4 operator/(float Divisor) const
 	{
 		return Vector4(X / Divisor, Y / Divisor, Z / Divisor, W / Divisor);
 	}
