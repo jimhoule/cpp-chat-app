@@ -13,15 +13,15 @@
 
 struct Button
 {
-    std::string label;
-    Vector2 size;
-    Vector2 padding = Vector2(0.0f, 0.0f);
-    Vector4 color = Vector4(1.0f, 0.0f, 0.0f, 1.0f);
-    Vector4 color_active = Vector4(0.0f, 1.0f, 0.0f, 1.0f);
-    Vector4 color_hovered = Vector4(0.0f, 0.0f, 1.0f, 1.0f);
-    float border_size = 0.0f;
-    float corner_rounding = 0.0f;
-    bool is_disabled = false;
+    std::string Label;
+    Vector2 Size;
+    Vector2 Padding = Vector2(0.0f, 0.0f);
+    Rgba Color = Rgba(255, 0, 0, 1);
+    Rgba ColorActive = Rgba(0, 255, 0, 1);
+    Rgba ColorHovered = Rgba(0, 0, 255, 1);
+    float BorderSize = 0.0f;
+    float CornerRounding = 0.0f;
+    bool IsDisabled = false;
 
     std::function<void()> OnClick;
     std::function<void()> OnHover = {};
@@ -29,52 +29,59 @@ struct Button
 
 struct Container
 {
-    std::string id;
-    Vector2 size;
-    Vector2 padding = Vector2(0.0f, 0.0f);
-    Vector4 bg_color = Vector4(0.0f, 0.0f, 0.0f, 1.0f);
-    float border_size = 0.0f;
-    float corner_rounding = 0.0f;
+    std::string ID;
+    Vector2 Size;
+    Vector2 Padding = Vector2(0.0f, 0.0f);
+    Rgba BgColor = Rgba(0, 0, 0, 1);
+    float BorderSize = 0.0f;
+    float CornerRounding = 0.0f;
 
     std::function<void()> DrawContent;
 };
 
 struct Text
 {
-    std::string value;
+    std::string Value;
+};
+
+struct Image
+{
+    unsigned int TextureId;
+    Vector2 Size;
+    float CornerRounding = 0.0f;
 };
 
 struct TextInput
 {
-    std::string id;
-    std::string placeholder;
-    Vector2 size;
-    Vector2 padding = Vector2(0.0f, 0.0f);
-    Vector4 bg_color = Vector4(0.0f, 0.0f, 0.0f, 1.0f);
-    Vector4 text_color = Vector4(1.0f, 1.0f, 1.0f, 1.0f);
-    Rgba placeholder_color = Rgba(255, 255, 255, 255);
-    float border_size = 0.0f;
-    float corner_rounding = 0.0f;
+    std::string ID;
+    std::string Placeholder;
+    Vector2 Size;
+    Vector2 Padding = Vector2(0.0f, 0.0f);
+    Rgba BgColor = Rgba(0, 0, 0, 1);
+    Rgba TextColor = Rgba(255, 255, 255, 1);
+    Rgba PlaceholderColor = Rgba(255, 255, 255, 1);
+    float BorderSize = 0.0f;
+    float CornerRounding = 0.0f;
 };
 
 struct TreeNode {
-    std::string name;
-    std::vector<TreeNode> children;
+    std::string Name;
+    std::vector<TreeNode> Children;
 };
 
 struct Window
 {
-    std::string name;
-    Vector2 size;
-    Vector2 position = Vector2(0.0f, 0.0f);
-    Vector2 padding = Vector2(0.0f, 0.0f);
-    Vector4 bg_color = Vector4(0.0f, 0.0f, 0.0f, 1.0f);
-    bool can_save_settigs = false;
-    bool is_titlebar_visible = false;
-    bool is_scrollbar_visible = false;
-    bool is_resizable = false;
-    bool is_collapsible = false;
-    bool is_movable = false;
+    std::string Name;
+    Vector2 Size;
+    Vector2 Position = Vector2(0.0f, 0.0f);
+    Vector2 Padding = Vector2(0.0f, 0.0f);
+    Rgba BgColor = Rgba(0, 0, 0, 1);
+    bool CanSaveSettigs = false;
+    bool IsTitlebarVisible = false;
+    bool IsScrollbarVisible = false;
+    bool IsResizable = false;
+    bool IsCollapsible = false;
+    bool IsMovable = false;
 
     std::function<void()> DrawContent;
 };
@@ -84,24 +91,25 @@ class Gui
 public:
     Gui() = default;
 
-    void Init(GLFWwindow* glfw_window) const;
+    void Init(GLFWwindow* GlfwWindow) const;
+    void Destroy() const;
     void Render() const;
     void Clear() const;
-    void Destroy() const;
 
-    void DrawButton(const Button& button) const;
-    void DrawContainer(const Container& container) const;
-    void DrawText(const Text& text) const;
-    void DrawTextInputMultiline(std::string& value, const TextInput& text_input) const;
-    void DrawTreeNode(const TreeNode& node) const;
-    void DrawWindow(const Window& window) const;
+    void DrawButton(Button& Button) const;
+    void DrawContainer(Container& Container) const;
+    void DrawImage(const Image& Image) const;
+    void DrawText(const Text& Text) const;
+    void DrawTextInputMultiline(std::string& Value, TextInput& TextInput) const;
+    void DrawTreeNode(const TreeNode& Node) const;
+    void DrawWindow(Window& Window) const;
 
-    void AlignCenter(Vector2 element_size) const;
-    void AlignCenterX(float element_width) const;
-    void AlignCenterY(float element_heigth) const;
+    void AlignCenter(Vector2 ElementSize) const;
+    void AlignCenterX(float ElementWidth) const;
+    void AlignCenterY(float ElementHeigth) const;
     void DisplayInline() const;
-    void ScrollToY(float y) const;
-    void ScrollToX(float x) const;
+    void ScrollToY(float X) const;
+    void ScrollToX(float Y) const;
     float GetScrollPositionY() const;
     float GetScrollPositionX() const;
     float GetMaxScrollPositionY() const;
@@ -110,13 +118,13 @@ public:
     const Vector2 GetPosition() const;
     float GetPositionX() const;
     float GetPositionY() const;
-    void SetPosition(Vector2 position) const;
-    void SetPositionX(float x) const;
-    void SetPositionY(float y) const;
+    void SetPosition(Vector2 Position) const;
+    void SetPositionX(float X) const;
+    void SetPositionY(float Y) const;
 
 private:
-    const Vector2 ToVector2(const ImVec2& vector_2) const;
-    const Vector4 ToVector4(const ImVec4& vector_4) const;
-    const ImVec2 ToImVec2(const Vector2& vector_2) const;
-    const ImVec4 ToImVec4(const Vector4& vector_4) const;
+    const Vector2 ToVector2(const ImVec2& Vector2) const;
+    const Vector4 ToVector4(const ImVec4& Vector4) const;
+    const ImVec2 ToImVec2(const Vector2& Vector2) const;
+    const ImVec4 ToImVec4(const Vector4& Vector4) const;
 };
