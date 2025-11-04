@@ -4,20 +4,21 @@
 
 struct Rgba
 {
-	int r;
-	int g;
-	int b;
-	int a;
+	int R;
+	int G;
+	int B;
+	int A;
 
 	Rgba() = default;
-	Rgba(int r, int g, int b, int a) : r(r), g(g), b(b), a(a)
+	Rgba(int R, int G, int B, int A) : R(R), G(G), B(B), A(A)
 	{
 	}
 
 	Vector4 ToVector4()
 	{
-		const float RGBA_MAX_VALUE = 255.0f;
-		return Vector4(static_cast<float>(r) / RGBA_MAX_VALUE, static_cast<float>(g) / RGBA_MAX_VALUE,
-		               static_cast<float>(b) / RGBA_MAX_VALUE, static_cast<float>(a) / RGBA_MAX_VALUE);
+		const float RGB_MAX_VALUE = 255.0f;
+        const float ALPHA_MAX_VALUE = 1.0f;
+		return Vector4(static_cast<float>(R) / RGB_MAX_VALUE, static_cast<float>(G) / RGB_MAX_VALUE,
+		               static_cast<float>(B) / RGB_MAX_VALUE, static_cast<float>(A) / ALPHA_MAX_VALUE);
 	}
 };
