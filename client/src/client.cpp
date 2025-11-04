@@ -1,5 +1,6 @@
 #include "Gui.h"
 #include "SocketClient.h"
+#include "Texture.h"
 
 #include <GLAD/glad.h>
 #include <GLFW/glfw3.h>
@@ -17,20 +18,20 @@
 constexpr int SERVER_PORT =  5000;
 
 struct Message {
-    std::string id;
+    std::string ID;
     std::string conversation_id;
     std::string sender_id;
     std::string text;
     std::string created_at;
 };
 
-void framebuffer_size_callback(GLFWwindow* window, int width, int height)
+void framebuffer_size_callback(GLFWwindow* Window, int width, int height)
 {
     glViewport(0, 0, width, height);
 }
 
 
-void myKeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
+void myKeyCallback(GLFWwindow* Window, int key, int scancode, int action, int mods)
 {
     if (key == GLFW_KEY_E && action == GLFW_PRESS)
     {
@@ -55,7 +56,7 @@ int main()
     const int WINDOW_HEIGHT = 720;
     const std::string& window_title = "Chat Client";
 
-    GLFWwindow* window = glfwCreateWindow(
+    GLFWwindow* GlfwWindow = glfwCreateWindow(
         WINDOW_WIDTH,
         WINDOW_HEIGHT,
         window_title.c_str(),
@@ -63,12 +64,12 @@ int main()
         NULL
     );
 
-    if(window == nullptr)
+    if(GlfwWindow == nullptr)
     {
-        std::cout << "Failed to open GLFW window" << std::endl;
+        std::cout << "Failed to open GLFW Window" << std::endl;
         return -1;
     }
-    glfwMakeContextCurrent(window);
+    glfwMakeContextCurrent(GlfwWindow);
 
     if(!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
     {
@@ -77,14 +78,18 @@ int main()
     }
 
     //Register Key Callback -> glfwPollEvents
-    glfwSetKeyCallback(window, myKeyCallback);
+    glfwSetKeyCallback(GlfwWindow, myKeyCallback);
 
     glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
 
-    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+    glfwSetFramebufferSizeCallback(GlfwWindow, framebuffer_size_callback);
 
-    Gui gui;
-    gui.Init(window);
+    Texture BlankImageTexture = {};
+    BlankImageTexture.Load("../../assets/blank.jpg", 0);
+    BlankImageTexture.Bind();
+
+    Gui ClientGui = {};
+    ClientGui.Init(GlfwWindow);
 
     // SocketClient socket_client;
     // socket_client.Connect(SERVER_PORT, "127.0.0.1");
@@ -95,219 +100,225 @@ int main()
     // socket_client.Send(message);
     // socket_client.Close();
 
-    while(!glfwWindowShouldClose(window))
+    while(!glfwWindowShouldClose(GlfwWindow))
     {
         // Clears screen
         glClearColor(250.0f / 255.0f, 119.0f / 255.0f, 110.0f / 255.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
          // Clears ImGui state
-        gui.Clear();
+        ClientGui.Clear();
 
         // WINDOW
-        Window main_window = {};
-        main_window.name = "MainWindow";
-        main_window.size = Vector2(WINDOW_WIDTH, WINDOW_HEIGHT);
-        main_window.bg_color = Rgba(26, 30, 67, 255).ToVector4();
-        main_window.DrawContent = [&gui]() {
-            const Vector2 MAIN_WINDOW_AVAILABLE_SPACE = gui.GetAvailableSpace();
+        Window MainWindow = {};
+        MainWindow.Name = "MainWindow";
+        MainWindow.Size = Vector2(WINDOW_WIDTH, WINDOW_HEIGHT);
+        MainWindow.BgColor = Rgba(26, 30, 67, 255);
+        MainWindow.DrawContent = [&ClientGui, &BlankImageTexture]() {
+            const Vector2 MAIN_WINDOW_AVAILABLE_SPACE = ClientGui.GetAvailableSpace();
 
             // NAVBAR CONTAINER
-            Container navbar_container = {};
-            navbar_container.id = "NavbarContainer";
-            navbar_container.size = Vector2(MAIN_WINDOW_AVAILABLE_SPACE.x, MAIN_WINDOW_AVAILABLE_SPACE.y * 0.15f);
-            navbar_container.padding = Vector2(15.0f, 15.0f);
+            Container NavbarContainer = {};
+            NavbarContainer.ID = "NavbarContainer";
+            NavbarContainer.Size = Vector2(MAIN_WINDOW_AVAILABLE_SPACE.X, MAIN_WINDOW_AVAILABLE_SPACE.Y * 0.15f);
+            NavbarContainer.Padding = Vector2(15.0f, 15.0f);
             // NOTE: Transparent background
-            navbar_container.bg_color = Vector4(0.0f, 0.0f, 0.0f, 0.0f);
-            navbar_container.DrawContent = [&gui]() {
-                const Vector2 NAVBAR_CONTAINER_AVAILABLE_SPACE = gui.GetAvailableSpace();
+            NavbarContainer.BgColor = Rgba(0, 0, 0, 0);
+            NavbarContainer.DrawContent = [&ClientGui]() {
+                const Vector2 NAVBAR_CONTAINER_AVAILABLE_SPACE = ClientGui.GetAvailableSpace();
 
                 // NAVBAR
-                Container navbar = {};
-                navbar.id = "Navbar";
-                navbar.size = Vector2(NAVBAR_CONTAINER_AVAILABLE_SPACE);
-                navbar.corner_rounding = 10.f;
-                navbar.bg_color = Rgba(50, 56, 102, 255).ToVector4();
-                navbar.DrawContent = [&gui]() {};
+                Container Navbar = {};
+                Navbar.ID = "Navbar";
+                Navbar.Size = Vector2(NAVBAR_CONTAINER_AVAILABLE_SPACE);
+                Navbar.CornerRounding = 10.f;
+                Navbar.BgColor = Rgba(50, 56, 102, 255);
+                Navbar.DrawContent = [&ClientGui]() {};
 
-                gui.DrawContainer(navbar);
+                ClientGui.DrawContainer(Navbar);
             };
 
-            gui.DrawContainer(navbar_container);
+            ClientGui.DrawContainer(NavbarContainer);
 
             // CONVERSATIONS CONTAINER
-            Container conversations_container = {};
-            conversations_container.id = "ConversationsContainer";
-            conversations_container.size = Vector2(MAIN_WINDOW_AVAILABLE_SPACE.x * 0.25f, MAIN_WINDOW_AVAILABLE_SPACE.y - navbar_container.size.y);
-            conversations_container.padding = Vector2(15.0f, 15.0f);
+            Container ConversationsContainer = {};
+            ConversationsContainer.ID = "ConversationsContainer";
+            ConversationsContainer.Size = Vector2(MAIN_WINDOW_AVAILABLE_SPACE.X * 0.25f, MAIN_WINDOW_AVAILABLE_SPACE.Y - NavbarContainer.Size.Y);
+            ConversationsContainer.Padding = Vector2(15.0f, 15.0f);
             // NOTE: Transparent background
-            conversations_container.bg_color = Vector4(0.0f, 0.0f, 0.0f, 0.0f);
-            conversations_container.DrawContent = [&gui]() {
-                const Vector2 CONVERSATIONS_CONTAINER_AVAILABLE_SPACE = gui.GetAvailableSpace();
+            ConversationsContainer.BgColor = Rgba(0, 0, 0, 0);
+            ConversationsContainer.DrawContent = [&ClientGui]() {
+                const Vector2 CONVERSATIONS_CONTAINER_AVAILABLE_SPACE = ClientGui.GetAvailableSpace();
 
                 // DIRECT MESSAGES CONTAINER
-                Container direct_messages_container = {};
-                direct_messages_container.id = "DirectMessagessContainer";
-                direct_messages_container.size = Vector2(CONVERSATIONS_CONTAINER_AVAILABLE_SPACE);
-                direct_messages_container.corner_rounding = 10.f;
-                direct_messages_container.bg_color = Rgba(50, 56, 102, 255).ToVector4();
-                direct_messages_container.DrawContent = [&gui]() {
-                    const Vector2 DIRECT_MESSAGES_CONTAINER_AVAILABLE_SPACE = gui.GetAvailableSpace();
+                Container DirectMessagesContainer = {};
+                DirectMessagesContainer.ID = "DirectMessagessContainer";
+                DirectMessagesContainer.Size = Vector2(CONVERSATIONS_CONTAINER_AVAILABLE_SPACE);
+                DirectMessagesContainer.CornerRounding = 10.f;
+                DirectMessagesContainer.BgColor = Rgba(50, 56, 102, 255);
+                DirectMessagesContainer.DrawContent = [&ClientGui]() {
+                    const Vector2 DIRECT_MESSAGES_CONTAINER_AVAILABLE_SPACE = ClientGui.GetAvailableSpace();
 
                     TreeNode direct_messages_root_node = {};
-                    direct_messages_root_node.name = "Direct Messages";
-                    direct_messages_root_node.children = {
+                    direct_messages_root_node.Name = "Direct Messages";
+                    direct_messages_root_node.Children = {
                         { "Direct Message 1" },
                         { "Direct Message 2" },
                         { "Direct Message 3" },
                     };
 
-                    gui.DrawTreeNode(direct_messages_root_node);
+                    ClientGui.DrawTreeNode(direct_messages_root_node);
                 };
 
-                gui.DrawContainer(direct_messages_container);
+                ClientGui.DrawContainer(DirectMessagesContainer);
             };
 
-            gui.DrawContainer(conversations_container);
+            ClientGui.DrawContainer(ConversationsContainer);
 
             // SELECTED CONVERSATION CONTAINER
-            gui.DisplayInline();
-            gui.SetPositionX(MAIN_WINDOW_AVAILABLE_SPACE.x * 0.25f);
+            static std::vector<std::string> Messages;
 
-            static std::vector<std::string> messages;
-
-            Container selected_conversation_container = {};
-            selected_conversation_container.id = "SelectedConversationContainer";
-            selected_conversation_container.size = Vector2(MAIN_WINDOW_AVAILABLE_SPACE.x * 0.75f, MAIN_WINDOW_AVAILABLE_SPACE.y * 0.70f);
-            selected_conversation_container.padding = Vector2(15.0f, 15.0f);
+            Container SelectedConversationContainer = {};
+            SelectedConversationContainer.ID = "SelectedConversationContainer";
+            SelectedConversationContainer.Size = Vector2(MAIN_WINDOW_AVAILABLE_SPACE.X * 0.75f, MAIN_WINDOW_AVAILABLE_SPACE.Y * 0.70f);
+            SelectedConversationContainer.Padding = Vector2(15.0f, 15.0f);
             // NOTE: Transparent background
-            selected_conversation_container.bg_color = Vector4(0.0f, 0.0f, 0.0f, 0.0f);
-            selected_conversation_container.DrawContent = [&gui]() {
-                const Vector2 SELECTED_CONVERSATION_CONTAINER_AVAILABLE_SPACE = gui.GetAvailableSpace();
+            SelectedConversationContainer.BgColor = Rgba(0, 0, 0, 0);
+            SelectedConversationContainer.DrawContent = [&ClientGui, &BlankImageTexture]() {
+                const Vector2 SELECTED_CONVERSATION_CONTAINER_AVAILABLE_SPACE = ClientGui.GetAvailableSpace();
 
                 // MESSSAGES CONTAINER
-                Container messages_container = {};
-                messages_container.id = "MessagesContainer";
-                messages_container.size = Vector2(SELECTED_CONVERSATION_CONTAINER_AVAILABLE_SPACE);
-                messages_container.corner_rounding = 10.f;
-                messages_container.bg_color = Rgba(50, 56, 102, 255).ToVector4();
-                messages_container.DrawContent = [&gui]() {
-                    const Vector2 MESSAGES_CONTAINER_AVAILABLE_SPACE = gui.GetAvailableSpace();
+                Container MessagesContainer = {};
+                MessagesContainer.ID = "MessagesContainer";
+                MessagesContainer.Size = Vector2(SELECTED_CONVERSATION_CONTAINER_AVAILABLE_SPACE);
+                MessagesContainer.CornerRounding = 10.f;
+                MessagesContainer.BgColor = Rgba(50, 56, 102, 255);
+                MessagesContainer.DrawContent = [&ClientGui, &BlankImageTexture]() {
+                    const Vector2 MESSAGES_CONTAINER_AVAILABLE_SPACE = ClientGui.GetAvailableSpace();
 
-                    for (int i = 0; i < messages.size(); i++)
+                    for (int i = 0; i < Messages.size(); i++)
                     {
                         // MESSAGE CONTAINER
-                        const std::string& MESSAGE = messages[i];
+                        const std::string& MESSAGE = Messages[i];
                         const std::string& ID = "MessageContainer" + std::to_string(i);
 
-                        Container message_container = {};
-                        message_container.id = ID;
-                        message_container.size = Vector2(MESSAGES_CONTAINER_AVAILABLE_SPACE.x, MESSAGES_CONTAINER_AVAILABLE_SPACE.y * 0.10f);
-                        message_container.bg_color = Vector4(0.8f, 0.8f, 0.0f, 1.0f);
-                        message_container.DrawContent = [&gui, &MESSAGE]() {
-                            Text message_text = {};
-                            message_text.value = MESSAGE;
+                        Container MessageContainer = {};
+                        MessageContainer.ID = ID;
+                        MessageContainer.Size = Vector2(MESSAGES_CONTAINER_AVAILABLE_SPACE.X, MESSAGES_CONTAINER_AVAILABLE_SPACE.Y * 0.10f);
+                        MessageContainer.BgColor = Rgba(200, 200, 0, 1);
+                        MessageContainer.DrawContent = [&ClientGui, &BlankImageTexture, &MESSAGE]() {
+                            const Vector2 MESSAGE_CONTAINER_AVAILABLE_SPACE = ClientGui.GetAvailableSpace();
 
-                            gui.DrawText(message_text);
+                            // NOTE: Images are drawn directly over elements so anything that needs to go beside will have to be postioned manually
+                            Image MessageSenderImage = {};
+                            MessageSenderImage.TextureId = BlankImageTexture.GetID();
+                            MessageSenderImage.Size = Vector2(MESSAGE_CONTAINER_AVAILABLE_SPACE.Y, MESSAGE_CONTAINER_AVAILABLE_SPACE.Y);
+                            MessageSenderImage.CornerRounding = 10.0f;
+                            ClientGui.DrawImage(MessageSenderImage);
+
+                            Text MessageText = {};
+                            MessageText.Value = MESSAGE;
+                            ClientGui.SetPositionX(MessageSenderImage.Size.X);
+                            ClientGui.DrawText(MessageText);
                         };
 
-                        gui.DrawContainer(message_container);
+                        ClientGui.DrawContainer(MessageContainer);
                     }
 
                     // Before drawing content, check if we are already at the bottom
-                    const bool is_at_bottom = gui.GetScrollPositionY() >= gui.GetMaxScrollPositionY();
+                    const bool IsAtBottom = ClientGui.GetScrollPositionY() >= ClientGui.GetMaxScrollPositionY();
                     // Auto-scroll logic: only scroll if the user hasn't moved away from the bottom
-                    if (is_at_bottom)
+                    if (IsAtBottom)
                     {
                         // Scrolls to the end
-                        gui.ScrollToY(1.0f);
+                        ClientGui.ScrollToY(1.0f);
                     }
                 };
 
-                gui.DrawContainer(messages_container);
+                ClientGui.DrawContainer(MessagesContainer);
             };
 
-            gui.DrawContainer(selected_conversation_container);
+            ClientGui.DisplayInline();
+            ClientGui.SetPositionX(MAIN_WINDOW_AVAILABLE_SPACE.X * 0.25f);
+            ClientGui.DrawContainer(SelectedConversationContainer);
 
             // MESSAGE TEXT INPUT CONTAINER
-            gui.SetPositionX(MAIN_WINDOW_AVAILABLE_SPACE.x * 0.25f);
-            gui.SetPositionY(MAIN_WINDOW_AVAILABLE_SPACE.y * 0.85f);
+            static std::string Message = "";
 
-            static std::string message = "";
-
-            Container message_textinput_container = {};
-            message_textinput_container.id = "TextInputContainer";
-            message_textinput_container.size = Vector2(MAIN_WINDOW_AVAILABLE_SPACE.x * 0.60f, MAIN_WINDOW_AVAILABLE_SPACE.y * 0.15f);
-            message_textinput_container.padding = Vector2(15.0f, 15.0f);
+            Container MessageTextinputContainer = {};
+            MessageTextinputContainer.ID = "TextInputContainer";
+            MessageTextinputContainer.Size = Vector2(MAIN_WINDOW_AVAILABLE_SPACE.X * 0.60f, MAIN_WINDOW_AVAILABLE_SPACE.Y * 0.15f);
+            MessageTextinputContainer.Padding = Vector2(15.0f, 15.0f);
             // NOTE: Transparent background
-            message_textinput_container.bg_color = Vector4(0.0f, 0.0f, 0.0f, 0.0f);
-            message_textinput_container.DrawContent = [&gui]() {
-                const Vector2 MESSAGE_TEXTINPUT_CONTAINER_AVAILABLE_SPACE = gui.GetAvailableSpace();
+            MessageTextinputContainer.BgColor = Rgba(0, 0, 0, 0);
+            MessageTextinputContainer.DrawContent = [&ClientGui]() {
+                const Vector2 MESSAGE_TEXTINPUT_CONTAINER_AVAILABLE_SPACE = ClientGui.GetAvailableSpace();
 
                 // MESSAGE TEXT INPUT
                 TextInput message_textinput = {};
-                message_textinput.id = "MessageTextInput";
-                message_textinput.placeholder = "Enter message here...";
-                message_textinput.size = Vector2(MESSAGE_TEXTINPUT_CONTAINER_AVAILABLE_SPACE);
-                message_textinput.padding = Vector2(15.0f, 15.0f);
-                message_textinput.corner_rounding = 10.f;
-                message_textinput.bg_color = Rgba(43, 50, 94, 255).ToVector4();
-                message_textinput.placeholder_color = Rgba(120, 125, 172, 255);
+                message_textinput.ID = "MessageTextInput";
+                message_textinput.Placeholder = "Enter message here...";
+                message_textinput.Size = Vector2(MESSAGE_TEXTINPUT_CONTAINER_AVAILABLE_SPACE);
+                message_textinput.Padding = Vector2(15.0f, 15.0f);
+                message_textinput.CornerRounding = 10.f;
+                message_textinput.BgColor = Rgba(43, 50, 94, 255);
+                message_textinput.PlaceholderColor = Rgba(120, 125, 172, 255);
 
-                gui.DrawTextInputMultiline(message, message_textinput);
+                ClientGui.DrawTextInputMultiline(Message, message_textinput);
             };
 
-            gui.DrawContainer(message_textinput_container);
+            ClientGui.SetPositionX(MAIN_WINDOW_AVAILABLE_SPACE.X * 0.25f);
+            ClientGui.SetPositionY(MAIN_WINDOW_AVAILABLE_SPACE.Y * 0.85f);
+            ClientGui.DrawContainer(MessageTextinputContainer);
 
             // SEND BUTTON CONTAINER
-            gui.DisplayInline();
-            gui.SetPositionX(MAIN_WINDOW_AVAILABLE_SPACE.x * 0.85f);
-
-            Container send_button_container = {};
-            send_button_container.id = "SendButtonContainer";
-            send_button_container.size = Vector2(MAIN_WINDOW_AVAILABLE_SPACE.x * 0.15f, MAIN_WINDOW_AVAILABLE_SPACE.y * 0.15f);
-            send_button_container.padding = Vector2(15.0f, 15.0f);
+            Container SendButtonContainer = {};
+            SendButtonContainer.ID = "SendButtonContainer";
+            SendButtonContainer.Size = Vector2(MAIN_WINDOW_AVAILABLE_SPACE.X * 0.15f, MAIN_WINDOW_AVAILABLE_SPACE.Y * 0.15f);
+            SendButtonContainer.Padding = Vector2(15.0f, 15.0f);
             // NOTE: Transparent background
-            send_button_container.bg_color = Vector4(0.0f, 0.0f, 0.0f, 0.0f);
-            send_button_container.DrawContent = [&gui]() {
-                const Vector2 SEND_BUTTON_CONTAINER_AVAILABLE_SPACE = gui.GetAvailableSpace();
+            SendButtonContainer.BgColor = Rgba(0, 0, 0, 0);
+            SendButtonContainer.DrawContent = [&ClientGui]() {
+                const Vector2 SEND_BUTTON_CONTAINER_AVAILABLE_SPACE = ClientGui.GetAvailableSpace();
 
                 // SEND BUTTON
-                const Vector2 SEND_BUTTON_SIZE = Vector2(SEND_BUTTON_CONTAINER_AVAILABLE_SPACE.x * 0.70f, SEND_BUTTON_CONTAINER_AVAILABLE_SPACE.y * 0.40f);
-                gui.AlignCenter(SEND_BUTTON_SIZE);
+                const Vector2 SEND_BUTTON_SIZE = Vector2(SEND_BUTTON_CONTAINER_AVAILABLE_SPACE.X * 0.70f, SEND_BUTTON_CONTAINER_AVAILABLE_SPACE.Y * 0.40f);
 
-                Button send_button = {};
-                send_button.label = "Send";
-                send_button.size = SEND_BUTTON_SIZE;
-                send_button.color = Vector4(0.8f, 0.2f, 0.2f, 1.0f); // Red button
-                send_button.color_active = Vector4(0.6f, 0.0f, 0.0f, 1.0f); // Darker red when active
-                send_button.color_hovered = Vector4(1.0f, 0.4f, 0.4f, 1.0f); // Lighter red on hover
-                send_button.corner_rounding = 10.0f;
-                send_button.is_disabled  = message.empty();
-                send_button.OnClick = []() {
-                    messages.push_back(message);
-                    std::cout << "SENT: " << message << std::endl;
+                Button SendButton = {};
+                SendButton.Label = "Send";
+                SendButton.Size = SEND_BUTTON_SIZE;
+                SendButton.Color = Rgba(200, 30, 30, 1); // Red button
+                SendButton.ColorActive = Rgba(150, 0, 0, 1); // Darker red when active
+                SendButton.ColorHovered = Rgba(255, 100, 100, 1); // Lighter red on hover
+                SendButton.CornerRounding = 10.0f;
+                SendButton.IsDisabled  = Message.empty();
+                SendButton.OnClick = []() {
+                    Messages.push_back(Message);
+                    std::cout << "SENT: " << Message << std::endl;
                 };
 
-                gui.DrawButton(send_button);
+                ClientGui.AlignCenter(SEND_BUTTON_SIZE);
+                ClientGui.DrawButton(SendButton);
             };
 
-            gui.DrawContainer(send_button_container);
+            ClientGui.DisplayInline();
+            ClientGui.SetPositionX(MAIN_WINDOW_AVAILABLE_SPACE.X * 0.85f);
+            ClientGui.DrawContainer(SendButtonContainer);
         };
 
-        gui.DrawWindow(main_window);
+        ClientGui.DrawWindow(MainWindow);
 
         // Rendering
-        gui.Render();
+        ClientGui.Render();
 
-        glfwSwapBuffers(window);
+        glfwSwapBuffers(GlfwWindow);
         glfwPollEvents();
     }
 
-    // imgui cleanup
-    gui.Destroy();
+    BlankImageTexture.Destroy();
+    ClientGui.Destroy();
 
-    glfwDestroyWindow(window);
+    glfwDestroyWindow(GlfwWindow);
     glfwTerminate();
 
     return 0;

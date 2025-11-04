@@ -7,4 +7,11 @@ set(GLM_VENDOR_NAME glm::glm)
 set(IMGUI_VENDOR_NAME ImGui)
 
 add_executable(${CLIENT_APP_NAME} src/client.cpp)
-target_link_libraries(${CLIENT_APP_NAME} PRIVATE ${CORE_LIB_NAME} ${GUI_LIB_NAME} ${GLAD_VENDOR_NAME} ${GLFW_VENDOR_NAME} ${GLM_VENDOR_NAME} ${IMGUI_VENDOR_NAME})
+target_link_libraries(${CLIENT_APP_NAME} PRIVATE
+    ${CORE_LIB_NAME}
+    ${GUI_LIB_NAME}
+    ${GLAD_VENDOR_NAME}
+    ${GLFW_VENDOR_NAME}
+    ${GLM_VENDOR_NAME}
+    ${IMGUI_VENDOR_NAME}
+)
