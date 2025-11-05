@@ -245,31 +245,31 @@ int main()
             // MESSAGE TEXT INPUT CONTAINER
             static std::string Message = "";
 
-            Container MessageTextinputContainer = {};
-            MessageTextinputContainer.ID = "TextInputContainer";
-            MessageTextinputContainer.Size = Vector2(MAIN_WINDOW_AVAILABLE_SPACE.X * 0.60f, MAIN_WINDOW_AVAILABLE_SPACE.Y * 0.15f);
-            MessageTextinputContainer.Padding = Vector2(15.0f, 15.0f);
+            Container MessageTextInputContainer = {};
+            MessageTextInputContainer.ID = "TextInputContainer";
+            MessageTextInputContainer.Size = Vector2(MAIN_WINDOW_AVAILABLE_SPACE.X * 0.60f, MAIN_WINDOW_AVAILABLE_SPACE.Y * 0.15f);
+            MessageTextInputContainer.Padding = Vector2(15.0f, 15.0f);
             // NOTE: Transparent background
-            MessageTextinputContainer.BgColor = Rgba(0, 0, 0, 0);
-            MessageTextinputContainer.DrawContent = [&ClientGui]() {
+            MessageTextInputContainer.BgColor = Rgba(0, 0, 0, 0);
+            MessageTextInputContainer.DrawContent = [&ClientGui]() {
                 const Vector2 MESSAGE_TEXTINPUT_CONTAINER_AVAILABLE_SPACE = ClientGui.GetAvailableSpace();
 
                 // MESSAGE TEXT INPUT
-                TextInput message_textinput = {};
-                message_textinput.ID = "MessageTextInput";
-                message_textinput.Placeholder = "Enter message here...";
-                message_textinput.Size = Vector2(MESSAGE_TEXTINPUT_CONTAINER_AVAILABLE_SPACE);
-                message_textinput.Padding = Vector2(15.0f, 15.0f);
-                message_textinput.CornerRounding = 10.f;
-                message_textinput.BgColor = Rgba(43, 50, 94, 255);
-                message_textinput.PlaceholderColor = Rgba(120, 125, 172, 255);
+                TextInput MessageTextInput = {};
+                MessageTextInput.ID = "MessageTextInput";
+                MessageTextInput.Placeholder = "Enter message here...";
+                MessageTextInput.Size = Vector2(MESSAGE_TEXTINPUT_CONTAINER_AVAILABLE_SPACE);
+                MessageTextInput.Padding = Vector2(15.0f, 15.0f);
+                MessageTextInput.CornerRounding = 10.f;
+                MessageTextInput.BgColor = Rgba(43, 50, 94, 255);
+                MessageTextInput.PlaceholderColor = Rgba(120, 125, 172, 255);
 
-                ClientGui.DrawTextInputMultiline(Message, message_textinput);
+                ClientGui.DrawTextInputMultiline(Message, MessageTextInput);
             };
 
             ClientGui.SetPositionX(MAIN_WINDOW_AVAILABLE_SPACE.X * 0.25f);
             ClientGui.SetPositionY(MAIN_WINDOW_AVAILABLE_SPACE.Y * 0.85f);
-            ClientGui.DrawContainer(MessageTextinputContainer);
+            ClientGui.DrawContainer(MessageTextInputContainer);
 
             // SEND BUTTON CONTAINER
             Container SendButtonContainer = {};
@@ -282,11 +282,9 @@ int main()
                 const Vector2 SEND_BUTTON_CONTAINER_AVAILABLE_SPACE = ClientGui.GetAvailableSpace();
 
                 // SEND BUTTON
-                const Vector2 SEND_BUTTON_SIZE = Vector2(SEND_BUTTON_CONTAINER_AVAILABLE_SPACE.X * 0.70f, SEND_BUTTON_CONTAINER_AVAILABLE_SPACE.Y * 0.40f);
-
                 Button SendButton = {};
                 SendButton.Label = "Send";
-                SendButton.Size = SEND_BUTTON_SIZE;
+                SendButton.Size = Vector2(SEND_BUTTON_CONTAINER_AVAILABLE_SPACE.X * 0.70f, SEND_BUTTON_CONTAINER_AVAILABLE_SPACE.Y * 0.40f);
                 SendButton.Color = Rgba(200, 30, 30, 1); // Red button
                 SendButton.ColorActive = Rgba(150, 0, 0, 1); // Darker red when active
                 SendButton.ColorHovered = Rgba(255, 100, 100, 1); // Lighter red on hover
@@ -297,7 +295,7 @@ int main()
                     std::cout << "SENT: " << Message << std::endl;
                 };
 
-                ClientGui.AlignCenter(SEND_BUTTON_SIZE);
+                ClientGui.AlignCenter(SendButton.Size);
                 ClientGui.DrawButton(SendButton);
             };
 
