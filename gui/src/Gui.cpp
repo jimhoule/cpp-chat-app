@@ -67,12 +67,16 @@ void Gui::DrawButton(Button& Button) const
 
 void Gui::DrawContainer(Container& Container) const
 {
+    ImGuiChildFlags Flags = ImGuiChildFlags_AlwaysUseWindowPadding;
+    if (Container.IsAutoResizableY) Flags |= ImGuiChildFlags_AutoResizeY;
+    if (Container.IsAutoResizableX) Flags |= ImGuiChildFlags_AutoResizeX;
+
     ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, Container.BorderSize);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ToImVec2(Container.Padding));
     ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, Container.CornerRounding);
     ImGui::PushStyleColor(ImGuiCol_ChildBg, ToImVec4(Container.BgColor.ToVector4()));
 
-    if (ImGui::BeginChild(Container.ID.c_str(), ToImVec2(Container.Size), ImGuiChildFlags_AlwaysUseWindowPadding)) Container.DrawContent();
+    if (ImGui::BeginChild(Container.ID.c_str(), ToImVec2(Container.Size), Flags)) Container.DrawContent();
     ImGui::EndChild();
 
     ImGui::PopStyleVar(3);
@@ -81,7 +85,8 @@ void Gui::DrawContainer(Container& Container) const
 
 void Gui::DrawImage(const Image& Image) const
 {
-    ImDrawList* ForegroundDrawList = ImGui::GetForegroundDrawList();
+    // NOTE: Uses window drawlist instead of forground drawlist to avoid image being visible when scrolling out of sight
+    ImDrawList* WindowDrawList = ImGui::GetWindowDrawList();
 
     ImVec2 Position = ImGui::GetCursorScreenPos();
     ImVec2 Size = ImVec2(Position.x + Image.Size.X, Position.y + Image.Size.Y);
@@ -89,7 +94,7 @@ void Gui::DrawImage(const Image& Image) const
     ImVec2 UvPositionEnd = ImVec2(1.0f, 1.0f);
     ImU32 TintColor = IM_COL32_WHITE;
 
-    ForegroundDrawList->AddImageRounded(
+    WindowDrawList->AddImageRounded(
         Image.TextureID,
         Position,
         Size,
@@ -149,9 +154,9 @@ void Gui::DrawTreeNode(const TreeNode& Node) const
 {
     if (ImGui::TreeNode(Node.Name.c_str()))
     {
-        for (const TreeNode& child : Node.Children)
+        for (const TreeNode& Child : Node.Children)
         {
-            DrawTreeNode(child);
+            DrawTreeNode(Child);
         }
         ImGui::TreePop();
     }
@@ -159,22 +164,22 @@ void Gui::DrawTreeNode(const TreeNode& Node) const
 
 void Gui::DrawWindow(Window& Window) const
 {
-    bool is_open = true;
-    ImGuiWindowFlags flags = ImGuiWindowFlags_None;
+    bool IsOpen = true;
 
-    if (!Window.CanSaveSettigs) flags |= ImGuiWindowFlags_NoSavedSettings;
-    if (!Window.IsTitlebarVisible) flags |= ImGuiWindowFlags_NoTitleBar;
-    if (!Window.IsScrollbarVisible) flags |= ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
-    if (!Window.IsResizable) flags |= ImGuiWindowFlags_NoResize;
-    if (!Window.IsCollapsible) flags |= ImGuiWindowFlags_NoCollapse;
-    if (!Window.IsMovable) flags |= ImGuiWindowFlags_NoMove;
+    ImGuiWindowFlags Flags = ImGuiWindowFlags_None;
+    if (!Window.CanSaveSettigs) Flags |= ImGuiWindowFlags_NoSavedSettings;
+    if (!Window.IsTitlebarVisible) Flags |= ImGuiWindowFlags_NoTitleBar;
+    if (!Window.IsScrollbarVisible) Flags |= ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
+    if (!Window.IsResizable) Flags |= ImGuiWindowFlags_NoResize;
+    if (!Window.IsCollapsible) Flags |= ImGuiWindowFlags_NoCollapse;
+    if (!Window.IsMovable) Flags |= ImGuiWindowFlags_NoMove;
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ToImVec2(Window.Padding));
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ToImVec4(Window.BgColor.ToVector4()));
 
     ImGui::SetNextWindowPos(ToImVec2(Window.Position));
     ImGui::SetNextWindowSize(ToImVec2(Window.Size));
-    if (ImGui::Begin(Window.Name.c_str(), &is_open, flags)) Window.DrawContent();
+    if (ImGui::Begin(Window.Name.c_str(), &IsOpen, Flags)) Window.DrawContent();
     ImGui::End();
 
     ImGui::PopStyleVar(1);

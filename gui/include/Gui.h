@@ -35,6 +35,8 @@ struct Container
     Rgba BgColor = Rgba(0, 0, 0, 1);
     float BorderSize = 0.0f;
     float CornerRounding = 0.0f;
+    bool IsAutoResizableY = false;
+    bool IsAutoResizableX = false;
 
     std::function<void()> DrawContent;
 };
