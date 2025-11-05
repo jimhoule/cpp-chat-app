@@ -10,6 +10,7 @@
 #include <imgui/imgui_impl_opengl3.h>
 
 #include <arpa/inet.h>
+#include <ctime>
 #include <iostream>
 #include <string>
 #include <unistd.h>
@@ -19,10 +20,12 @@ constexpr int SERVER_PORT =  5000;
 
 struct Message {
     std::string ID;
-    std::string conversation_id;
-    std::string sender_id;
-    std::string text;
-    std::string created_at;
+    std::string ConversationID;
+    std::string SenderID;
+    std::string SenderFirstName;
+    std::string SenderImageUrl;
+    std::string Text;
+    std::time_t CreatedAt;
 };
 
 void framebuffer_size_callback(GLFWwindow* Window, int width, int height)
@@ -176,7 +179,7 @@ int main()
             ClientGui.DrawContainer(ConversationsContainer);
 
             // SELECTED CONVERSATION CONTAINER
-            static std::vector<std::string> Messages;
+            static std::vector<Message> Messages;
 
             Container SelectedConversationContainer = {};
             SelectedConversationContainer.ID = "SelectedConversationContainer";
@@ -192,34 +195,68 @@ int main()
                 MessagesContainer.ID = "MessagesContainer";
                 MessagesContainer.Size = Vector2(SELECTED_CONVERSATION_CONTAINER_AVAILABLE_SPACE);
                 MessagesContainer.CornerRounding = 10.f;
-                MessagesContainer.BgColor = Rgba(50, 56, 102, 255);
+                MessagesContainer.BgColor = Rgba(50, 56, 102, 1);
                 MessagesContainer.DrawContent = [&ClientGui, &BlankImageTexture]() {
                     const Vector2 MESSAGES_CONTAINER_AVAILABLE_SPACE = ClientGui.GetAvailableSpace();
 
                     for (int i = 0; i < Messages.size(); i++)
                     {
                         // MESSAGE CONTAINER
-                        const std::string& MESSAGE = Messages[i];
+                        const Message& MESSAGE = Messages[i];
                         const std::string& ID = "MessageContainer" + std::to_string(i);
 
                         Container MessageContainer = {};
                         MessageContainer.ID = ID;
-                        MessageContainer.Size = Vector2(MESSAGES_CONTAINER_AVAILABLE_SPACE.X, MESSAGES_CONTAINER_AVAILABLE_SPACE.Y * 0.10f);
-                        MessageContainer.BgColor = Rgba(200, 200, 0, 1);
+                        MessageContainer.Size = Vector2(MESSAGES_CONTAINER_AVAILABLE_SPACE.X, 0.0f);
+                        MessageContainer.Padding = Vector2(10.0f, 10.0f);
+                        // NOTE: Transparent background
+                        MessageContainer.BgColor = Rgba(0, 0, 0, 0);
+                        MessageContainer.IsAutoResizableY = true;
                         MessageContainer.DrawContent = [&ClientGui, &BlankImageTexture, &MESSAGE]() {
                             const Vector2 MESSAGE_CONTAINER_AVAILABLE_SPACE = ClientGui.GetAvailableSpace();
 
+                            // MESSAGE SENDER IMAGE
                             // NOTE: Images are drawn directly over elements so anything that needs to go beside will have to be postioned manually
                             Image MessageSenderImage = {};
                             MessageSenderImage.TextureID = BlankImageTexture.GetID();
-                            MessageSenderImage.Size = Vector2(MESSAGE_CONTAINER_AVAILABLE_SPACE.Y, MESSAGE_CONTAINER_AVAILABLE_SPACE.Y);
+                            MessageSenderImage.Size = Vector2(MESSAGE_CONTAINER_AVAILABLE_SPACE.X * 0.05f, MESSAGE_CONTAINER_AVAILABLE_SPACE.X * 0.05f);
                             MessageSenderImage.CornerRounding = 10.0f;
                             ClientGui.DrawImage(MessageSenderImage);
 
-                            Text MessageText = {};
-                            MessageText.Value = MESSAGE;
-                            ClientGui.SetPositionX(MessageSenderImage.Size.X);
-                            ClientGui.DrawText(MessageText);
+                            // MESSAGE DETAILS CONTAINER
+                            ImGuiStyle& Style = ImGui::GetStyle();
+
+                            Container MessageDetailsContainer = {};
+                            MessageDetailsContainer.ID = "MessageDetailsContainer";
+                            MessageDetailsContainer.Size = Vector2(MESSAGE_CONTAINER_AVAILABLE_SPACE.X - MessageSenderImage.Size.X, 0.0f);
+                            MessageDetailsContainer.Padding = Vector2(Style.WindowPadding.x / 1.5f, 0.0f);
+                            // NOTE: Transparent background
+                            MessageDetailsContainer.BgColor = Rgba(0, 0, 0, 0);
+                            MessageDetailsContainer.IsAutoResizableY = true;
+                            MessageDetailsContainer.DrawContent = [&ClientGui, &MESSAGE]() {
+                                // MESSAGE SENDER FIRSTNAME TEXT
+                                Text MessageSenderFirstNameText = {};
+                                MessageSenderFirstNameText.Value = MESSAGE.SenderFirstName;
+                                ClientGui.DrawText(MessageSenderFirstNameText);
+
+                                std::tm* MessageCreatedAtDate = std::localtime(&MESSAGE.CreatedAt);
+                                const std::string& MESSAGE_CREATED_AT_STRING_DATE = asctime(MessageCreatedAtDate);
+
+                                // MESSAGE CREATED AT TEXT
+                                Text MessageCreatedAtText = {};
+                                MessageCreatedAtText.Value = MESSAGE_CREATED_AT_STRING_DATE;
+                                ClientGui.DisplayInline();
+                                ClientGui.DrawText(MessageCreatedAtText);
+
+                                // MESSAGE TEXT
+                                Text MessageText = {};
+                                MessageText.Value = MESSAGE.Text;
+                                ClientGui.DrawText(MessageText);
+                            };
+
+                            ClientGui.SetPositionX(MessageSenderImage.Size.X + 10.0f);
+                            ClientGui.DrawContainer(MessageDetailsContainer);
+
                         };
 
                         ClientGui.DrawContainer(MessageContainer);
@@ -243,7 +280,7 @@ int main()
             ClientGui.DrawContainer(SelectedConversationContainer);
 
             // MESSAGE TEXT INPUT CONTAINER
-            static std::string Message = "";
+            static std::string MessageText = "";
 
             Container MessageTextInputContainer = {};
             MessageTextInputContainer.ID = "TextInputContainer";
@@ -264,7 +301,7 @@ int main()
                 MessageTextInput.BgColor = Rgba(43, 50, 94, 255);
                 MessageTextInput.PlaceholderColor = Rgba(120, 125, 172, 255);
 
-                ClientGui.DrawTextInputMultiline(Message, MessageTextInput);
+                ClientGui.DrawTextInputMultiline(MessageText, MessageTextInput);
             };
 
             ClientGui.SetPositionX(MAIN_WINDOW_AVAILABLE_SPACE.X * 0.25f);
@@ -289,10 +326,21 @@ int main()
                 SendButton.ColorActive = Rgba(150, 0, 0, 1); // Darker red when active
                 SendButton.ColorHovered = Rgba(255, 100, 100, 1); // Lighter red on hover
                 SendButton.CornerRounding = 10.0f;
-                SendButton.IsDisabled  = Message.empty();
+                SendButton.IsDisabled  = MessageText.empty();
                 SendButton.OnClick = []() {
-                    Messages.push_back(Message);
-                    std::cout << "SENT: " << Message << std::endl;
+                    Message NewMessage = {};
+                    NewMessage.ID = "FakeID";
+                    NewMessage.ConversationID = "FakeConversationID";
+                    NewMessage.SenderID = "FakeSenderID";
+                    NewMessage.SenderFirstName = "Olivier";
+                    NewMessage.SenderImageUrl = "https://fakeimageurl.com";
+                    NewMessage.Text = MessageText;
+                    NewMessage.CreatedAt = std::time(0);
+
+                    // TODO: Server call to persist message will go there
+
+                    Messages.push_back(NewMessage);
+                    std::cout << "SENT: " << MessageText << std::endl;
                 };
 
                 ClientGui.AlignCenter(SendButton.Size);
