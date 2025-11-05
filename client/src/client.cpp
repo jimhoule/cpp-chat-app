@@ -211,7 +211,7 @@ int main()
 
                             // NOTE: Images are drawn directly over elements so anything that needs to go beside will have to be postioned manually
                             Image MessageSenderImage = {};
-                            MessageSenderImage.TextureId = BlankImageTexture.GetID();
+                            MessageSenderImage.TextureID = BlankImageTexture.GetID();
                             MessageSenderImage.Size = Vector2(MESSAGE_CONTAINER_AVAILABLE_SPACE.Y, MESSAGE_CONTAINER_AVAILABLE_SPACE.Y);
                             MessageSenderImage.CornerRounding = 10.0f;
                             ClientGui.DrawImage(MessageSenderImage);

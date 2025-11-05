@@ -90,7 +90,7 @@ void Gui::DrawImage(const Image& Image) const
     ImU32 TintColor = IM_COL32_WHITE;
 
     ForegroundDrawList->AddImageRounded(
-        Image.TextureId,
+        Image.TextureID,
         Position,
         Size,
         UvPositionStart,

@@ -46,7 +46,7 @@ struct Text
 
 struct Image
 {
-    unsigned int TextureId;
+    unsigned int TextureID;
     Vector2 Size;
     float CornerRounding = 0.0f;
 };
