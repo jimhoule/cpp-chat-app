@@ -239,10 +239,10 @@ int main()
                                 MessageSenderFirstNameText.Value = MESSAGE.SenderFirstName;
                                 ClientGui.DrawText(MessageSenderFirstNameText);
 
+                                // MESSAGE CREATED AT TEXT
                                 std::tm* MessageCreatedAtDate = std::localtime(&MESSAGE.CreatedAt);
                                 const std::string& MESSAGE_CREATED_AT_STRING_DATE = asctime(MessageCreatedAtDate);
 
-                                // MESSAGE CREATED AT TEXT
                                 Text MessageCreatedAtText = {};
                                 MessageCreatedAtText.Value = MESSAGE_CREATED_AT_STRING_DATE;
                                 ClientGui.DisplayInline();
@@ -251,7 +251,8 @@ int main()
                                 // MESSAGE TEXT
                                 Text MessageText = {};
                                 MessageText.Value = MESSAGE.Text;
-                                ClientGui.DrawText(MessageText);
+                                ClientGui.DrawTextWrapped(MessageText);
+
                             };
 
                             ClientGui.SetPositionX(MessageSenderImage.Size.X + 10.0f);

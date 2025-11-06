@@ -106,10 +106,15 @@ void Gui::DrawImage(const Image& Image) const
     );
 }
 
- void Gui::DrawText(const Text& Text) const
- {
+void Gui::DrawText(const Text& Text) const
+{
     ImGui::TextUnformatted(Text.Value.c_str());
- }
+}
+
+void Gui::DrawTextWrapped(const Text& Text) const
+{
+    ImGui::TextWrapped("%s", Text.Value.c_str());
+}
 
 void Gui::DrawTextInputMultiline(std::string& Value, TextInput& TextInput) const
 {

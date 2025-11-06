@@ -102,6 +102,7 @@ public:
     void DrawContainer(Container& Container) const;
     void DrawImage(const Image& Image) const;
     void DrawText(const Text& Text) const;
+    void DrawTextWrapped(const Text& Text) const;
     void DrawTextInputMultiline(std::string& Value, TextInput& TextInput) const;
     void DrawTreeNode(const TreeNode& Node) const;
     void DrawWindow(Window& Window) const;
