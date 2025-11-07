@@ -10,8 +10,8 @@ const int RGBA_MAX_VALUE = 255;
 
 struct Rgba
 {
-public:
-    int R = RGBA_EMPTY_VALUE;
+  public:
+	int R = RGBA_EMPTY_VALUE;
 	int G = RGBA_EMPTY_VALUE;
 	int B = RGBA_EMPTY_VALUE;
 	int A = RGBA_EMPTY_VALUE;
@@ -21,10 +21,10 @@ public:
 	{
 	}
 
-    bool IsEmpty()
-    {
-        return R == RGBA_EMPTY_VALUE && G == RGBA_EMPTY_VALUE && B == RGBA_EMPTY_VALUE && A == RGBA_EMPTY_VALUE;
-    }
+	bool IsEmpty()
+	{
+		return R == RGBA_EMPTY_VALUE && G == RGBA_EMPTY_VALUE && B == RGBA_EMPTY_VALUE && A == RGBA_EMPTY_VALUE;
+	}
 
 	Vector4 ToVector4()
 	{
@@ -33,9 +33,9 @@ public:
 		               static_cast<float>(B) / RGBA_MAX_VALUE_FLOAT, static_cast<float>(A) / RGBA_MAX_VALUE_FLOAT);
 	}
 
-private:
-    int Clamp(int Value)
-    {
-        return std::clamp(Value, RGBA_MIN_VALUE, RGBA_MAX_VALUE);
-    }
+  private:
+	int Clamp(int Value)
+	{
+		return std::clamp(Value, RGBA_MIN_VALUE, RGBA_MAX_VALUE);
+	}
 };
