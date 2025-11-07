@@ -12,19 +12,37 @@
 #include <arpa/inet.h>
 #include <ctime>
 #include <iostream>
+#include <memory>
 #include <string>
+#include <utility>
 #include <unistd.h>
 #include <vector>
 
 constexpr int SERVER_PORT =  5000;
 
-struct Message {
+struct User
+{
+    std::string ID;
+    std::string FirstName;
+    std::string ImageUrl;
+};
+
+struct Message
+{
     std::string ID;
     std::string ConversationID;
     std::string SenderID;
     std::string SenderFirstName;
     std::string SenderImageUrl;
     std::string Text;
+    std::time_t CreatedAt;
+};
+
+struct Conversation
+{
+    std::string ID;
+    std::vector<Message> Messages;
+    std::vector<User> Users;
     std::time_t CreatedAt;
 };
 
@@ -94,6 +112,41 @@ int main()
     Gui ClientGui = {};
     ClientGui.Init(GlfwWindow);
 
+    // Fake Users
+    User User1 = {};
+    User1.ID = "User1";
+    User1.FirstName = "Olivier";
+    User1.ImageUrl = "http://fake.iamge.url";
+
+    User User2 = {};
+    User1.ID = "User2";
+    User1.FirstName = "Marc";
+    User1.ImageUrl = "http://fake.iamge.url";
+
+    User User3 = {};
+    User1.ID = "User3";
+    User1.FirstName = "Simon";
+    User1.ImageUrl = "http://fake.iamge.url";
+
+    // Fake conversations
+    Conversation Conversation1 = {};
+    Conversation1.ID = "Conversation1";
+    Conversation1.Users = { User1, User2 };
+    Conversation1.Messages = {};
+    Conversation1.CreatedAt = std::time(0);
+
+    Conversation Conversation2 = {};
+    Conversation2.ID = "Conversation2";
+    Conversation2.Users = { User1, User3 };
+    Conversation2.Messages = {};
+    Conversation2.CreatedAt = std::time(0);
+
+    static std::vector<std::shared_ptr<Conversation>> Conversations = {
+        std::make_shared<Conversation>(Conversation1),
+        std::make_shared<Conversation>(Conversation2)
+    };
+    static std::shared_ptr<Conversation> SelectedConversation = Conversations[0];
+
     // SocketClient socket_client;
     // socket_client.Connect(SERVER_PORT, "127.0.0.1");
 
@@ -143,44 +196,91 @@ int main()
 
             ClientGui.DrawContainer(NavbarContainer);
 
-            // CONVERSATIONS CONTAINER
-            Container ConversationsContainer = {};
-            ConversationsContainer.ID = "ConversationsContainer";
-            ConversationsContainer.Size = Vector2(MAIN_WINDOW_AVAILABLE_SPACE.X * 0.25f, MAIN_WINDOW_AVAILABLE_SPACE.Y - NavbarContainer.Size.Y);
-            ConversationsContainer.Padding = Vector2(15.0f, 15.0f);
+            // CHATS CONTAINER
+            Container ChatsContainer = {};
+            ChatsContainer.ID = "ChatsContainer";
+            ChatsContainer.Size = Vector2(MAIN_WINDOW_AVAILABLE_SPACE.X * 0.25f, MAIN_WINDOW_AVAILABLE_SPACE.Y - NavbarContainer.Size.Y);
+            ChatsContainer.Padding = Vector2(15.0f, 15.0f);
             // NOTE: Transparent background
-            ConversationsContainer.BgColor = Rgba(0, 0, 0, 0);
-            ConversationsContainer.DrawContent = [&ClientGui]() {
-                const Vector2 CONVERSATIONS_CONTAINER_AVAILABLE_SPACE = ClientGui.GetAvailableSpace();
+            ChatsContainer.BgColor = Rgba(0, 0, 0, 0);
+            ChatsContainer.DrawContent = [&ClientGui, &BlankImageTexture]() {
+                const Vector2 CHATS_CONTAINER_AVAILABLE_SPACE = ClientGui.GetAvailableSpace();
 
-                // DIRECT MESSAGES CONTAINER
-                Container DirectMessagesContainer = {};
-                DirectMessagesContainer.ID = "DirectMessagessContainer";
-                DirectMessagesContainer.Size = Vector2(CONVERSATIONS_CONTAINER_AVAILABLE_SPACE);
-                DirectMessagesContainer.CornerRounding = 10.f;
-                DirectMessagesContainer.BgColor = Rgba(50, 56, 102, 255);
-                DirectMessagesContainer.DrawContent = [&ClientGui]() {
-                    const Vector2 DIRECT_MESSAGES_CONTAINER_AVAILABLE_SPACE = ClientGui.GetAvailableSpace();
+                // CONVERSATIONS CONTAINER
+                Container ConversationsContainer = {};
+                ConversationsContainer.ID = "ConversationsContainer";
+                ConversationsContainer.Size = Vector2(CHATS_CONTAINER_AVAILABLE_SPACE);
+                ConversationsContainer.CornerRounding = 10.f;
+                ConversationsContainer.BgColor = Rgba(50, 56, 102, 255);
+                ConversationsContainer.DrawContent = [&ClientGui, &BlankImageTexture]() {
+                    const Vector2 CONVERSATIONS_CONTAINER_AVAILABLE_SPACE = ClientGui.GetAvailableSpace();
 
-                    TreeNode direct_messages_root_node = {};
-                    direct_messages_root_node.Name = "Direct Messages";
-                    direct_messages_root_node.Children = {
-                        { "Direct Message 1" },
-                        { "Direct Message 2" },
-                        { "Direct Message 3" },
+                    // CONVERSATIONS NODE
+                    Node ConversationsNode = {};
+                    ConversationsNode.Name = "Conversations";
+                    ConversationsNode.DrawContent = [&ClientGui, &BlankImageTexture]() {
+                        const Vector2 CONVERSATIONS_NODE_AVAILABLE_SPACE = ClientGui.GetAvailableSpace();
+
+                        for (int i = 0; i < Conversations.size(); i++)
+                        {
+                            const std::shared_ptr<Conversation> Conversation = Conversations[i];
+                            const std::string& ID = "ConversationContainer" + std::to_string(i);
+
+                            // CONVERSATION CONTAINER
+                            Rgba BgColor = Rgba(50, 56, 102, 255);
+                            if (Conversation->ID == SelectedConversation->ID) BgColor = Rgba(100, 100, 100, 255);
+
+                            Container ConversationContainer = {};
+                            ConversationContainer.ID = ID;
+                            ConversationContainer.Size = Vector2(CONVERSATIONS_NODE_AVAILABLE_SPACE.X, CONVERSATIONS_NODE_AVAILABLE_SPACE.Y * 0.05f);
+                            ConversationContainer.CornerRounding = 10.f;
+                            ConversationContainer.BgColor = BgColor;
+                            ConversationContainer.BgColorHovered = Rgba(0, 0, 0, 255);
+                            ConversationContainer.IsAutoResizableY = true;
+                            ConversationContainer.DrawContent = [&ClientGui, &BlankImageTexture, &Conversation]() {
+                                const Vector2 CONVERSATION_CONTAINER_AVAILABLE_SPACE = ClientGui.GetAvailableSpace();
+
+                                // CONVERSATION IMAGE
+                                Image ConversationImage = {};
+                                ConversationImage.TextureID = BlankImageTexture.GetID();
+                                ConversationImage.Size = Vector2(CONVERSATION_CONTAINER_AVAILABLE_SPACE.Y, CONVERSATION_CONTAINER_AVAILABLE_SPACE.Y);
+                                ConversationImage.CornerRounding = 10.0f;
+                                ClientGui.DrawImage(ConversationImage);
+
+                                // SELECT CONVERSATION BUTTON
+                                ImVec2 TextSize = ImGui::CalcTextSize(Conversation->ID.c_str());
+
+                                Button SelectConversationButton = {};
+                                SelectConversationButton.Label = Conversation->ID;
+                                SelectConversationButton.Size = Vector2(TextSize.x, TextSize.y);
+                                // NOTE: Transparent background
+                                SelectConversationButton.BgColor = Rgba(0, 0, 0, 0);
+                                // NOTE: Transparent background
+                                SelectConversationButton.BgColorActive = Rgba(0, 0, 0, 0);
+                                // NOTE: Transparent background
+                                SelectConversationButton.BgColorHovered = Rgba(0, 0, 0, 0);
+                                SelectConversationButton.OnClick = [&Conversation]() {
+                                    SelectedConversation = Conversation;
+                                    std::cout << "SELECTED CONVERSATION ID: " << SelectedConversation->ID << std::endl;
+                                };
+
+                                ClientGui.SetPositionX(ConversationImage.Size.X + 10.0f);
+                                ClientGui.DrawButton(SelectConversationButton);
+                            };
+
+                            ClientGui.DrawContainer(ConversationContainer);
+                        }
                     };
 
-                    ClientGui.DrawTreeNode(direct_messages_root_node);
+                    ClientGui.DrawNode(ConversationsNode);
                 };
 
-                ClientGui.DrawContainer(DirectMessagesContainer);
+                ClientGui.DrawContainer(ConversationsContainer);
             };
 
-            ClientGui.DrawContainer(ConversationsContainer);
+            ClientGui.DrawContainer(ChatsContainer);
 
             // SELECTED CONVERSATION CONTAINER
-            static std::vector<Message> Messages;
-
             Container SelectedConversationContainer = {};
             SelectedConversationContainer.ID = "SelectedConversationContainer";
             SelectedConversationContainer.Size = Vector2(MAIN_WINDOW_AVAILABLE_SPACE.X * 0.75f, MAIN_WINDOW_AVAILABLE_SPACE.Y * 0.70f);
@@ -195,14 +295,14 @@ int main()
                 MessagesContainer.ID = "MessagesContainer";
                 MessagesContainer.Size = Vector2(SELECTED_CONVERSATION_CONTAINER_AVAILABLE_SPACE);
                 MessagesContainer.CornerRounding = 10.f;
-                MessagesContainer.BgColor = Rgba(50, 56, 102, 1);
+                MessagesContainer.BgColor = Rgba(50, 56, 102, 255);
                 MessagesContainer.DrawContent = [&ClientGui, &BlankImageTexture]() {
                     const Vector2 MESSAGES_CONTAINER_AVAILABLE_SPACE = ClientGui.GetAvailableSpace();
 
-                    for (int i = 0; i < Messages.size(); i++)
+                    for (int i = 0; i < SelectedConversation->Messages.size(); i++)
                     {
                         // MESSAGE CONTAINER
-                        const Message& MESSAGE = Messages[i];
+                        const Message& MESSAGE = SelectedConversation->Messages[i];
                         const std::string& ID = "MessageContainer" + std::to_string(i);
 
                         Container MessageContainer = {};
@@ -323,15 +423,15 @@ int main()
                 Button SendButton = {};
                 SendButton.Label = "Send";
                 SendButton.Size = Vector2(SEND_BUTTON_CONTAINER_AVAILABLE_SPACE.X * 0.70f, SEND_BUTTON_CONTAINER_AVAILABLE_SPACE.Y * 0.40f);
-                SendButton.Color = Rgba(200, 30, 30, 1); // Red button
-                SendButton.ColorActive = Rgba(150, 0, 0, 1); // Darker red when active
-                SendButton.ColorHovered = Rgba(255, 100, 100, 1); // Lighter red on hover
+                SendButton.BgColor = Rgba(200, 30, 30, 255); // Red button
+                SendButton.BgColorActive = Rgba(150, 0, 0, 255); // Darker red when active
+                SendButton.BgColorHovered = Rgba(255, 100, 100, 255); // Lighter red on hover
                 SendButton.CornerRounding = 10.0f;
                 SendButton.IsDisabled  = MessageText.empty();
                 SendButton.OnClick = []() {
                     Message NewMessage = {};
                     NewMessage.ID = "FakeID";
-                    NewMessage.ConversationID = "FakeConversationID";
+                    NewMessage.ConversationID = SelectedConversation->ID;
                     NewMessage.SenderID = "FakeSenderID";
                     NewMessage.SenderFirstName = "Olivier";
                     NewMessage.SenderImageUrl = "https://fakeimageurl.com";
@@ -340,7 +440,7 @@ int main()
 
                     // TODO: Server call to persist message will go there
 
-                    Messages.push_back(NewMessage);
+                    SelectedConversation->Messages.push_back(NewMessage);
                     std::cout << "SENT: " << MessageText << std::endl;
                 };
 
