@@ -2,6 +2,7 @@
 
 struct Vector2
 {
+public:
 	float X;
 	float Y;
 
@@ -43,6 +44,7 @@ struct Vector2
 
 struct Vector4
 {
+public:
 	float X;
 	float Y;
 	float Z;
