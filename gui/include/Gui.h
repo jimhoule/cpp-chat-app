@@ -16,9 +16,9 @@ struct Button
     std::string Label;
     Vector2 Size;
     Vector2 Padding = Vector2(0.0f, 0.0f);
-    Rgba Color = Rgba(255, 0, 0, 1);
-    Rgba ColorActive = Rgba(0, 255, 0, 1);
-    Rgba ColorHovered = Rgba(0, 0, 255, 1);
+    Rgba BgColor = Rgba(255, 0, 0, 255);
+    Rgba BgColorActive = {};
+    Rgba BgColorHovered = {};
     float BorderSize = 0.0f;
     float CornerRounding = 0.0f;
     bool IsDisabled = false;
@@ -32,13 +32,15 @@ struct Container
     std::string ID;
     Vector2 Size;
     Vector2 Padding = Vector2(0.0f, 0.0f);
-    Rgba BgColor = Rgba(0, 0, 0, 1);
+    Rgba BgColor = Rgba(0, 0, 0, 255);
+    Rgba BgColorHovered = {};
     float BorderSize = 0.0f;
     float CornerRounding = 0.0f;
     bool IsAutoResizableY = false;
     bool IsAutoResizableX = false;
 
     std::function<void()> DrawContent;
+    std::function<void()> OnHover = {};
 };
 
 struct Text
@@ -53,15 +55,22 @@ struct Image
     float CornerRounding = 0.0f;
 };
 
+struct Node
+{
+    std::string Name;
+
+    std::function<void()> DrawContent;
+};
+
 struct TextInput
 {
     std::string ID;
     std::string Placeholder;
     Vector2 Size;
     Vector2 Padding = Vector2(0.0f, 0.0f);
-    Rgba BgColor = Rgba(0, 0, 0, 1);
-    Rgba TextColor = Rgba(255, 255, 255, 1);
-    Rgba PlaceholderColor = Rgba(255, 255, 255, 1);
+    Rgba BgColor = Rgba(0, 0, 0, 255);
+    Rgba TextColor = Rgba(255, 255, 255, 255);
+    Rgba PlaceholderColor = Rgba(255, 255, 255, 255);
     float BorderSize = 0.0f;
     float CornerRounding = 0.0f;
 };
@@ -77,7 +86,7 @@ struct Window
     Vector2 Size;
     Vector2 Position = Vector2(0.0f, 0.0f);
     Vector2 Padding = Vector2(0.0f, 0.0f);
-    Rgba BgColor = Rgba(0, 0, 0, 1);
+    Rgba BgColor = Rgba(0, 0, 0, 255);
     bool CanSaveSettigs = false;
     bool IsTitlebarVisible = false;
     bool IsScrollbarVisible = false;
@@ -101,10 +110,11 @@ public:
     void DrawButton(Button& Button) const;
     void DrawContainer(Container& Container) const;
     void DrawImage(const Image& Image) const;
+    void DrawNode(const Node& Node) const;
     void DrawText(const Text& Text) const;
     void DrawTextWrapped(const Text& Text) const;
     void DrawTextInputMultiline(std::string& Value, TextInput& TextInput) const;
-    void DrawTreeNode(const TreeNode& Node) const;
+    void DrawTreeNode(const TreeNode& RootTreeNode) const;
     void DrawWindow(Window& Window) const;
 
     void AlignCenter(Vector2 ElementSize) const;

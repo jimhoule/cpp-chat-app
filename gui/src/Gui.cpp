@@ -50,9 +50,9 @@ void Gui::DrawButton(Button& Button) const
     ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, Button.BorderSize);
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ToImVec2(Button.Padding));
     ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, Button.CornerRounding);
-    ImGui::PushStyleColor(ImGuiCol_Button, ToImVec4(Button.Color.ToVector4()));
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ToImVec4(Button.ColorActive.ToVector4()));
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ToImVec4(Button.ColorHovered.ToVector4()));
+    ImGui::PushStyleColor(ImGuiCol_Button, ToImVec4(Button.BgColor.ToVector4()));
+    if (!Button.BgColorActive.IsEmpty()) ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ToImVec4(Button.BgColorActive.ToVector4()));
+    if (!Button.BgColorHovered.IsEmpty()) ImGui::PushStyleColor(ImGuiCol_ButtonActive, ToImVec4(Button.BgColorHovered.ToVector4()));
 
     if (Button.IsDisabled)  ImGui::BeginDisabled();
 
@@ -62,7 +62,9 @@ void Gui::DrawButton(Button& Button) const
     if (Button.IsDisabled)  ImGui::EndDisabled();
 
     ImGui::PopStyleVar(3);
-    ImGui::PopStyleColor(3);
+    ImGui::PopStyleColor(1);
+    if (!Button.BgColorActive.IsEmpty()) ImGui::PopStyleColor(1);
+    if (!Button.BgColorHovered.IsEmpty()) ImGui::PopStyleColor(1);
 }
 
 void Gui::DrawContainer(Container& Container) const
@@ -76,7 +78,35 @@ void Gui::DrawContainer(Container& Container) const
     ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, Container.CornerRounding);
     ImGui::PushStyleColor(ImGuiCol_ChildBg, ToImVec4(Container.BgColor.ToVector4()));
 
-    if (ImGui::BeginChild(Container.ID.c_str(), ToImVec2(Container.Size), Flags)) Container.DrawContent();
+    if (ImGui::BeginChild(Container.ID.c_str(), ToImVec2(Container.Size), Flags))
+    {
+        const bool IS_HOVERED = ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows);
+        // Draws rectangle on top of background container when is hovered
+        if (IS_HOVERED && !Container.BgColorHovered.IsEmpty())
+        {
+            ImDrawList* WindowDrawList = ImGui::GetWindowDrawList();
+
+            ImVec2 BgPositionMin = ImGui::GetCursorScreenPos();
+            ImVec2 BgPositionMax = ImVec2(BgPositionMin.x + Container.Size.X, BgPositionMin.y + Container.Size.Y);
+            ImU32 BgColorHovered = IM_COL32(
+                Container.BgColorHovered.R,
+                Container.BgColorHovered.G,
+                Container.BgColorHovered.B,
+                Container.BgColorHovered.A
+            );
+
+            WindowDrawList->AddRectFilled(
+                BgPositionMin,
+                BgPositionMax,
+                BgColorHovered,
+                Container.CornerRounding
+            );
+        }
+
+        if (IS_HOVERED && !!Container.OnHover) Container.OnHover();
+
+        Container.DrawContent();
+    }
     ImGui::EndChild();
 
     ImGui::PopStyleVar(3);
@@ -104,6 +134,15 @@ void Gui::DrawImage(const Image& Image) const
         Image.CornerRounding,
         ImDrawFlags_RoundCornersAll
     );
+}
+
+void Gui::DrawNode(const Node& Node) const
+{
+    if (ImGui::TreeNode(Node.Name.c_str()))
+    {
+        Node.DrawContent();
+        ImGui::TreePop();
+    }
 }
 
 void Gui::DrawText(const Text& Text) const
@@ -155,11 +194,11 @@ void Gui::DrawTextInputMultiline(std::string& Value, TextInput& TextInput) const
     ImGui::PopStyleColor(2);
 }
 
-void Gui::DrawTreeNode(const TreeNode& Node) const
+void Gui::DrawTreeNode(const TreeNode& RootTreeNode) const
 {
-    if (ImGui::TreeNode(Node.Name.c_str()))
+    if (ImGui::TreeNode(RootTreeNode.Name.c_str()))
     {
-        for (const TreeNode& Child : Node.Children)
+        for (const TreeNode& Child : RootTreeNode.Children)
         {
             DrawTreeNode(Child);
         }
