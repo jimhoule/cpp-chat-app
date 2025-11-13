@@ -23,7 +23,7 @@ struct Rgba
 
 	bool IsEmpty()
 	{
-		return R == RGBA_EMPTY_VALUE && G == RGBA_EMPTY_VALUE && B == RGBA_EMPTY_VALUE && A == RGBA_EMPTY_VALUE;
+		return R <= RGBA_EMPTY_VALUE && G <= RGBA_EMPTY_VALUE && B <= RGBA_EMPTY_VALUE && A <= RGBA_EMPTY_VALUE;
 	}
 
 	Vector4 ToVector4()
