@@ -51,18 +51,20 @@ void Gui::DrawButton(Button& Button) const
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ToImVec2(Button.Padding));
     ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, Button.CornerRounding);
     ImGui::PushStyleColor(ImGuiCol_Button, ToImVec4(Button.BgColor.ToVector4()));
+    ImGui::PushStyleColor(ImGuiCol_Text, ToImVec4(Button.TextColor.ToVector4()));
     if (!Button.BgColorActive.IsEmpty()) ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ToImVec4(Button.BgColorActive.ToVector4()));
     if (!Button.BgColorHovered.IsEmpty()) ImGui::PushStyleColor(ImGuiCol_ButtonActive, ToImVec4(Button.BgColorHovered.ToVector4()));
 
     if (Button.IsDisabled)  ImGui::BeginDisabled();
 
-    if (ImGui::Button(Button.Label.c_str(), ImVec2(Button.Size.X, Button.Size.Y))) Button.OnClick();
+    ImGui::Button(Button.Label.c_str(), ImVec2(Button.Size.X, Button.Size.Y));
+    if (ImGui::IsItemClicked()) Button.OnClick();
     if (ImGui::IsItemHovered() && !!Button.OnHover) Button.OnHover();
 
     if (Button.IsDisabled)  ImGui::EndDisabled();
 
     ImGui::PopStyleVar(3);
-    ImGui::PopStyleColor(1);
+    ImGui::PopStyleColor(2);
     if (!Button.BgColorActive.IsEmpty()) ImGui::PopStyleColor(1);
     if (!Button.BgColorHovered.IsEmpty()) ImGui::PopStyleColor(1);
 }
@@ -105,7 +107,9 @@ void Gui::DrawContainer(Container& Container) const
 
         if (IS_HOVERED && !!Container.OnHover) Container.OnHover();
 
-        Container.DrawContent();
+        ContainerState State = {};
+        State.IsHovered = IS_HOVERED;
+        Container.DrawContent(State);
     }
     ImGui::EndChild();
 
@@ -115,25 +119,25 @@ void Gui::DrawContainer(Container& Container) const
 
 void Gui::DrawImage(const Image& Image) const
 {
-    // NOTE: Uses window drawlist instead of forground drawlist to avoid image being visible when scrolling out of sight
-    ImDrawList* WindowDrawList = ImGui::GetWindowDrawList();
+    ImagePositioned ImagePositioned = {};
+    ImagePositioned.Image = Image;
+    ImagePositioned.Position = ToVector2(ImGui::GetCursorScreenPos());
+    DrawImagePositioned(ImagePositioned);
+}
 
-    ImVec2 Position = ImGui::GetCursorScreenPos();
-    ImVec2 Size = ImVec2(Position.x + Image.Size.X, Position.y + Image.Size.Y);
-    ImVec2 UvPositionStart = ImVec2(0.0f, 0.0f);
-    ImVec2 UvPositionEnd = ImVec2(1.0f, 1.0f);
-    ImU32 TintColor = IM_COL32_WHITE;
+void Gui::DrawImageButton(ImageButton& ImageButton) const
+{
+    Image ImageButtonImage = ImageButton.Image;
 
-    WindowDrawList->AddImageRounded(
-        Image.TextureID,
-        Position,
-        Size,
-        UvPositionStart,
-        UvPositionEnd,
-        TintColor,
-        Image.CornerRounding,
-        ImDrawFlags_RoundCornersAll
-    );
+    ImGui::InvisibleButton(ImageButton.ID.c_str(), ToImVec2(ImageButton.Image.Size));
+    if (ImGui::IsItemClicked()) ImageButton.OnClick();
+    if (ImGui::IsItemHovered() && !ImageButton.TintColorHovered.IsEmpty()) ImageButtonImage.TintColor = ImageButton.TintColorHovered;
+
+    ImagePositioned ImagePositioned = {};
+    ImagePositioned.Image = ImageButtonImage;
+    // NOTE: Position image to bounding box min position
+    ImagePositioned.Position = ToVector2(ImGui::GetItemRectMin());
+    DrawImagePositioned(ImagePositioned);
 }
 
 void Gui::DrawNode(const Node& Node) const
@@ -324,6 +328,33 @@ void Gui::SetPositionY(float Y) const
 // ***********
 // * PRIVATE *
 // ***********
+void Gui::DrawImagePositioned(const ImagePositioned& ImagePositioned) const
+{
+    // NOTE: Uses window drawlist instead of forground drawlist to avoid image being visible when scrolling out of sight
+    ImDrawList* WindowDrawList = ImGui::GetWindowDrawList();
+
+    ImVec2 Size = ImVec2(ImagePositioned.Position.X + ImagePositioned.Image.Size.X, ImagePositioned.Position.Y + ImagePositioned.Image.Size.Y);
+    ImVec2 UvPositionStart = ImVec2(0.0f, 0.0f);
+    ImVec2 UvPositionEnd = ImVec2(1.0f, 1.0f);
+    ImU32 TintColor = IM_COL32(
+        ImagePositioned.Image.TintColor.R,
+        ImagePositioned.Image.TintColor.G,
+        ImagePositioned.Image.TintColor.B,
+        ImagePositioned.Image.TintColor.A
+    );
+
+    WindowDrawList->AddImageRounded(
+        ImagePositioned.Image.TextureID,
+        ToImVec2(ImagePositioned.Position),
+        Size,
+        UvPositionStart,
+        UvPositionEnd,
+        TintColor,
+        ImagePositioned.Image.CornerRounding,
+        ImDrawFlags_RoundCornersAll
+    );
+}
+
 const Vector2 Gui::ToVector2(const ImVec2& ImguiVec2) const
 {
     return Vector2(ImguiVec2.x, ImguiVec2.y);

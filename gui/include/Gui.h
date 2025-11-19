@@ -2,13 +2,12 @@
 
 #include "Color.h"
 #include "Vector.h"
-// NOTE: Not inluding header files to aoid conflict with GLAD when imported into client.cpp
+// NOTE: Not inluding header files to avoid conflict with GLAD when imported into client.cpp
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 #include <imgui/imgui.h>
 
 #include <functional>
-#include <optional>
 #include <string>
 
 struct Button
@@ -19,12 +18,18 @@ struct Button
     Rgba BgColor = Rgba(255, 0, 0, 255);
     Rgba BgColorActive = {};
     Rgba BgColorHovered = {};
+    Rgba TextColor = Rgba(255, 255, 255, 255);
     float BorderSize = 0.0f;
     float CornerRounding = 0.0f;
     bool IsDisabled = false;
 
     std::function<void()> OnClick;
     std::function<void()> OnHover = {};
+};
+
+struct ContainerState
+{
+    bool IsHovered = false;
 };
 
 struct Container
@@ -39,7 +44,7 @@ struct Container
     bool IsAutoResizableY = false;
     bool IsAutoResizableX = false;
 
-    std::function<void()> DrawContent;
+    std::function<void(const ContainerState&)> DrawContent;
     std::function<void()> OnHover = {};
 };
 
@@ -52,7 +57,17 @@ struct Image
 {
     unsigned int TextureID;
     Vector2 Size;
+    Rgba TintColor = Rgba(255, 255, 255, 255);
     float CornerRounding = 0.0f;
+};
+
+struct ImageButton
+{
+    std::string ID;
+    Image Image;
+    Rgba TintColorHovered = {};
+
+    std::function<void()> OnClick;
 };
 
 struct Node
@@ -110,6 +125,7 @@ public:
     void DrawButton(Button& Button) const;
     void DrawContainer(Container& Container) const;
     void DrawImage(const Image& Image) const;
+    void DrawImageButton(ImageButton& ImageButton) const;
     void DrawNode(const Node& Node) const;
     void DrawText(const Text& Text) const;
     void DrawTextWrapped(const Text& Text) const;
@@ -136,6 +152,13 @@ public:
     void SetPositionY(float Y) const;
 
 private:
+    struct ImagePositioned
+    {
+        Image Image;
+        Vector2 Position;
+    };
+
+    void DrawImagePositioned(const ImagePositioned& ImagePositioned) const;
     const Vector2 ToVector2(const ImVec2& Vector2) const;
     const Vector4 ToVector4(const ImVec4& Vector4) const;
     const ImVec2 ToImVec2(const Vector2& Vector2) const;
