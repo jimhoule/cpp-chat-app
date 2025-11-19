@@ -106,8 +106,12 @@ int main()
     glfwSetFramebufferSizeCallback(GlfwWindow, framebuffer_size_callback);
 
     Texture BlankImageTexture = {};
-    BlankImageTexture.Load("../../assets/blank.jpg", 0);
+    BlankImageTexture.Load("../../assets/Blank.jpg", 0);
     BlankImageTexture.Bind();
+
+    Texture ClosableImageTexture = {};
+    ClosableImageTexture.Load("../../assets/Closable.png", 1);
+    ClosableImageTexture.Bind();
 
     Gui ClientGui = {};
     ClientGui.Init(GlfwWindow);
@@ -170,7 +174,7 @@ int main()
         MainWindow.Name = "MainWindow";
         MainWindow.Size = Vector2(WINDOW_WIDTH, WINDOW_HEIGHT);
         MainWindow.BgColor = Rgba(26, 30, 67, 255);
-        MainWindow.DrawContent = [&ClientGui, &BlankImageTexture]() {
+        MainWindow.DrawContent = [&ClientGui, &BlankImageTexture, &ClosableImageTexture]() {
             const Vector2 MAIN_WINDOW_AVAILABLE_SPACE = ClientGui.GetAvailableSpace();
 
             // NAVBAR CONTAINER
@@ -180,7 +184,7 @@ int main()
             NavbarContainer.Padding = Vector2(15.0f, 15.0f);
             // NOTE: Transparent background
             NavbarContainer.BgColor = Rgba(0, 0, 0, 0);
-            NavbarContainer.DrawContent = [&ClientGui]() {
+            NavbarContainer.DrawContent = [&ClientGui](const ContainerState& State) {
                 const Vector2 NAVBAR_CONTAINER_AVAILABLE_SPACE = ClientGui.GetAvailableSpace();
 
                 // NAVBAR
@@ -189,7 +193,7 @@ int main()
                 Navbar.Size = Vector2(NAVBAR_CONTAINER_AVAILABLE_SPACE);
                 Navbar.CornerRounding = 10.f;
                 Navbar.BgColor = Rgba(50, 56, 102, 255);
-                Navbar.DrawContent = [&ClientGui]() {};
+                Navbar.DrawContent = [&ClientGui](const ContainerState& State) {};
 
                 ClientGui.DrawContainer(Navbar);
             };
@@ -203,7 +207,7 @@ int main()
             ChatsContainer.Padding = Vector2(15.0f, 15.0f);
             // NOTE: Transparent background
             ChatsContainer.BgColor = Rgba(0, 0, 0, 0);
-            ChatsContainer.DrawContent = [&ClientGui, &BlankImageTexture]() {
+            ChatsContainer.DrawContent = [&ClientGui, &BlankImageTexture, &ClosableImageTexture](const ContainerState& State) {
                 const Vector2 CHATS_CONTAINER_AVAILABLE_SPACE = ClientGui.GetAvailableSpace();
 
                 // CONVERSATIONS CONTAINER
@@ -212,32 +216,31 @@ int main()
                 ConversationsContainer.Size = Vector2(CHATS_CONTAINER_AVAILABLE_SPACE);
                 ConversationsContainer.CornerRounding = 10.f;
                 ConversationsContainer.BgColor = Rgba(50, 56, 102, 255);
-                ConversationsContainer.DrawContent = [&ClientGui, &BlankImageTexture]() {
+                ConversationsContainer.DrawContent = [&ClientGui, &BlankImageTexture, &ClosableImageTexture](const ContainerState& State) {
                     const Vector2 CONVERSATIONS_CONTAINER_AVAILABLE_SPACE = ClientGui.GetAvailableSpace();
 
                     // CONVERSATIONS NODE
                     Node ConversationsNode = {};
                     ConversationsNode.Name = "Conversations";
-                    ConversationsNode.DrawContent = [&ClientGui, &BlankImageTexture]() {
+                    ConversationsNode.DrawContent = [&ClientGui, &BlankImageTexture, &ClosableImageTexture]() {
                         const Vector2 CONVERSATIONS_NODE_AVAILABLE_SPACE = ClientGui.GetAvailableSpace();
 
                         for (int i = 0; i < Conversations.size(); i++)
                         {
                             const std::shared_ptr<Conversation> Conversation = Conversations[i];
-                            const std::string& ID = "ConversationContainer" + std::to_string(i);
 
                             // CONVERSATION CONTAINER
                             Rgba BgColor = Rgba(50, 56, 102, 255);
                             if (Conversation->ID == SelectedConversation->ID) BgColor = Rgba(100, 100, 100, 255);
 
                             Container ConversationContainer = {};
-                            ConversationContainer.ID = ID;
+                            ConversationContainer.ID = "ConversationContainer" + Conversation->ID;;
                             ConversationContainer.Size = Vector2(CONVERSATIONS_NODE_AVAILABLE_SPACE.X, CONVERSATIONS_NODE_AVAILABLE_SPACE.Y * 0.05f);
                             ConversationContainer.CornerRounding = 10.f;
                             ConversationContainer.BgColor = BgColor;
                             ConversationContainer.BgColorHovered = Rgba(0, 0, 0, 255);
                             ConversationContainer.IsAutoResizableY = true;
-                            ConversationContainer.DrawContent = [&ClientGui, &BlankImageTexture, &Conversation]() {
+                            ConversationContainer.DrawContent = [&ClientGui, &BlankImageTexture, &ClosableImageTexture, &Conversation, i](const ContainerState& State) {
                                 const Vector2 CONVERSATION_CONTAINER_AVAILABLE_SPACE = ClientGui.GetAvailableSpace();
 
                                 // CONVERSATION IMAGE
@@ -248,11 +251,12 @@ int main()
                                 ClientGui.DrawImage(ConversationImage);
 
                                 // SELECT CONVERSATION BUTTON
-                                ImVec2 TextSize = ImGui::CalcTextSize(Conversation->ID.c_str());
-
                                 Button SelectConversationButton = {};
                                 SelectConversationButton.Label = Conversation->ID;
-                                SelectConversationButton.Size = Vector2(TextSize.x, TextSize.y);
+                                SelectConversationButton.Size = Vector2(
+                                    CONVERSATION_CONTAINER_AVAILABLE_SPACE.X - (ConversationImage.Size.X * 2),
+                                    CONVERSATION_CONTAINER_AVAILABLE_SPACE.Y
+                                );
                                 // NOTE: Transparent background
                                 SelectConversationButton.BgColor = Rgba(0, 0, 0, 0);
                                 // NOTE: Transparent background
@@ -264,8 +268,47 @@ int main()
                                     std::cout << "SELECTED CONVERSATION ID: " << SelectedConversation->ID << std::endl;
                                 };
 
-                                ClientGui.SetPositionX(ConversationImage.Size.X + 10.0f);
+                                ClientGui.SetPositionX(ConversationImage.Size.X);
                                 ClientGui.DrawButton(SelectConversationButton);
+
+                                // CLOSE CONVERSATION IMAGE BUTTON CONTAINER
+                                if (!State.IsHovered) return;
+
+                                Container CloseConversationImageButtonContainer = {};
+                                CloseConversationImageButtonContainer.ID = "CloseConversationImageButtonContainer" + Conversation->ID;
+                                CloseConversationImageButtonContainer.Size = ConversationImage.Size;
+                                CloseConversationImageButtonContainer.Padding = Vector2(5.0f, 5.0f);
+                                // NOTE: Transparent background
+                                CloseConversationImageButtonContainer.BgColor = Rgba(0, 0, 0, 0);
+                                CloseConversationImageButtonContainer.DrawContent = [&ClientGui, &ClosableImageTexture, &Conversation, i](const ContainerState& State) {
+                                    // CLOSE CONVERSATION IMAGE BUTTON
+                                    Image CloseConversationImageButtonImage = {};
+                                    CloseConversationImageButtonImage.TextureID = ClosableImageTexture.GetID();
+                                    CloseConversationImageButtonImage.Size = ClientGui.GetAvailableSpace();
+                                    CloseConversationImageButtonImage.TintColor = Rgba(255, 255, 255, 255);
+                                    CloseConversationImageButtonImage.CornerRounding = 0.0f;
+
+                                    ImageButton CloseConversationImageButton = {};
+                                    CloseConversationImageButton.ID = "CloseConversationImageButton" + Conversation->ID;
+                                    CloseConversationImageButton.Image = CloseConversationImageButtonImage;
+                                    CloseConversationImageButton.TintColorHovered = Rgba(200, 200, 0, 255);
+                                    CloseConversationImageButton.OnClick = [i]() {
+                                        const std::string& ID = Conversations[i]->ID;
+
+                                        // Deletes conversation
+                                        Conversations.erase(Conversations.begin() + i);
+                                        // Selects first conversation if deleted conversation is the selected one
+                                        if (SelectedConversation->ID == ID) SelectedConversation = Conversations[0];
+
+                                        std::cout << "DELETED CONVERSATION ID: " << ID << std::endl;
+                                    };
+
+                                    ClientGui.DrawImageButton(CloseConversationImageButton);
+                                };
+
+                                ClientGui.DisplayInline();
+                                ClientGui.SetPositionX(ConversationImage.Size.X + SelectConversationButton.Size.X);
+                                ClientGui.DrawContainer(CloseConversationImageButtonContainer);
                             };
 
                             ClientGui.DrawContainer(ConversationContainer);
@@ -287,7 +330,7 @@ int main()
             SelectedConversationContainer.Padding = Vector2(15.0f, 15.0f);
             // NOTE: Transparent background
             SelectedConversationContainer.BgColor = Rgba(0, 0, 0, 0);
-            SelectedConversationContainer.DrawContent = [&ClientGui, &BlankImageTexture]() {
+            SelectedConversationContainer.DrawContent = [&ClientGui, &BlankImageTexture](const ContainerState& State) {
                 const Vector2 SELECTED_CONVERSATION_CONTAINER_AVAILABLE_SPACE = ClientGui.GetAvailableSpace();
 
                 // MESSSAGES CONTAINER
@@ -296,7 +339,7 @@ int main()
                 MessagesContainer.Size = Vector2(SELECTED_CONVERSATION_CONTAINER_AVAILABLE_SPACE);
                 MessagesContainer.CornerRounding = 10.f;
                 MessagesContainer.BgColor = Rgba(50, 56, 102, 255);
-                MessagesContainer.DrawContent = [&ClientGui, &BlankImageTexture]() {
+                MessagesContainer.DrawContent = [&ClientGui, &BlankImageTexture](const ContainerState& State) {
                     const Vector2 MESSAGES_CONTAINER_AVAILABLE_SPACE = ClientGui.GetAvailableSpace();
 
                     for (int i = 0; i < SelectedConversation->Messages.size(); i++)
@@ -312,7 +355,7 @@ int main()
                         // NOTE: Transparent background
                         MessageContainer.BgColor = Rgba(0, 0, 0, 0);
                         MessageContainer.IsAutoResizableY = true;
-                        MessageContainer.DrawContent = [&ClientGui, &BlankImageTexture, &MESSAGE]() {
+                        MessageContainer.DrawContent = [&ClientGui, &BlankImageTexture, &MESSAGE](const ContainerState& State) {
                             const Vector2 MESSAGE_CONTAINER_AVAILABLE_SPACE = ClientGui.GetAvailableSpace();
 
                             // MESSAGE SENDER IMAGE
@@ -333,7 +376,7 @@ int main()
                             // NOTE: Transparent background
                             MessageDetailsContainer.BgColor = Rgba(0, 0, 0, 0);
                             MessageDetailsContainer.IsAutoResizableY = true;
-                            MessageDetailsContainer.DrawContent = [&ClientGui, &MESSAGE]() {
+                            MessageDetailsContainer.DrawContent = [&ClientGui, &MESSAGE](const ContainerState& State) {
                                 // MESSAGE SENDER FIRSTNAME TEXT
                                 Text MessageSenderFirstNameText = {};
                                 MessageSenderFirstNameText.Value = MESSAGE.SenderFirstName;
@@ -389,7 +432,7 @@ int main()
             MessageTextInputContainer.Padding = Vector2(15.0f, 15.0f);
             // NOTE: Transparent background
             MessageTextInputContainer.BgColor = Rgba(0, 0, 0, 0);
-            MessageTextInputContainer.DrawContent = [&ClientGui]() {
+            MessageTextInputContainer.DrawContent = [&ClientGui](const ContainerState& State) {
                 const Vector2 MESSAGE_TEXTINPUT_CONTAINER_AVAILABLE_SPACE = ClientGui.GetAvailableSpace();
 
                 // MESSAGE TEXT INPUT
@@ -416,7 +459,7 @@ int main()
             SendButtonContainer.Padding = Vector2(15.0f, 15.0f);
             // NOTE: Transparent background
             SendButtonContainer.BgColor = Rgba(0, 0, 0, 0);
-            SendButtonContainer.DrawContent = [&ClientGui]() {
+            SendButtonContainer.DrawContent = [&ClientGui](const ContainerState& State) {
                 const Vector2 SEND_BUTTON_CONTAINER_AVAILABLE_SPACE = ClientGui.GetAvailableSpace();
 
                 // SEND BUTTON
@@ -463,6 +506,7 @@ int main()
     }
 
     BlankImageTexture.Destroy();
+    ClosableImageTexture.Destroy();
     ClientGui.Destroy();
 
     glfwDestroyWindow(GlfwWindow);
