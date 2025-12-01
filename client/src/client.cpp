@@ -9,8 +9,10 @@
 #include <imgui/imgui_impl_glfw.h>
 #include <imgui/imgui_impl_opengl3.h>
 
+#include <algorithm>
 #include <arpa/inet.h>
 #include <ctime>
+#include <cctype>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -24,6 +26,7 @@ struct User
 {
     std::string ID;
     std::string FirstName;
+    std::string LastName;
     std::string ImageUrl;
 };
 
@@ -113,35 +116,48 @@ int main()
     ClosableImageTexture.Load("../../assets/Closable.png", 1);
     ClosableImageTexture.Bind();
 
+    Texture WhiteLeftArrowImageTexture = {};
+    WhiteLeftArrowImageTexture.Load("../../assets/WhiteLeftArrow.png", 1);
+    WhiteLeftArrowImageTexture.Bind();
+
     Gui ClientGui = {};
     ClientGui.Init(GlfwWindow);
 
     // Fake Users
+    User CurrentUser = {};
+    CurrentUser.ID = "CurrentUser";
+    CurrentUser.FirstName = "Olivier";
+    CurrentUser.LastName = "Perron";
+    CurrentUser.ImageUrl = "http://fake.iamge.url";
+
     User User1 = {};
     User1.ID = "User1";
-    User1.FirstName = "Olivier";
+    User1.FirstName = "Marc";
+    User1.LastName = "Bum";
     User1.ImageUrl = "http://fake.iamge.url";
 
     User User2 = {};
-    User1.ID = "User2";
-    User1.FirstName = "Marc";
-    User1.ImageUrl = "http://fake.iamge.url";
+    User2.ID = "User2";
+    User2.FirstName = "Simon";
+    User2.LastName = "Robichaud";
+    User2.ImageUrl = "http://fake.iamge.url";
 
-    User User3 = {};
-    User1.ID = "User3";
-    User1.FirstName = "Simon";
-    User1.ImageUrl = "http://fake.iamge.url";
+    static std::vector<std::shared_ptr<User>> Users = {
+        std::make_shared<User>(CurrentUser),
+        std::make_shared<User>(User1),
+        std::make_shared<User>(User2),
+    };
 
     // Fake conversations
     Conversation Conversation1 = {};
     Conversation1.ID = "Conversation1";
-    Conversation1.Users = { User1, User2 };
+    Conversation1.Users = { CurrentUser, User1 };
     Conversation1.Messages = {};
     Conversation1.CreatedAt = std::time(0);
 
     Conversation Conversation2 = {};
     Conversation2.ID = "Conversation2";
-    Conversation2.Users = { User1, User3 };
+    Conversation2.Users = { CurrentUser, User2 };
     Conversation2.Messages = {};
     Conversation2.CreatedAt = std::time(0);
 
@@ -162,19 +178,22 @@ int main()
 
     while(!glfwWindowShouldClose(GlfwWindow))
     {
-        // Clears screen
-        glClearColor(250.0f / 255.0f, 119.0f / 255.0f, 110.0f / 255.0f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
+        glfwPollEvents();
 
          // Clears ImGui state
         ClientGui.Clear();
+
+        // DEBUG WINDOW
+        static bool IsOpen = false;
+        if (ImGui::IsKeyPressed(ImGuiKey_D)) IsOpen = !IsOpen;
+        if (IsOpen) ImGui::ShowMetricsWindow(&IsOpen);
 
         // WINDOW
         Window MainWindow = {};
         MainWindow.Name = "MainWindow";
         MainWindow.Size = Vector2(WINDOW_WIDTH, WINDOW_HEIGHT);
         MainWindow.BgColor = Rgba(26, 30, 67, 255);
-        MainWindow.DrawContent = [&ClientGui, &BlankImageTexture, &ClosableImageTexture]() {
+        MainWindow.DrawContent = [&ClientGui, &BlankImageTexture, &ClosableImageTexture, &WhiteLeftArrowImageTexture]() {
             const Vector2 MAIN_WINDOW_AVAILABLE_SPACE = ClientGui.GetAvailableSpace();
 
             // NAVBAR CONTAINER
@@ -184,7 +203,7 @@ int main()
             NavbarContainer.Padding = Vector2(15.0f, 15.0f);
             // NOTE: Transparent background
             NavbarContainer.BgColor = Rgba(0, 0, 0, 0);
-            NavbarContainer.DrawContent = [&ClientGui](const ContainerState& State) {
+            NavbarContainer.DrawContent = [&ClientGui, &BlankImageTexture, &WhiteLeftArrowImageTexture](const ContainerState& State) {
                 const Vector2 NAVBAR_CONTAINER_AVAILABLE_SPACE = ClientGui.GetAvailableSpace();
 
                 // NAVBAR
@@ -193,7 +212,324 @@ int main()
                 Navbar.Size = Vector2(NAVBAR_CONTAINER_AVAILABLE_SPACE);
                 Navbar.CornerRounding = 10.f;
                 Navbar.BgColor = Rgba(50, 56, 102, 255);
-                Navbar.DrawContent = [&ClientGui](const ContainerState& State) {};
+                Navbar.DrawContent = [&ClientGui, &BlankImageTexture, &WhiteLeftArrowImageTexture](const ContainerState& State) {
+                    const Vector2 NAVBAR_AVAILABLE_SPACE = ClientGui.GetAvailableSpace();
+
+                    // SEARCH TEXT INPUT CONTAINER
+                    static std::string SearchText = "";
+
+                    Container SearchTextInputContainer = {};
+                    SearchTextInputContainer.ID = "SearchTextInputContainer";
+                    SearchTextInputContainer.Size = Vector2(NAVBAR_AVAILABLE_SPACE.X * 0.50f, NAVBAR_AVAILABLE_SPACE.Y);
+                    SearchTextInputContainer.CornerRounding = 10.0f;
+                    // NOTE: Transparent background
+                    SearchTextInputContainer.BgColor = Rgba(0, 0, 0, 0);
+                    SearchTextInputContainer.DrawContent = [&ClientGui, &BlankImageTexture, &WhiteLeftArrowImageTexture](const ContainerState& State) {
+                        const Vector2 SEARCH_TEXTINPUT_CONTAINER_AVAILABLE_SPACE = ClientGui.GetAvailableSpace();
+
+                        // SEARCH MODAL
+                        Modal SearchModal = {};
+                        SearchModal.ID = "SearchModal";
+                        SearchModal.Size = ClientGui.GetViewportSize();
+
+                        Container SearchModalHeaderContainer = {};
+                        SearchModalHeaderContainer.ID = "SearchModalHeaderContainer";
+                        SearchModalHeaderContainer.Size = Vector2(SearchModal.Size.X , 0.0f);
+                        // NOTE: Transparent background
+                        SearchModalHeaderContainer.BgColor = Rgba(0, 0, 0, 0);
+                        SearchModalHeaderContainer.CornerRounding = SearchModal.CornerRounding;
+                        SearchModalHeaderContainer.IsAutoResizableY = true;
+                        SearchModalHeaderContainer.DrawContent = [&ClientGui, &SearchModal, &WhiteLeftArrowImageTexture](const ContainerState& State) {
+                            const Vector2 SEARCH_MODAL_HEADER_CONTAINER_AVAILABLE_SPACE = ClientGui.GetAvailableSpace();
+
+                            Container SearchModalCloseImageButtonContainer = {};
+                            SearchModalCloseImageButtonContainer.ID = "SearchModalCloseImageButtonContainer";
+                            SearchModalCloseImageButtonContainer.Size = Vector2(
+                                SEARCH_MODAL_HEADER_CONTAINER_AVAILABLE_SPACE.Y ,
+                                SEARCH_MODAL_HEADER_CONTAINER_AVAILABLE_SPACE.Y
+                            );
+                            SearchModalCloseImageButtonContainer.Padding = Vector2(10.0f, 10.0f);
+                            // NOTE: Transparent background
+                            SearchModalCloseImageButtonContainer.BgColor = Rgba(0, 0, 0, 0);
+                            //SearchModalCloseImageButtonContainer.CornerRounding = SearchModal.CornerRounding;
+                            SearchModalCloseImageButtonContainer.DrawContent = [&ClientGui, &SearchModal, &WhiteLeftArrowImageTexture](const ContainerState& State) {
+                                Image SearchModalCloseImageButtonImage = {};
+                                SearchModalCloseImageButtonImage.TextureID = WhiteLeftArrowImageTexture.GetID();
+                                SearchModalCloseImageButtonImage.Size = ClientGui.GetAvailableSpace();
+                                SearchModalCloseImageButtonImage.TintColor = Rgba(255, 255, 255, 255);
+
+                                ImageButton SearchModalCloseImageButton = {};
+                                SearchModalCloseImageButton.ID = "SearchModalCloseImageButton";
+                                SearchModalCloseImageButton.Image = SearchModalCloseImageButtonImage;
+                                SearchModalCloseImageButton.TintColorHovered = Rgba(200, 200, 0, 255);
+                                SearchModalCloseImageButton.OnClick = [&ClientGui, &SearchModal]() {
+                                    ClientGui.CloseModal(SearchModal.ID);
+                                };
+
+                                ClientGui.DrawImageButton(SearchModalCloseImageButton);
+                            };
+
+                            ClientGui.DrawContainer(SearchModalCloseImageButtonContainer);
+
+                            Placeholder SearchModalTextInputPlaceholder = {};
+                            //SearchModalTextInputPlaceholder.Color = Rgba(120, 125, 172, 255);
+                            SearchModalTextInputPlaceholder.Text = "Enter search here...";
+
+                            TextInput SearchModalTextInput = {};
+                            SearchModalTextInput.ID = "SearchModalTextInput";
+                            SearchModalTextInput.Padding = Vector2(15.0f, 15.0f);
+                            SearchModalTextInput.CornerRounding = 10.f;
+                            //SearchModalTextInput.BgColor = Rgba(43, 50, 94, 255);
+                            SearchModalTextInput.BgColor = Rgba(0, 0, 0, 0);
+                            SearchModalTextInput.Placeholder  = SearchModalTextInputPlaceholder;
+
+                            TextInputSingleline SearchModalTextInputSingleline = {};
+                            SearchModalTextInputSingleline.TextInput = SearchModalTextInput;
+                            SearchModalTextInputSingleline.Width = SEARCH_MODAL_HEADER_CONTAINER_AVAILABLE_SPACE.X - SEARCH_MODAL_HEADER_CONTAINER_AVAILABLE_SPACE.Y;
+
+                            ClientGui.DisplayInline();
+                            ClientGui.SetPositionX(SearchModalCloseImageButtonContainer.Size.X);
+                            ClientGui.DrawTextInputSingleline(SearchText, SearchModalTextInputSingleline);
+
+                            Divider BottomDivider = {};
+                            BottomDivider.Color = Rgba(100, 100, 100, 255);
+
+                            ClientGui.SetPositionY(SEARCH_MODAL_HEADER_CONTAINER_AVAILABLE_SPACE.Y - BottomDivider.Height);
+                            ClientGui.DrawDivider(BottomDivider);
+
+                        };
+
+                        Container SearchModalBodyContainer = {};
+                        SearchModalBodyContainer.ID = "SearchModalBodyContainer";
+                        SearchModalBodyContainer.Size = Vector2(SearchModal.Size.X , 0.0f);
+                        SearchModalBodyContainer.Padding = Vector2(15.0f, 15.0f);
+                        // NOTE: Transparent background
+                        SearchModalBodyContainer.BgColor = Rgba(0, 0, 0, 0);
+                        SearchModalBodyContainer.CornerRounding = SearchModal.CornerRounding;
+                        SearchModalBodyContainer.IsAutoResizableY = true;
+                        SearchModalBodyContainer.DrawContent = [&ClientGui, &SearchModal, &BlankImageTexture](const ContainerState& State) {
+                            if (SearchText.empty()) return;
+
+                            const Vector2 SEARCH_MODAL_BODY_CONTAINER_AVAILABLE_SPACE = ClientGui.GetAvailableSpace();
+
+                            std::function<std::vector<std::shared_ptr<User>>(std::string&)> Search = [](std::string& Value) {
+                                // Defines a lambda function as the predicate for filtering
+                                std::function<bool(std::shared_ptr<User>)> IsFound = [&Value](std::shared_ptr<User> User) {
+                                    // Defines a lambda function for converting a char to a lowercase char
+                                    std::function<int(unsigned char)> ConvertCharToLowercase = [&Value](unsigned char Character){
+                                        return std::tolower(Character);
+                                    };
+
+                                    std::string& LowercaseFirstName = User->FirstName;
+                                    std::transform(LowercaseFirstName.begin(), LowercaseFirstName.end(), LowercaseFirstName.begin(), ConvertCharToLowercase);
+
+                                    std::string& LowercaseLastName = User->LastName;
+                                    std::transform(LowercaseLastName.begin(), LowercaseLastName.end(), LowercaseLastName.begin(), ConvertCharToLowercase);
+
+                                    // std::string& LowercaseValue = SearchText;
+                                    std::string& LowercaseValue = Value;
+                                    std::transform(LowercaseValue.begin(), LowercaseValue.end(), LowercaseValue.begin(), ConvertCharToLowercase);
+
+                                    return (
+                                        LowercaseFirstName.find(LowercaseValue) != std::string::npos ||
+                                        LowercaseLastName.find(LowercaseValue) != std::string::npos
+                                    );
+                                };
+
+                                // Copies elements that satisfy the predicate into the new vector
+                                std::vector<std::shared_ptr<User>> FilteredUsers = {};
+                                std::copy_if(Users.begin(), Users.end(), std::back_inserter(FilteredUsers), IsFound);
+
+                                return std::move(FilteredUsers);
+                            };
+
+                            std::vector<std::shared_ptr<User>> Users = Search(SearchText);
+                            if (Users.empty()) return;
+
+                            for (int i = 0; i < Users.size(); i++)
+                            {
+                                std::shared_ptr<User> User = Users[i];
+
+                                // USER CONTAINER
+                                Container UserContainer = {};
+                                UserContainer.ID = User->ID;
+                                UserContainer.Size = Vector2(SEARCH_MODAL_BODY_CONTAINER_AVAILABLE_SPACE.X, 40.0f);
+                                UserContainer.CornerRounding = 10.f;
+                                // NOTE: Transparent background
+                                UserContainer.BgColor = Rgba(0, 0, 0, 0);
+                                UserContainer.BgColorHovered = Rgba(50, 56, 102, 255);
+                                UserContainer.IsAutoResizableY = true;
+                                UserContainer.OnClick = [&ClientGui, &SearchModal, &User]() {
+                                    std::cout << "selected User with ID " << User->ID << std::endl;
+                                    ClientGui.CloseModal(SearchModal.ID);
+                                    SearchText = "";
+                                };
+                                UserContainer.DrawContent = [&ClientGui, &BlankImageTexture, &User](const ContainerState& State) {
+                                    const Vector2 USER_CONTAINER_AVAILABLE_SPACE = ClientGui.GetAvailableSpace();
+
+                                    // USER IMAGE
+                                    Image UserImage = {};
+                                    UserImage.TextureID = BlankImageTexture.GetID();
+                                    UserImage.Size = Vector2(USER_CONTAINER_AVAILABLE_SPACE.Y, USER_CONTAINER_AVAILABLE_SPACE.Y);
+                                    UserImage.CornerRounding = 10.0f;
+
+                                    ClientGui.DrawImage(UserImage);
+
+                                    // USER TEXT
+                                    Text UserText = {};
+                                    UserText.Value = User->FirstName + " " + User->LastName;
+
+                                    ClientGui.DisplayInline();
+                                    ClientGui.SetPositionX(UserImage.Size.X * 1.3f);
+                                    ImVec2 TextSize = ImGui::CalcTextSize(UserText.Value.c_str());
+                                    ClientGui.AlignCenterY(TextSize.y);
+                                    ClientGui.DrawText(UserText);
+                                };
+
+                                ClientGui.DrawContainer(UserContainer);
+                            }
+                        };
+
+                        SearchModal.HeaderContainer = SearchModalHeaderContainer;
+                        SearchModal.BodyContainer = SearchModalBodyContainer;
+
+                        ClientGui.DrawModal(SearchModal);
+
+                        // SEARCH TEXT INPUT
+                        Placeholder SearchTextInputPlaceholder = {};
+                        SearchTextInputPlaceholder.Color = Rgba(120, 125, 172, 255);
+                        if (!ClientGui.AreAnyModalsOpen()) SearchTextInputPlaceholder.Text = "Enter search here...";
+
+                        TextInput SearchTextInput = {};
+                        SearchTextInput.ID = "SearchTextInput";
+                        SearchTextInput.Padding = Vector2(15.0f, 15.0f);
+                        SearchTextInput.CornerRounding = 10.f;
+                        SearchTextInput.BgColor = Rgba(26, 30, 67, 255);
+                        SearchTextInput.Placeholder = SearchTextInputPlaceholder;
+                        SearchTextInput.OnClick = [&ClientGui, &SearchModal]() {
+                           ClientGui.OpenModal(SearchModal.ID);
+                        };
+
+                        TextInputSingleline SearchTextInputSingleline = {};
+                        SearchTextInputSingleline.TextInput = SearchTextInput;
+                        SearchTextInputSingleline.Width = SEARCH_TEXTINPUT_CONTAINER_AVAILABLE_SPACE.X * 0.80f;
+
+                        // NOTE: SearchTextInputSingleline is only a trigger to show SearchModal
+                        std::string EmptyValue = "";
+                        float Height = ImGui::GetFontSize() + ImGui::GetFrameHeight();
+                        ClientGui.AlignCenter(Vector2(SearchTextInputSingleline.Width, Height));
+                        ClientGui.DrawTextInputSingleline(EmptyValue, SearchTextInputSingleline);
+                    };
+
+                    ClientGui.DrawContainer(SearchTextInputContainer);
+
+                    // SETTINGS CONTAINER
+                    Container SettingsContainer = {};
+                    SettingsContainer.ID = "SettingsContainer";
+                    SettingsContainer.Size = Vector2(NAVBAR_AVAILABLE_SPACE.X * 0.50f, NAVBAR_AVAILABLE_SPACE.Y);
+                    SettingsContainer.CornerRounding = 10.0f;
+                    // NOTE: Transparent background
+                    SettingsContainer.BgColor = Rgba(0, 0, 0, 0);
+                    SettingsContainer.DrawContent = [&ClientGui, &BlankImageTexture](const ContainerState& State) {
+                        const Vector2 SETTINGS_CONTAINER_AVAILABLE_SPACE = ClientGui.GetAvailableSpace();
+
+                        // CURRENT USER IMAGE CONTAINER
+                        Container CurrentUserImageContainer = {};
+                        CurrentUserImageContainer.ID = "CurrentUserImageContainer";
+                        CurrentUserImageContainer.Size = Vector2(SETTINGS_CONTAINER_AVAILABLE_SPACE.Y, SETTINGS_CONTAINER_AVAILABLE_SPACE.Y);
+                        CurrentUserImageContainer.CornerRounding = 10.f;
+                        CurrentUserImageContainer.Padding = Vector2(10.0f, 10.0f);
+                        // NOTE: Transparent background
+                        CurrentUserImageContainer.BgColor = Rgba(0, 0, 0, 0);
+                        CurrentUserImageContainer.DrawContent = [&ClientGui, &BlankImageTexture](const ContainerState& State) {
+                            static bool IsSettingsDropDownMenuOpen = false;
+
+                            // CURRENT USER IMAGE BUTTON
+                            Image CurrentUserImage = {};
+                            CurrentUserImage.TextureID = BlankImageTexture.GetID();
+                            CurrentUserImage.Size = ClientGui.GetAvailableSpace();
+                            CurrentUserImage.TintColor = Rgba(255, 255, 255, 255);
+                            CurrentUserImage.CornerRounding = 10.0f;
+
+                            ImageButton CurrentUserImageButton = {};
+                            CurrentUserImageButton.ID = "CurrentUserImageButton";
+                            CurrentUserImageButton.Image = CurrentUserImage;
+                            CurrentUserImageButton.TintColorHovered = Rgba(200, 200, 0, 255);
+                            CurrentUserImageButton.OnClick = []() {
+                                IsSettingsDropDownMenuOpen = !IsSettingsDropDownMenuOpen;
+                            };
+
+                            ClientGui.DrawImageButton(CurrentUserImageButton);
+
+                            // Closes setting drop down menu if a modal is open
+                            if (ClientGui.AreAnyModalsOpen()) IsSettingsDropDownMenuOpen = false;
+                            if (!IsSettingsDropDownMenuOpen) return;
+
+                            // SETTINGS DROP DOWN MENU
+                            DropDownMenuItem ProfileDropDownMenuItem = {};
+                            ProfileDropDownMenuItem.Text = "Profile";
+                            ProfileDropDownMenuItem.TextColor = Rgba(255, 255, 255, 255);
+                            ProfileDropDownMenuItem.BgColorHovered = Rgba(50, 56, 102, 255);
+                            ProfileDropDownMenuItem.OnClick = []() {
+                                std::cout << "Profile clicked!" << std::endl;
+                            };
+
+                            DropDownMenuItem PreferencesDropDownMenuItem = {};
+                            PreferencesDropDownMenuItem.Text = "Preferences";
+                            PreferencesDropDownMenuItem.TextColor = Rgba(255, 255, 255, 255);
+                            PreferencesDropDownMenuItem.BgColorHovered = Rgba(50, 56, 102, 255);
+                            PreferencesDropDownMenuItem.OnClick = []() {
+                                std::cout << "Preferences clicked!" << std::endl;
+                            };
+
+                            DropDownMenuItem DownloadssDropDownMenuItem = {};
+                            DownloadssDropDownMenuItem.Text = "Downloads";
+                            DownloadssDropDownMenuItem.TextColor = Rgba(255, 255, 255, 255);
+                            DownloadssDropDownMenuItem.BgColorHovered = Rgba(50, 56, 102, 255);
+                            DownloadssDropDownMenuItem.OnClick = []() {
+                                std::cout << "Downloads clicked!" << std::endl;
+                            };
+
+                            std::vector<std::shared_ptr<DropDownMenuItem>> DropDownMenuItems = {
+                                std::make_shared<DropDownMenuItem>(ProfileDropDownMenuItem),
+                                std::make_shared<DropDownMenuItem>(PreferencesDropDownMenuItem),
+                                std::make_shared<DropDownMenuItem>(DownloadssDropDownMenuItem),
+                            };
+
+                            // Calculates drop down menu size
+                            Vector2 DropDownMenuSize = Vector2(0.0f, 0.0f);
+                            for (std::shared_ptr<DropDownMenuItem> DropDownMenuItem : DropDownMenuItems)
+                            {
+                                ImVec2 TextSize = ImGui::CalcTextSize(DropDownMenuItem->Text.c_str());
+
+                                DropDownMenuSize.Y += TextSize.y;
+                                DropDownMenuSize.X = std::max(DropDownMenuSize.X, TextSize.x);
+                            }
+
+                            Border SettingsDropDownMenuBorder = {};
+                            SettingsDropDownMenuBorder.Color = Rgba(255, 255, 255, 255);
+                            SettingsDropDownMenuBorder.Height = 2.0f;
+
+                            DropDownMenu SettingsDropDownMenu = {};
+                            SettingsDropDownMenu.Border = SettingsDropDownMenuBorder;
+                            SettingsDropDownMenu.Size = DropDownMenuSize;
+                            SettingsDropDownMenu.OuterPadding = Vector2(15.0f, 15.0f);
+                            SettingsDropDownMenu.BgColor = Rgba(26, 30, 67, 255);
+                            SettingsDropDownMenu.LineHeight = 10.0f;
+                            SettingsDropDownMenu.Items = DropDownMenuItems;
+
+                            ClientGui.DrawDropDownMenu(SettingsDropDownMenu);
+
+                        };
+
+                        ClientGui.SetPositionX(SETTINGS_CONTAINER_AVAILABLE_SPACE.X - CurrentUserImageContainer.Size.X);
+                        ClientGui.DrawContainer(CurrentUserImageContainer);
+                    };
+
+                    ClientGui.DisplayInline();
+                    ClientGui.SetPositionX(SearchTextInputContainer.Size.X);
+                    ClientGui.DrawContainer(SettingsContainer);
+                };
 
                 ClientGui.DrawContainer(Navbar);
             };
@@ -234,7 +570,7 @@ int main()
                             if (Conversation->ID == SelectedConversation->ID) BgColor = Rgba(100, 100, 100, 255);
 
                             Container ConversationContainer = {};
-                            ConversationContainer.ID = "ConversationContainer" + Conversation->ID;;
+                            ConversationContainer.ID = "ConversationContainer" + Conversation->ID;
                             ConversationContainer.Size = Vector2(CONVERSATIONS_NODE_AVAILABLE_SPACE.X, CONVERSATIONS_NODE_AVAILABLE_SPACE.Y * 0.05f);
                             ConversationContainer.CornerRounding = 10.f;
                             ConversationContainer.BgColor = BgColor;
@@ -252,7 +588,8 @@ int main()
 
                                 // SELECT CONVERSATION BUTTON
                                 Button SelectConversationButton = {};
-                                SelectConversationButton.Label = Conversation->ID;
+                                // NOTE: The current user is always the first one in the fake data (this logic will have to be refined later on)
+                                SelectConversationButton.Label = Conversation->Users[1].FirstName;
                                 SelectConversationButton.Size = Vector2(
                                     CONVERSATION_CONTAINER_AVAILABLE_SPACE.X - (ConversationImage.Size.X * 2),
                                     CONVERSATION_CONTAINER_AVAILABLE_SPACE.Y
@@ -436,16 +773,22 @@ int main()
                 const Vector2 MESSAGE_TEXTINPUT_CONTAINER_AVAILABLE_SPACE = ClientGui.GetAvailableSpace();
 
                 // MESSAGE TEXT INPUT
+                Placeholder MessageTextInputPlaceholder = {};
+                MessageTextInputPlaceholder.Color = Rgba(120, 125, 172, 255);
+                if (!ClientGui.AreAnyModalsOpen()) MessageTextInputPlaceholder.Text = "Enter message here...";
+
                 TextInput MessageTextInput = {};
                 MessageTextInput.ID = "MessageTextInput";
-                MessageTextInput.Placeholder = "Enter message here...";
-                MessageTextInput.Size = Vector2(MESSAGE_TEXTINPUT_CONTAINER_AVAILABLE_SPACE);
                 MessageTextInput.Padding = Vector2(15.0f, 15.0f);
                 MessageTextInput.CornerRounding = 10.f;
                 MessageTextInput.BgColor = Rgba(43, 50, 94, 255);
-                MessageTextInput.PlaceholderColor = Rgba(120, 125, 172, 255);
+                MessageTextInput.Placeholder = MessageTextInputPlaceholder;
 
-                ClientGui.DrawTextInputMultiline(MessageText, MessageTextInput);
+                TextInputMultiline MessageTextInputMultiline = {};
+                MessageTextInputMultiline.TextInput = MessageTextInput;
+                MessageTextInputMultiline.Size = Vector2(MESSAGE_TEXTINPUT_CONTAINER_AVAILABLE_SPACE);
+
+                ClientGui.DrawTextInputMultiline(MessageText, MessageTextInputMultiline);
             };
 
             ClientGui.SetPositionX(MAIN_WINDOW_AVAILABLE_SPACE.X * 0.25f);
@@ -498,15 +841,19 @@ int main()
 
         ClientGui.DrawWindow(MainWindow);
 
+         // Clears screen
+        glClearColor(250.0f / 255.0f, 119.0f / 255.0f, 110.0f / 255.0f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+
         // Rendering
         ClientGui.Render();
 
         glfwSwapBuffers(GlfwWindow);
-        glfwPollEvents();
     }
 
     BlankImageTexture.Destroy();
     ClosableImageTexture.Destroy();
+    WhiteLeftArrowImageTexture.Destroy();
     ClientGui.Destroy();
 
     glfwDestroyWindow(GlfwWindow);
