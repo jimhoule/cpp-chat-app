@@ -513,8 +513,10 @@ int main()
                             DropDownMenu SettingsDropDownMenu = {};
                             SettingsDropDownMenu.Border = SettingsDropDownMenuBorder;
                             SettingsDropDownMenu.Size = DropDownMenuSize;
+                            SettingsDropDownMenu.OriginOffset = Vector2(-80.0f, 10.0f);
                             SettingsDropDownMenu.OuterPadding = Vector2(15.0f, 15.0f);
                             SettingsDropDownMenu.BgColor = Rgba(26, 30, 67, 255);
+                            SettingsDropDownMenu.CornerRounding = 10.0f;
                             SettingsDropDownMenu.LineHeight = 10.0f;
                             SettingsDropDownMenu.Items = DropDownMenuItems;
 

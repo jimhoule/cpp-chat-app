@@ -78,7 +78,9 @@ struct DropDownMenu
     Border Border = { Rgba(255, 255, 255, 255), 0.0f };
     Vector2 Size;
     Vector2 OuterPadding = Vector2(0.0f, 0.0f);
+    Vector2 OriginOffset = Vector2(0.0f, 0.0f);
     Rgba BgColor = Rgba(0, 0, 0, 255);
+    float CornerRounding = 0.0f;
     float LineHeight = 0.0f;
     std::vector<std::shared_ptr<DropDownMenuItem>> Items;
 };

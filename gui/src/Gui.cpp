@@ -138,41 +138,36 @@ void Gui::DrawDivider(const Divider& Divider) const
     WindowDrawList->AddLine(LineStartPosition, LineEndPosition, Color, Divider.Height);
 }
 
-// NOTE: Draws corners from right to left (top right corner to bottom left corner)
 void Gui::DrawDropDownMenu(const DropDownMenu& DropDownMenu) const
 {
+    ImVec2 TriggerElementBoundingBoxTopLeftCornerPosition = ImGui::GetItemRectMin();
     ImVec2 TriggerElementBoundingBoxBottomRightCornerPosition = ImGui::GetItemRectMax();
 
-    // Gets drop down menu inner rect (content rect) corners (top right corner and bottom left corner)
+    // Gets drop down menu inner rect (content rect) corners
     ImVec2 MinCornerPosition = ImVec2(
-        TriggerElementBoundingBoxBottomRightCornerPosition.x - DropDownMenu.OuterPadding.X,
-        TriggerElementBoundingBoxBottomRightCornerPosition.y + DropDownMenu.OuterPadding.Y
+        TriggerElementBoundingBoxTopLeftCornerPosition.x + DropDownMenu.OuterPadding.X + DropDownMenu.OriginOffset.X,
+        TriggerElementBoundingBoxBottomRightCornerPosition.y + DropDownMenu.OuterPadding.Y + DropDownMenu.OriginOffset.Y
     );
     ImVec2 MaxCornerPosition = ImVec2(
-        TriggerElementBoundingBoxBottomRightCornerPosition.x - DropDownMenu.Size.X - DropDownMenu.OuterPadding.X,
-        TriggerElementBoundingBoxBottomRightCornerPosition.y + DropDownMenu.Size.Y + DropDownMenu.OuterPadding.Y + (DropDownMenu.LineHeight * DropDownMenu.Items.size())
+        MinCornerPosition.x + DropDownMenu.Size.X,
+        MinCornerPosition.y + DropDownMenu.Size.Y+ (DropDownMenu.LineHeight * DropDownMenu.Items.size())
     );
 
-    // Gets drop down menu outer rect (padding rect) corners (top right corner and bottom left corner)
-    ImVec2 PaddedMinCornerPosition = ImVec2(
-        MinCornerPosition.x + DropDownMenu.OuterPadding.X,
+    /**
+     * NOTES:
+     *  - Gets drop down menu outer rect (padding rect) corners
+     *  - Used to apply padding outside of content rect
+     */
+    ImVec2 OuterPaddedMinCornerPosition = ImVec2(
+        MinCornerPosition.x - DropDownMenu.OuterPadding.X,
         MinCornerPosition.y - DropDownMenu.OuterPadding.Y
     );
-    ImVec2 PaddedMaxCornerPosition = ImVec2(
-        MaxCornerPosition.x - DropDownMenu.OuterPadding.X,
+    ImVec2 OuterPaddedMaxCornerPosition = ImVec2(
+        MaxCornerPosition.x + DropDownMenu.OuterPadding.X,
         MaxCornerPosition.y + DropDownMenu.OuterPadding.Y
     );
 
     ImDrawList* ForegroundDrawList = ImGui::GetForegroundDrawList();
-
-    /**
-     * NOTES:
-     *  - Corner rounding is always 0 as it is deactivated for this component
-     *  - Because we draw from top right corner to bottom left corner we would need negative
-     *    values for corner rounding
-     *  - Corner rounding values in ImGui cannot be negative number
-     */
-    float CornerRounding = 0.0f;
 
     ImU32 BgColor = IM_COL32(
         DropDownMenu.BgColor.R,
@@ -181,12 +176,12 @@ void Gui::DrawDropDownMenu(const DropDownMenu& DropDownMenu) const
         DropDownMenu.BgColor.A
     );
 
-    // Draws drop down menu outer rect (padding rect)
+    // Draws drop down menu outer rect (outer padding rect)
     ForegroundDrawList->AddRectFilled(
-        PaddedMinCornerPosition,
-        PaddedMaxCornerPosition,
+        OuterPaddedMinCornerPosition,
+        OuterPaddedMaxCornerPosition,
         BgColor,
-        CornerRounding,
+        DropDownMenu.CornerRounding,
         ImDrawFlags_RoundCornersAll
     );
 
@@ -195,7 +190,7 @@ void Gui::DrawDropDownMenu(const DropDownMenu& DropDownMenu) const
         MinCornerPosition,
         MaxCornerPosition,
         BgColor,
-        CornerRounding,
+        DropDownMenu.CornerRounding,
         ImDrawFlags_RoundCornersAll
     );
 
@@ -207,21 +202,25 @@ void Gui::DrawDropDownMenu(const DropDownMenu& DropDownMenu) const
         DropDownMenu.Border.Color.A
     );
     ForegroundDrawList->AddRect(
-        PaddedMinCornerPosition,
-        PaddedMaxCornerPosition,
+        OuterPaddedMinCornerPosition,
+        OuterPaddedMaxCornerPosition,
         BorderColor,
-        CornerRounding,
+        DropDownMenu.CornerRounding,
         ImDrawFlags_RoundCornersAll,
         DropDownMenu.Border.Height
     );
 
     // Draws drop down menu items
-    ImVec2 TextClickableBoundingBoxMinCornerPosition = ImVec2(PaddedMaxCornerPosition.x, MinCornerPosition.y);
+    // NOTE: Bounding box is not applied on the border
+    ImVec2 TextClickableBoundingBoxMinCornerPosition = ImVec2(
+        OuterPaddedMinCornerPosition.x + DropDownMenu.Border.Height,
+        MinCornerPosition.y
+    );
     for (std::shared_ptr<DropDownMenuItem> DropDownMenuItem : DropDownMenu.Items)
     {
         // Draws centered text
         float TextPositionOffsetY = DropDownMenu.LineHeight * 0.5f;
-        ImVec2 CenteredTextPosition = ImVec2(MaxCornerPosition.x, TextClickableBoundingBoxMinCornerPosition.y + TextPositionOffsetY);
+        ImVec2 CenteredTextPosition = ImVec2(MinCornerPosition.x, TextClickableBoundingBoxMinCornerPosition.y + TextPositionOffsetY);
         ImU32 TextColor = IM_COL32(
             DropDownMenuItem->TextColor.R,
             DropDownMenuItem->TextColor.G,
@@ -237,8 +236,9 @@ void Gui::DrawDropDownMenu(const DropDownMenu& DropDownMenu) const
         // Draws rect bounding box for click and hover events
         ImVec2 TextSize = ImGui::CalcTextSize(DropDownMenuItem->Text.c_str());
         float TextClickableBoundingBoxHeight = TextSize.y + DropDownMenu.LineHeight;
+        // NOTE: Bounding box is not applied on the border
         ImVec2 TextClickableBoundingBoxMaxCornerPosition = ImVec2(
-            PaddedMinCornerPosition.x,
+            OuterPaddedMaxCornerPosition.x - DropDownMenu.Border.Height,
             TextClickableBoundingBoxMinCornerPosition.y + TextClickableBoundingBoxHeight
         );
         ImRect TextClickableBoundingBox(TextClickableBoundingBoxMinCornerPosition, TextClickableBoundingBoxMaxCornerPosition);
