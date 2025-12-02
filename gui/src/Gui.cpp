@@ -487,6 +487,16 @@ void Gui::DisplayInline() const
     ImGui::SameLine();
 }
 
+const Vector2 Gui::GetTextSize(const std::string& Text) const
+{
+    return ToVector2(ImGui::CalcTextSize(Text.c_str()));
+}
+
+float Gui::GetTextInputSinglelineHeight() const
+{
+    return ImGui::GetFontSize() + ImGui::GetFrameHeight();
+}
+
 void Gui::ScrollToY(float Y) const
 {
     ImGui::SetScrollHereY(Y);

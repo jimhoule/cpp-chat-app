@@ -381,8 +381,8 @@ int main()
 
                                     ClientGui.DisplayInline();
                                     ClientGui.SetPositionX(UserImage.Size.X * 1.3f);
-                                    ImVec2 TextSize = ImGui::CalcTextSize(UserText.Value.c_str());
-                                    ClientGui.AlignCenterY(TextSize.y);
+                                    Vector2 TextSize = ClientGui.GetTextSize(UserText.Value);
+                                    ClientGui.AlignCenterY(TextSize.Y);
                                     ClientGui.DrawText(UserText);
                                 };
 
@@ -416,8 +416,8 @@ int main()
 
                         // NOTE: SearchTextInputSingleline is only a trigger to show SearchModal
                         std::string EmptyValue = "";
-                        float Height = ImGui::GetFontSize() + ImGui::GetFrameHeight();
-                        ClientGui.AlignCenter(Vector2(SearchTextInputSingleline.Width, Height));
+                        float SearchTextInputSinglelineHeight = ClientGui.GetTextInputSinglelineHeight();
+                        ClientGui.AlignCenter(Vector2(SearchTextInputSingleline.Width, SearchTextInputSinglelineHeight));
                         ClientGui.DrawTextInputSingleline(EmptyValue, SearchTextInputSingleline);
                     };
 
@@ -500,10 +500,10 @@ int main()
                             Vector2 DropDownMenuSize = Vector2(0.0f, 0.0f);
                             for (std::shared_ptr<DropDownMenuItem> DropDownMenuItem : DropDownMenuItems)
                             {
-                                ImVec2 TextSize = ImGui::CalcTextSize(DropDownMenuItem->Text.c_str());
+                                Vector2 TextSize = ClientGui.GetTextSize(DropDownMenuItem->Text);
 
-                                DropDownMenuSize.Y += TextSize.y;
-                                DropDownMenuSize.X = std::max(DropDownMenuSize.X, TextSize.x);
+                                DropDownMenuSize.Y += TextSize.Y;
+                                DropDownMenuSize.X = std::max(DropDownMenuSize.X, TextSize.X);
                             }
 
                             Border SettingsDropDownMenuBorder = {};
@@ -576,6 +576,10 @@ int main()
                             ConversationContainer.BgColor = BgColor;
                             ConversationContainer.BgColorHovered = Rgba(0, 0, 0, 255);
                             ConversationContainer.IsAutoResizableY = true;
+                            ConversationContainer.OnClick = [&Conversation]() {
+                                SelectedConversation = Conversation;
+                                std::cout << "SELECTED CONVERSATION ID: " << SelectedConversation->ID << std::endl;
+                            };
                             ConversationContainer.DrawContent = [&ClientGui, &BlankImageTexture, &ClosableImageTexture, &Conversation, i](const ContainerState& State) {
                                 const Vector2 CONVERSATION_CONTAINER_AVAILABLE_SPACE = ClientGui.GetAvailableSpace();
 
@@ -586,27 +590,12 @@ int main()
                                 ConversationImage.CornerRounding = 10.0f;
                                 ClientGui.DrawImage(ConversationImage);
 
-                                // SELECT CONVERSATION BUTTON
-                                Button SelectConversationButton = {};
-                                // NOTE: The current user is always the first one in the fake data (this logic will have to be refined later on)
-                                SelectConversationButton.Label = Conversation->Users[1].FirstName;
-                                SelectConversationButton.Size = Vector2(
-                                    CONVERSATION_CONTAINER_AVAILABLE_SPACE.X - (ConversationImage.Size.X * 2),
-                                    CONVERSATION_CONTAINER_AVAILABLE_SPACE.Y
-                                );
-                                // NOTE: Transparent background
-                                SelectConversationButton.BgColor = Rgba(0, 0, 0, 0);
-                                // NOTE: Transparent background
-                                SelectConversationButton.BgColorActive = Rgba(0, 0, 0, 0);
-                                // NOTE: Transparent background
-                                SelectConversationButton.BgColorHovered = Rgba(0, 0, 0, 0);
-                                SelectConversationButton.OnClick = [&Conversation]() {
-                                    SelectedConversation = Conversation;
-                                    std::cout << "SELECTED CONVERSATION ID: " << SelectedConversation->ID << std::endl;
-                                };
+                                // CONVERSATION TEXT
+                                Text ConversationText = {};
+                                ConversationText.Value = Conversation->Users[1].FirstName;
 
-                                ClientGui.SetPositionX(ConversationImage.Size.X);
-                                ClientGui.DrawButton(SelectConversationButton);
+                                ClientGui.SetPositionX(ConversationImage.Size.X + 10.0f);
+                                ClientGui.DrawText(ConversationText);
 
                                 // CLOSE CONVERSATION IMAGE BUTTON CONTAINER
                                 if (!State.IsHovered) return;
@@ -644,7 +633,7 @@ int main()
                                 };
 
                                 ClientGui.DisplayInline();
-                                ClientGui.SetPositionX(ConversationImage.Size.X + SelectConversationButton.Size.X);
+                                ClientGui.SetPositionX(CONVERSATION_CONTAINER_AVAILABLE_SPACE.X - CloseConversationImageButtonContainer.Size.X);
                                 ClientGui.DrawContainer(CloseConversationImageButtonContainer);
                             };
 

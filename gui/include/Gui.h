@@ -274,6 +274,8 @@ public:
     void AlignCenterX(float ElementWidth) const;
     void AlignCenterY(float ElementHeigth) const;
     void DisplayInline() const;
+    const Vector2 GetTextSize(const std::string& Text) const;
+    float GetTextInputSinglelineHeight() const;
     void ScrollToY(float X) const;
     void ScrollToX(float Y) const;
     float GetScrollPositionY() const;
