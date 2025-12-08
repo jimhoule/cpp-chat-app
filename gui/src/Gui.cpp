@@ -16,7 +16,7 @@ void Gui::Init(GLFWwindow* GlfwWindow) const
     (void)Io;
     Io.Fonts->AddFontFromFileTTF("../../assets/Audiowide-Regular.ttf");
 
-     // Setup Dear ImGui style
+    // Setup Dear ImGui style
     ImGuiStyle& Style = ImGui::GetStyle();
     ImGui::StyleColorsDark();
 
@@ -60,7 +60,11 @@ void Gui::DrawButton(Button& Button) const
 
     ImGui::Button(Button.Label.c_str(), ImVec2(Button.Size.X, Button.Size.Y));
     if (ImGui::IsItemClicked()) Button.OnClick();
-    if (ImGui::IsItemHovered() && !!Button.OnHover) Button.OnHover();
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+        if (!!Button.OnHover) Button.OnHover();
+    }
 
     if (Button.IsDisabled)  ImGui::EndDisabled();
 
@@ -309,7 +313,11 @@ void Gui::DrawImageButton(ImageButton& ImageButton) const
 
     ImGui::InvisibleButton(ImageButton.ID.c_str(), ToImVec2(ImageButton.Image.Size));
     if (ImGui::IsItemClicked()) ImageButton.OnClick();
-    if (ImGui::IsItemHovered() && !ImageButton.TintColorHovered.IsEmpty()) ImageButtonImage.TintColor = ImageButton.TintColorHovered;
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+        if (!ImageButton.TintColorHovered.IsEmpty()) ImageButtonImage.TintColor = ImageButton.TintColorHovered;
+    }
 
     ImagePositioned ImagePositioned = {};
     ImagePositioned.Image = ImageButtonImage;
@@ -354,14 +362,36 @@ void Gui::DrawNode(const Node& Node) const
     }
 }
 
-void Gui::DrawText(const Text& Text) const
+void Gui::DrawText(Text& Text) const
 {
+    ImGui::PushStyleColor(ImGuiCol_Text, ToImVec4(Text.Color.ToVector4()));
+    if (!!Text.Height)
+    {
+        ImGuiIO& Io = ImGui::GetIO();
+        ImFont* Font = Io.Fonts->AddFontFromFileTTF("../../assets/Audiowide-Regular.ttf", Text.Height);
+        ImGui::PushFont(Font);
+    }
+
     ImGui::TextUnformatted(Text.Value.c_str());
+
+    ImGui::PopStyleColor(1);
+    if (!!Text.Height) ImGui::PopFont();
 }
 
-void Gui::DrawTextWrapped(const Text& Text) const
+void Gui::DrawTextWrapped(Text& Text) const
 {
+    ImGui::PushStyleColor(ImGuiCol_Text, ToImVec4(Text.Color.ToVector4()));
+    if (!!Text.Height)
+    {
+        ImGuiIO& Io = ImGui::GetIO();
+        ImFont* Font = Io.Fonts->AddFontFromFileTTF("../../assets/Audiowide-Regular.ttf", Text.Height);
+        ImGui::PushFont(Font);
+    }
+
     ImGui::TextWrapped("%s", Text.Value.c_str());
+
+    ImGui::PopStyleColor(1);
+    if (!!Text.Height) ImGui::PopFont();
 }
 
 void Gui::DrawTextInputMultiline(std::string& Value, TextInputMultiline& TextInputMultiline) const
@@ -490,6 +520,22 @@ void Gui::DisplayInline() const
 const Vector2 Gui::GetTextSize(const std::string& Text) const
 {
     return ToVector2(ImGui::CalcTextSize(Text.c_str()));
+}
+
+const Vector2 Gui::GetTextSize(const Text& Text) const
+{
+    if (!!Text.Height)
+    {
+        ImGuiIO& Io = ImGui::GetIO();
+        ImFont* Font = Io.Fonts->AddFontFromFileTTF("../../assets/Audiowide-Regular.ttf", Text.Height);
+        ImGui::PushFont(Font);
+    }
+
+    ImVec2 TextSize = ImGui::CalcTextSize(Text.Value.c_str());
+
+    if (!!Text.Height) ImGui::PopFont();
+
+    return ToVector2(TextSize);
 }
 
 float Gui::GetTextInputSinglelineHeight() const

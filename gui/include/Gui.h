@@ -88,6 +88,8 @@ struct DropDownMenu
 struct Text
 {
     std::string Value;
+    Rgba Color = Rgba(255, 255, 255, 255);
+    float Height = NULL;
 };
 
 struct Image
@@ -213,8 +215,8 @@ public:
     void DrawImageButton(ImageButton& ImageButton) const;
     void DrawNode(const Node& Node) const;
     void DrawModal(Modal& Modal) const;
-    void DrawText(const Text& Text) const;
-    void DrawTextWrapped(const Text& Text) const;
+    void DrawText(Text& Text) const;
+    void DrawTextWrapped(Text& Text) const;
     void DrawTextInputMultiline(std::string& Value, TextInputMultiline& TextInputMultiline) const;
     void DrawTextInputSingleline(std::string& Value, TextInputSingleline& TextInputSingleline) const;
     void DrawTreeNode(const TreeNode& RootTreeNode) const;
@@ -277,6 +279,7 @@ public:
     void AlignCenterY(float ElementHeigth) const;
     void DisplayInline() const;
     const Vector2 GetTextSize(const std::string& Text) const;
+    const Vector2 GetTextSize(const Text& Text) const;
     float GetTextInputSinglelineHeight() const;
     void ScrollToY(float X) const;
     void ScrollToX(float Y) const;
