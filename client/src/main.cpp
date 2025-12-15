@@ -1,4 +1,5 @@
 #include "api/AuthApi.h"
+#include "DebugOverlay.h"
 #include "layer/LayerStack.h"
 #include "layer/ChatLayer.h"
 #include "layer/LoginLayer.h"
@@ -53,7 +54,7 @@ int main()
     glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
 
 
-    LayerStack AppLayerStack;
+    std::shared_ptr<LayerStack> AppLayerStack = std::make_shared<LayerStack>();
 
     // Apis
     AuthApi AppAuthApi;
@@ -62,18 +63,21 @@ int main()
     Gui AppGui = {};
     AppGui.Init(GlfwWindow);
 
+    // Debug overlay
+    DebugOverlay AppDebugOverlay(AppGui, AppLayerStack);
+
     // Chat layer
     std::shared_ptr<ChatLayer> Chat = std::make_shared<ChatLayer>("Chat", AppGui);
      Chat->OnLogoutButtonClick = [&AppLayerStack]() {
-        AppLayerStack.Pop();
-        AppLayerStack.Unsuspend("Login");
+        AppLayerStack->Pop();
+        AppLayerStack->Unsuspend("Login");
     };
 
     // Register layer
     std::shared_ptr<RegisterLayer> Register = std::make_shared<RegisterLayer>("Register", AppGui);
      Register->OnLoginButtonClick = [&AppLayerStack]() {
-        AppLayerStack.Pop();
-        AppLayerStack.Unsuspend("Login");
+        AppLayerStack->Pop();
+        AppLayerStack->Unsuspend("Login");
     };
     Register->OnRegisterButtonClick = [&AppAuthApi, &AppLayerStack, &Chat](const std::string& FirstName, const std::string& LastName, const std::string& Email, const std::string& Password) {
         RegisterParams RegisterParams = {};
@@ -83,8 +87,8 @@ int main()
         RegisterParams.Password = Password;
         AppAuthApi.Register(RegisterParams);
 
-        AppLayerStack.Pop();
-        AppLayerStack.Push(Chat);
+        AppLayerStack->Pop();
+        AppLayerStack->Push(Chat);
     };
 
     // Login layer
@@ -95,15 +99,15 @@ int main()
         LoginParams.Password = Password;
         AppAuthApi.Login(LoginParams);
 
-        AppLayerStack.Push(Chat);
-        AppLayerStack.Suspend("Login");
+        AppLayerStack->Push(Chat);
+        AppLayerStack->Suspend("Login");
     };
     Login->OnRegisterButtonClick = [&AppLayerStack, &Register]() {
-        AppLayerStack.Push(Register);
-        AppLayerStack.Suspend("Login");
+        AppLayerStack->Push(Register);
+        AppLayerStack->Suspend("Login");
     };
 
-    AppLayerStack.Push(Login);
+    AppLayerStack->Push(Login);
 
     // SocketClient socket_client;
     // socket_client.Connect(SERVER_PORT, "127.0.0.1");
@@ -118,21 +122,21 @@ int main()
     {
         glfwPollEvents();
 
-        AppLayerStack.Update();
+        AppLayerStack->Update();
         AppGui.Clear();
 
         // Clears screen
         glClearColor(250.0f / 255.0f, 119.0f / 255.0f, 110.0f / 255.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        // Rendering
-        AppLayerStack.Render();
+        AppLayerStack->Render();
+        AppDebugOverlay.Render();
         AppGui.Render();
 
         glfwSwapBuffers(GlfwWindow);
     }
 
-    AppLayerStack.Clear();
+    AppLayerStack->Clear();
     AppGui.Destroy();
 
     glfwDestroyWindow(GlfwWindow);
