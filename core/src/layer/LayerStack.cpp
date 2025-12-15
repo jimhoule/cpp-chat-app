@@ -1,5 +1,7 @@
 #include "layer/LayerStack.h"
 
+#include <algorithm>
+#include <functional>
 #include <memory>
 #include <vector>
 
@@ -8,15 +10,12 @@
 // **********
 void LayerStack::Clear()
 {
-    while (!m_Layers.empty())
+    for (std::shared_ptr<Layer> Layer : m_Layers)
     {
-        Pop();
+        Layer->OnDetach();
     }
-}
 
-bool LayerStack::IsEmpty() const
-{
-    return m_Layers.empty();
+    m_Layers.clear();
 }
 
 void LayerStack::Push(std::shared_ptr<Layer> Layer)
@@ -75,7 +74,17 @@ void LayerStack::Render() const
     }
 }
 
+std::vector<std::shared_ptr<Layer>>LayerStack::GetLayers() const
+{
+    return m_Layers;
+}
+
 int LayerStack::GetSize() const
 {
     return m_Layers.size();
+}
+
+bool LayerStack::IsEmpty() const
+{
+    return m_Layers.empty();
 }
