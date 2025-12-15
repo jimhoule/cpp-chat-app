@@ -45,6 +45,7 @@ void Gui::Clear() const
     ImGui::NewFrame();
 }
 
+// Elements
 void Gui::DrawButton(Button& Button) const
 {
     ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, Button.Border.Height);
@@ -474,6 +475,53 @@ void Gui::DrawWindow(Window& Window) const
     ImGui::PopStyleColor(1);
 }
 
+/**
+ * NOTES:
+ *  - Raw elements
+ *  - Those elements are drawn on the foreground without being clipped to any parent elements
+ *  - They will always be drawn on top of any other elements
+ */
+void Gui::DrawRawText(const RawText& RawText) const
+{
+    ImDrawList* ForegroundDrawList = ImGui::GetForegroundDrawList();
+
+    ImU32 Color = IM_COL32(
+        RawText.Color.R,
+        RawText.Color.G,
+        RawText.Color.B,
+        RawText.Color.A
+    );
+
+    ForegroundDrawList->AddText(
+        ToImVec2(RawText.Position),
+        Color,
+        RawText.Value.c_str()
+    );
+}
+
+void Gui::DrawRawWindow(const RawWindow& RawWindow) const
+{
+    ImDrawList* ForegroundDrawList = ImGui::GetForegroundDrawList();
+
+    ImU32 BgColor = IM_COL32(
+        RawWindow.BgColor.R,
+        RawWindow.BgColor.G,
+        RawWindow.BgColor.B,
+        RawWindow.BgColor.A
+    );
+
+    ForegroundDrawList->AddRectFilled(
+        ToImVec2(RawWindow.MinCornerPosition),
+        ToImVec2(RawWindow.MaxCornerPosition),
+        BgColor,
+        RawWindow.CornerRounding,
+        ImDrawFlags_RoundCornersAll
+    );
+
+    RawWindow.DrawContent();
+}
+
+// Modal helpers
 bool Gui::AreAnyModalsOpen() const
 {
     return !!OpenModalIds.size();
@@ -491,6 +539,7 @@ void Gui::CloseModal(const std::string& ID)
     OpenModalIds.erase(ID);
 }
 
+// Position helpers
 void Gui::AlignCenter(Vector2 ElementSize) const
 {
     const Vector2 AVAILABLE_SPACE = GetAvailableSpace();

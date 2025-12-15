@@ -11,6 +11,7 @@
 #include <memory>
 #include <string>
 
+// Elements
 struct Border
 {
     Rgba Color;
@@ -197,6 +198,29 @@ struct Window
     std::function<void()> DrawContent;
 };
 
+/**
+ * NOTES:
+ *  - Raw elements
+ *  - Those elements are drawn on the foreground without being clipped to any parent elements
+ *  - They will always be drawn on top of any other elements
+ */
+struct RawText
+{
+    std::string Value;
+    Vector2 Position;
+    Rgba Color = Rgba(255, 255, 255, 255);
+};
+
+struct RawWindow
+{
+    Vector2 MinCornerPosition;
+    Vector2 MaxCornerPosition;
+    Rgba BgColor = Rgba(0, 0, 0, 255);
+    float CornerRounding = 0.0f;
+
+    std::function<void()> DrawContent;
+};
+
 class Gui
 {
 public:
@@ -207,6 +231,7 @@ public:
     void Render() const;
     void Clear() const;
 
+    // Elements
     void DrawButton(Button& Button) const;
     void DrawContainer(Container& Container) const;
     void DrawDivider(const Divider& Divider) const;
@@ -270,10 +295,21 @@ public:
         DrawDropDownMenu(SettingsDropDownMenu);
     }
 
+    /**
+     * NOTES:
+     *  - Raw elements
+     *  - Those elements are drawn on the foreground without being clipped to any parent elements
+     *  - They will always be drawn on top of any other elements
+     */
+    void DrawRawText(const RawText& RawText) const;
+    void DrawRawWindow(const RawWindow& RawWindow) const;
+
+    // Modals helpers
     bool AreAnyModalsOpen() const;
     void OpenModal(const std::string& ID);
     void CloseModal(const std::string& ID);
 
+    // Position helpers
     void AlignCenter(Vector2 ElementSize) const;
     void AlignCenterX(float ElementWidth) const;
     void AlignCenterY(float ElementHeigth) const;
