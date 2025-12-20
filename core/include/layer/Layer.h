@@ -1,11 +1,13 @@
 #pragma once
 
-#include <string>
+#include "log/Logger.h"
+
+#include <memory>
 
 class Layer
 {
 public:
-    Layer(const std::string& ID);
+    Layer(const std::string& ID, const std::shared_ptr<Logger>& Logger);
     virtual ~Layer() = default;
 
     virtual void OnAttach();
@@ -19,6 +21,10 @@ public:
     bool IsSuspended() const;
     void Suspend();
     void Unsuspend();
+
+protected:
+    std::shared_ptr<Logger> m_Logger = nullptr;
+
 private:
     std::string m_ID = "";
     bool m_IsSuspended = false;

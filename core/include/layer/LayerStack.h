@@ -2,7 +2,6 @@
 
 #include "layer/Layer.h"
 
-#include <memory>
 #include <vector>
 
 class LayerStack

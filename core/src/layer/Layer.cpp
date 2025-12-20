@@ -3,7 +3,7 @@
 // **********
 // * PUBLIC *
 // **********
-Layer::Layer(const std::string& ID) : m_ID(ID)
+Layer::Layer(const std::string& ID, const std::shared_ptr<Logger>& Logger) : m_ID(ID), m_Logger(Logger)
 {}
 
 void Layer::OnAttach()
