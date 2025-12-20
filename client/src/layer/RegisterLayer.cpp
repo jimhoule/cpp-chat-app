@@ -3,7 +3,10 @@
 // **********
 // * PUBLIC *
 // **********
-RegisterLayer::RegisterLayer(const std::string& ID, const Gui& Gui) : Layer(ID), m_Gui(Gui)
+RegisterLayer::RegisterLayer(const std::string& ID, const Gui& Gui) : Layer(ID, std::make_shared<Logger>(ID, "client/src/layer/RegisterLayer")), m_Gui(Gui)
+{}
+
+RegisterLayer::RegisterLayer(const std::string& ID, const Gui& Gui, const std::shared_ptr<Logger>& Logger) : Layer(ID, Logger), m_Gui(Gui)
 {}
 
 void RegisterLayer::OnDetach()

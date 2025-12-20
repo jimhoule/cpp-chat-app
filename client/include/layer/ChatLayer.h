@@ -7,13 +7,12 @@
 #include "Texture.h"
 
 #include <functional>
-#include <memory>
-#include <string>
 
 class ChatLayer : public Layer
 {
 public:
     ChatLayer(const std::string& ID, const Gui& Gui);
+    ChatLayer(const std::string& ID, const Gui& Gui, const std::shared_ptr<Logger>& Logger);
 
     void OnAttach() override;
     void OnDetach() override;

@@ -4,13 +4,12 @@
 #include "layer/Layer.h"
 
 #include <functional>
-#include <memory>
-#include <string>
 
 class RegisterLayer : public Layer
 {
 public:
     RegisterLayer(const std::string& ID, const Gui& Gui);
+    RegisterLayer(const std::string& ID, const Gui& Gui, const std::shared_ptr<Logger>& Logger);
 
     void OnDetach() override;
     void OnRender() override;

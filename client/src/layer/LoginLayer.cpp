@@ -3,7 +3,10 @@
 // **********
 // * PUBLIC *
 // **********
-LoginLayer::LoginLayer(const std::string& ID, const Gui& Gui) : Layer(ID), m_Gui(Gui)
+LoginLayer::LoginLayer(const std::string& ID, const Gui& Gui) : Layer(ID, std::make_shared<Logger>(ID, "client/src/layer/LoginLayer")), m_Gui(Gui)
+{}
+
+LoginLayer::LoginLayer(const std::string& ID, const Gui& Gui, const std::shared_ptr<Logger>& Logger) : Layer(ID, Logger), m_Gui(Gui)
 {}
 
 void LoginLayer::OnDetach()

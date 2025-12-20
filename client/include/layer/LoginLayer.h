@@ -4,13 +4,12 @@
 #include "layer/Layer.h"
 
 #include <functional>
-#include <memory>
-#include <string>
 
 class LoginLayer : public Layer
 {
 public:
     LoginLayer(const std::string& ID, const Gui& Gui);
+    LoginLayer(const std::string& ID, const Gui& Gui, const std::shared_ptr<Logger>& Logger);
 
     void OnDetach() override;
     void OnSuspend() override;

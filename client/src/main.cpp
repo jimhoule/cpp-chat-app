@@ -1,9 +1,11 @@
 #include "api/AuthApi.h"
-#include "DebugOverlay.h"
+#include "debug/DebugLogger.h"
+#include "debug/DebugOverlay.h"
 #include "layer/LayerStack.h"
 #include "layer/ChatLayer.h"
 #include "layer/LoginLayer.h"
 #include "layer/RegisterLayer.h"
+#include "log/Logger.h"
 #include "SocketClient.h"
 
 #include <GLAD/glad.h>
@@ -64,18 +66,20 @@ int main()
     AppGui.Init(GlfwWindow);
 
     // Debug overlay
-    DebugOverlay AppDebugOverlay(AppGui, AppLayerStack);
+    std::shared_ptr<DebugOverlay> AppDebugOverlay =  std::make_shared<DebugOverlay>(AppGui, AppLayerStack);
 
     // Chat layer
-    std::shared_ptr<ChatLayer> Chat = std::make_shared<ChatLayer>("Chat", AppGui);
-     Chat->OnLogoutButtonClick = [&AppLayerStack]() {
+    std::shared_ptr<DebugLogger> ChatLogger = std::make_shared<DebugLogger>("CHAT", "client/src/layer/ChatLayer", AppDebugOverlay);
+    std::shared_ptr<ChatLayer> Chat = std::make_shared<ChatLayer>("Chat", AppGui, ChatLogger);
+    Chat->OnLogoutButtonClick = [&AppLayerStack]() {
         AppLayerStack->Pop();
         AppLayerStack->Unsuspend("Login");
     };
 
     // Register layer
-    std::shared_ptr<RegisterLayer> Register = std::make_shared<RegisterLayer>("Register", AppGui);
-     Register->OnLoginButtonClick = [&AppLayerStack]() {
+    std::shared_ptr<DebugLogger> RegisterLogger = std::make_shared<DebugLogger>("REGISTER", "client/src/layer/RegisterLayer", AppDebugOverlay);
+    std::shared_ptr<RegisterLayer> Register = std::make_shared<RegisterLayer>("Register", AppGui, RegisterLogger);
+    Register->OnLoginButtonClick = [&AppLayerStack]() {
         AppLayerStack->Pop();
         AppLayerStack->Unsuspend("Login");
     };
@@ -92,7 +96,8 @@ int main()
     };
 
     // Login layer
-    std::shared_ptr<LoginLayer> Login = std::make_shared<LoginLayer>("Login", AppGui);
+    std::shared_ptr<DebugLogger> LoginLogger = std::make_shared<DebugLogger>("LOGIN", "client/src/layer/LoginLayer", AppDebugOverlay);
+    std::shared_ptr<LoginLayer> Login = std::make_shared<LoginLayer>("Login", AppGui, LoginLogger);
     Login->OnLoginButtonClick = [&AppAuthApi, &AppLayerStack, &Chat](const std::string& Email, const std::string& Password) {
         LoginParams LoginParams = {};
         LoginParams.Email = Email;
@@ -130,7 +135,7 @@ int main()
         glClear(GL_COLOR_BUFFER_BIT);
 
         AppLayerStack->Render();
-        AppDebugOverlay.Render();
+        AppDebugOverlay->Render();
         AppGui.Render();
 
         glfwSwapBuffers(GlfwWindow);

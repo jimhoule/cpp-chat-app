@@ -7,9 +7,10 @@ set(GLM_VENDOR_NAME glm::glm)
 set(IMGUI_VENDOR_NAME ImGui)
 
 file(GLOB API_SOURCE_FILES "src/api/*.cpp")
+file(GLOB DEBUG_SOURCE_FILES "src/debug/*.cpp")
 file(GLOB LAYER_SOURCE_FILES "src/layer/*.cpp")
 
-add_executable(${CLIENT_APP_NAME} ${API_SOURCE_FILES} ${LAYER_SOURCE_FILES} src/main.cpp src/DebugOverlay.cpp)
+add_executable(${CLIENT_APP_NAME} ${API_SOURCE_FILES} ${DEBUG_SOURCE_FILES} ${LAYER_SOURCE_FILES} src/main.cpp)
 target_link_libraries(${CLIENT_APP_NAME} PRIVATE
     ${CORE_LIB_NAME}
     ${GUI_LIB_NAME}

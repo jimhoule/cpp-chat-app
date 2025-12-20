@@ -1,13 +1,14 @@
 #include "layer/ChatLayer.h"
 
-#include <iostream>
-
 constexpr int SERVER_PORT =  5000;
 
 // **********
 // * PUBLIC *
 // **********
-ChatLayer::ChatLayer(const std::string& ID, const Gui& Gui) : Layer(ID), m_Gui(Gui)
+ChatLayer::ChatLayer(const std::string& ID, const Gui& Gui) : Layer(ID, std::make_shared<Logger>(ID, "client/src/layer/ChatLayer")), m_Gui(Gui)
+{}
+
+ChatLayer::ChatLayer(const std::string& ID, const Gui& Gui, const std::shared_ptr<Logger>& Logger) : Layer(ID, Logger), m_Gui(Gui)
 {}
 
 void ChatLayer::OnAttach()
@@ -243,7 +244,7 @@ void ChatLayer::OnRender()
                             UserContainer.BgColorHovered = Rgba(50, 56, 102, 255);
                             UserContainer.IsAutoResizableY = true;
                             UserContainer.OnClick = [this, &SearchModal, &User]() {
-                                std::cout << "selected User with ID " << User->ID << std::endl;
+                                m_Logger->Info("selected User with ID " + User->ID);
                                 m_Gui.CloseModal(SearchModal.ID);
                                 m_SearchValue = "";
                             };
@@ -351,16 +352,16 @@ void ChatLayer::OnRender()
                         ProfileDropDownMenuItem.Text = "Profile";
                         ProfileDropDownMenuItem.TextColor = Rgba(255, 255, 255, 255);
                         ProfileDropDownMenuItem.BgColorHovered = Rgba(50, 56, 102, 255);
-                        ProfileDropDownMenuItem.OnClick = []() {
-                            std::cout << "Profile clicked!" << std::endl;
+                        ProfileDropDownMenuItem.OnClick = [this]() {
+                            m_Logger->Info("Profile clicked!");
                         };
 
                         DropDownMenuItem PreferencesDropDownMenuItem = {};
                         PreferencesDropDownMenuItem.Text = "Preferences";
                         PreferencesDropDownMenuItem.TextColor = Rgba(255, 255, 255, 255);
                         PreferencesDropDownMenuItem.BgColorHovered = Rgba(50, 56, 102, 255);
-                        PreferencesDropDownMenuItem.OnClick = []() {
-                            std::cout << "Preferences clicked!" << std::endl;
+                        PreferencesDropDownMenuItem.OnClick = [this]() {
+                            m_Logger->Info("Preferences clicked!");
                         };
 
                         DropDownMenuItem LogoutDropDownMenuItem = {};
@@ -461,7 +462,7 @@ void ChatLayer::OnRender()
                         ConversationContainer.IsAutoResizableY = true;
                         ConversationContainer.OnClick = [this, &Conversation]() {
                             m_SelectedConversation = Conversation;
-                            std::cout << "SELECTED CONVERSATION ID: " << m_SelectedConversation->ID << std::endl;
+                            m_Logger->Info("SELECTED CONVERSATION ID: " + m_SelectedConversation->ID);
                         };
                         ConversationContainer.DrawContent = [this, &Conversation, Index](const ContainerState& State) {
                             const Vector2 CONVERSATION_CONTAINER_AVAILABLE_SPACE = m_Gui.GetAvailableSpace();
@@ -509,7 +510,7 @@ void ChatLayer::OnRender()
                                     // Selects first conversation if deleted conversation is the selected one
                                     if (m_SelectedConversation->ID == ID) m_SelectedConversation = m_Conversations[0];
 
-                                    std::cout << "DELETED CONVERSATION ID: " << ID << std::endl;
+                                    m_Logger->Info("DELETED CONVERSATION ID: " + ID);
                                 };
 
                                 m_Gui.DrawImageButton(CloseConversationImageButton);
@@ -697,7 +698,8 @@ void ChatLayer::OnRender()
                 // TODO: Server call to persist message will go there
 
                 m_SelectedConversation->Messages.push_back(NewMessage);
-                std::cout << "SENT: " << m_MessageValue << std::endl;
+
+                m_Logger->Info("SENT: " + m_MessageValue);
             };
 
             m_Gui.AlignCenter(SendButton.Size);
