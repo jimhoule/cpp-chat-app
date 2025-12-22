@@ -314,23 +314,29 @@ public:
     void AlignCenterX(float ElementWidth) const;
     void AlignCenterY(float ElementHeigth) const;
     void DisplayInline() const;
-    const Vector2 GetTextSize(const std::string& Text) const;
-    const Vector2 GetTextSize(const Text& Text) const;
-    float GetTextInputSinglelineHeight() const;
     void ScrollToY(float X) const;
     void ScrollToX(float Y) const;
     float GetScrollPositionY() const;
     float GetScrollPositionX() const;
     float GetMaxScrollPositionY() const;
     float GetMaxScrollPositionX() const;
-    const Vector2 GetAvailableSpace() const;
-    const Vector2 GetViewportSize() const;
     const Vector2 GetPosition() const;
     float GetPositionX() const;
     float GetPositionY() const;
     void SetPosition(Vector2 Position) const;
     void SetPositionX(float X) const;
     void SetPositionY(float Y) const;
+
+    // Dimension helpers
+    const Vector2 GetAvailableSpace() const;
+    const Vector2 GetParentContainerPaddingSize() const;
+    float GetTextInputSinglelineHeight() const;
+    const Vector2 GetTextSize(const std::string& Text) const;
+    const Vector2 GetTextSize(const Text& Text) const;
+    const Vector2 GetViewportSize() const;
+
+    // Config helpers
+    float GetDeltaTime() const;
 
 private:
     // NOTE: Keeps track of all open modals

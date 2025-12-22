@@ -3,12 +3,8 @@
 // **********
 // * PUBLIC *
 // **********
-DebugOverlay::DebugOverlay(const Gui& Gui, const std::shared_ptr<LayerStack>& LayerStack) : m_Gui(Gui), m_LayerStack(LayerStack)
-{
-    ImGuiIO& Io = ImGui::GetIO();
-    (void)Io;
-    m_Fps = 1.0f / Io.DeltaTime;
-}
+DebugOverlay::DebugOverlay(const Gui& Gui, const std::shared_ptr<LayerStack>& LayerStack) : m_Gui(Gui), m_LayerStack(LayerStack), m_Fps(CalculateFps())
+{}
 
 void DebugOverlay::AddScreenMessage(const ScreenMessage& ScreenMessage)
 {
@@ -35,9 +31,7 @@ void DebugOverlay::Render()
         // NOTE: Limits fps text update to 4 times per seconds
         if (UpdateTimeInterval.count() >= 0.25f)
         {
-            ImGuiIO& Io = ImGui::GetIO();
-            (void)Io;
-            m_Fps = 1.0f / Io.DeltaTime;
+            m_Fps = CalculateFps();
             m_PreviousUpdateTime = CurrentUpdateTime;
         }
 
@@ -88,4 +82,13 @@ void DebugOverlay::Render()
     };
 
     m_Gui.DrawRawWindow(DebugOverlayRawWindow);
+}
+
+
+// ***********
+// * PRIVATE *
+// ***********
+float DebugOverlay::CalculateFps() const
+{
+    return 1.0f / m_Gui.GetDeltaTime();
 }

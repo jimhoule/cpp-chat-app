@@ -577,12 +577,10 @@ void ChatLayer::OnRender()
                         m_Gui.DrawImage(MessageSenderImage);
 
                         // MESSAGE DETAILS CONTAINER
-                        ImGuiStyle& Style = ImGui::GetStyle();
-
                         Container MessageDetailsContainer = {};
                         MessageDetailsContainer.ID = "MessageDetailsContainer";
                         MessageDetailsContainer.Size = Vector2(MESSAGE_CONTAINER_AVAILABLE_SPACE.X - MessageSenderImage.Size.X, 0.0f);
-                        MessageDetailsContainer.Padding = Vector2(Style.WindowPadding.x / 1.5f, 0.0f);
+                        MessageDetailsContainer.Padding = Vector2(m_Gui.GetParentContainerPaddingSize().X / 1.5f, 0.0f);
                         // NOTE: Transparent background
                         MessageDetailsContainer.BgColor = Rgba(0, 0, 0, 0);
                         MessageDetailsContainer.IsAutoResizableY = true;

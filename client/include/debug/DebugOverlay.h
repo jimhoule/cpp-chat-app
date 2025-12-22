@@ -28,4 +28,6 @@ class DebugOverlay
 	std::chrono::steady_clock::time_point m_PreviousUpdateTime = std::chrono::steady_clock::now();
 	float m_Fps = 0.0f;
 	bool m_IsVisible = false;
+
+    float CalculateFps() const;
 };

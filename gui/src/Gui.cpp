@@ -566,32 +566,6 @@ void Gui::DisplayInline() const
     ImGui::SameLine();
 }
 
-const Vector2 Gui::GetTextSize(const std::string& Text) const
-{
-    return ToVector2(ImGui::CalcTextSize(Text.c_str()));
-}
-
-const Vector2 Gui::GetTextSize(const Text& Text) const
-{
-    if (!!Text.Height)
-    {
-        ImGuiIO& Io = ImGui::GetIO();
-        ImFont* Font = Io.Fonts->AddFontFromFileTTF("../../assets/Audiowide-Regular.ttf", Text.Height);
-        ImGui::PushFont(Font);
-    }
-
-    ImVec2 TextSize = ImGui::CalcTextSize(Text.Value.c_str());
-
-    if (!!Text.Height) ImGui::PopFont();
-
-    return ToVector2(TextSize);
-}
-
-float Gui::GetTextInputSinglelineHeight() const
-{
-    return ImGui::GetFontSize() + ImGui::GetFrameHeight();
-}
-
 void Gui::ScrollToY(float Y) const
 {
     ImGui::SetScrollHereY(Y);
@@ -622,16 +596,6 @@ float Gui::GetMaxScrollPositionX() const
     return ImGui::GetScrollMaxX();
 }
 
-const Vector2 Gui::GetAvailableSpace() const
-{
-    return ToVector2(ImGui::GetContentRegionAvail());
-}
-
-const Vector2 Gui::GetViewportSize() const
-{
-    return ToVector2(ImGui::GetIO().DisplaySize);
-}
-
 const Vector2 Gui::GetPosition() const
 {
     return ToVector2(ImGui::GetCursorPos());
@@ -660,6 +624,54 @@ void Gui::SetPositionX(float X) const
 void Gui::SetPositionY(float Y) const
 {
     ImGui::SetCursorPosY(Y);
+}
+
+// Dimension helpers
+const Vector2 Gui::GetAvailableSpace() const
+{
+    return ToVector2(ImGui::GetContentRegionAvail());
+}
+
+const Vector2 Gui::GetParentContainerPaddingSize() const
+{
+    return ToVector2(ImGui::GetStyle().WindowPadding);
+}
+
+float Gui::GetTextInputSinglelineHeight() const
+{
+    return ImGui::GetFontSize() + ImGui::GetFrameHeight();
+}
+
+const Vector2 Gui::GetTextSize(const std::string& Text) const
+{
+    return ToVector2(ImGui::CalcTextSize(Text.c_str()));
+}
+
+const Vector2 Gui::GetTextSize(const Text& Text) const
+{
+    if (!!Text.Height)
+    {
+        ImGuiIO& Io = ImGui::GetIO();
+        ImFont* Font = Io.Fonts->AddFontFromFileTTF("../../assets/Audiowide-Regular.ttf", Text.Height);
+        ImGui::PushFont(Font);
+    }
+
+    ImVec2 TextSize = ImGui::CalcTextSize(Text.Value.c_str());
+
+    if (!!Text.Height) ImGui::PopFont();
+
+    return ToVector2(TextSize);
+}
+
+const Vector2 Gui::GetViewportSize() const
+{
+    return ToVector2(ImGui::GetIO().DisplaySize);
+}
+
+// Config helpers
+float Gui::GetDeltaTime() const
+{
+    return ImGui::GetIO().DeltaTime;
 }
 
 // ***********
