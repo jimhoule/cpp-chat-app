@@ -19,8 +19,8 @@ int main()
 	AuthService AppAuthService;
 	AuthHandler AppAuthHandler(Server, AppAuthService);
 
-	Server.On(SocketEventName::LOGIN, AppAuthHandler.GetLoginHandlerFunction());
-	Server.On(SocketEventName::REGISTER, AppAuthHandler.GetRegisterHandlerFunction());
+	Server.On(SocketEventName::LOGIN, AppAuthHandler.GetLoginHandler());
+	Server.On(SocketEventName::REGISTER, AppAuthHandler.GetRegisterHandler());
 
 	Server.Init();
 	Server.Listen();

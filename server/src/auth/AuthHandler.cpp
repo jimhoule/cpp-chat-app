@@ -6,7 +6,7 @@
 AuthHandler::AuthHandler(const SocketServer& SocketServer, const AuthService& AuthService) : m_SocketServer(SocketServer), m_AuthService(AuthService)
 {}
 
-SocketServerEventHandler AuthHandler::GetLoginHandlerFunction()
+SocketServerEventHandler AuthHandler::GetLoginHandler()
 {
     return [this](const std::string& SerializedLoginSocketEventPayload, int ClientSocket) {
         // Gets login socket event payload
@@ -27,7 +27,7 @@ SocketServerEventHandler AuthHandler::GetLoginHandlerFunction()
     };
 }
 
-SocketServerEventHandler AuthHandler::GetRegisterHandlerFunction()
+SocketServerEventHandler AuthHandler::GetRegisterHandler()
 {
     return [this](const std::string& SerializedRegisterSocketEventPayload, int ClientSocket) {
         // Gets register socket event payload

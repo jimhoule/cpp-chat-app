@@ -12,8 +12,8 @@ class AuthHandler
 public:
     AuthHandler(const SocketServer& SocketServer, const AuthService& AuthService);
 
-    SocketServerEventHandler GetLoginHandlerFunction();
-    SocketServerEventHandler GetRegisterHandlerFunction();
+    SocketServerEventHandler GetLoginHandler();
+    SocketServerEventHandler GetRegisterHandler();
 
 private:
     SocketServer m_SocketServer;
