@@ -1,18 +1,18 @@
 #include "api/AuthApi.h"
 #include "debug/DebugLogger.h"
 #include "debug/DebugOverlay.h"
+#include "deserializer/LoggedinSocketEventPayloadDeserializer.h"
+#include "deserializer/RegisteredSocketEventPayloadDeserializer.h"
 #include "layer/LayerStack.h"
 #include "layer/ChatLayer.h"
 #include "layer/LoginLayer.h"
 #include "layer/RegisterLayer.h"
-#include "log/Logger.h"
-#include "SocketClient.h"
+#include "socket/SocketClient.h"
 
 #include <GLAD/glad.h>
 #include <GLFW/glfw3.h>
 
 #include <iostream>
-#include <string>
 #include <utility>
 
 int main()
@@ -55,11 +55,16 @@ int main()
 
     glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
 
+    // Socket client
+    SocketClient SocketClient = {};
+    const int SERVER_PORT = 5000;
+    SocketClient.Connect(SERVER_PORT, "127.0.0.1");
 
+    // Layer stack
     std::shared_ptr<LayerStack> AppLayerStack = std::make_shared<LayerStack>();
 
     // Apis
-    AuthApi AppAuthApi;
+    AuthApi AppAuthApi(SocketClient);
 
     // Gui
     Gui AppGui = {};
@@ -83,29 +88,23 @@ int main()
         AppLayerStack->Pop();
         AppLayerStack->Unsuspend("Login");
     };
-    Register->OnRegisterButtonClick = [&AppAuthApi, &AppLayerStack, &Chat](const std::string& FirstName, const std::string& LastName, const std::string& Email, const std::string& Password) {
+    Register->OnRegisterButtonClick = [&AppAuthApi](const std::string& FirstName, const std::string& LastName, const std::string& Email, const std::string& Password) {
         RegisterParams RegisterParams = {};
         RegisterParams.FirstName = FirstName;
         RegisterParams.LastName = LastName;
         RegisterParams.Email = Email;
         RegisterParams.Password = Password;
         AppAuthApi.Register(RegisterParams);
-
-        AppLayerStack->Pop();
-        AppLayerStack->Push(Chat);
     };
 
     // Login layer
     std::shared_ptr<DebugLogger> LoginLogger = std::make_shared<DebugLogger>("LOGIN", "client/src/layer/LoginLayer", AppDebugOverlay);
     std::shared_ptr<LoginLayer> Login = std::make_shared<LoginLayer>("Login", AppGui, LoginLogger);
-    Login->OnLoginButtonClick = [&AppAuthApi, &AppLayerStack, &Chat](const std::string& Email, const std::string& Password) {
+    Login->OnLoginButtonClick = [&AppAuthApi](const std::string& Email, const std::string& Password) {
         LoginParams LoginParams = {};
         LoginParams.Email = Email;
         LoginParams.Password = Password;
         AppAuthApi.Login(LoginParams);
-
-        AppLayerStack->Push(Chat);
-        AppLayerStack->Suspend("Login");
     };
     Login->OnRegisterButtonClick = [&AppLayerStack, &Register]() {
         AppLayerStack->Push(Register);
@@ -114,17 +113,35 @@ int main()
 
     AppLayerStack->Push(Login);
 
-    // SocketClient socket_client;
-    // socket_client.Connect(SERVER_PORT, "127.0.0.1");
+    // Socket client logged in event handlers
+    LoggedinSocketEventPayloadDeserializer LoggedinSocketEventPayloadDeserializer = {};
+    SocketClientEventHandler HandleLoggedinSocketEvent = [&AppLayerStack, &Chat, &LoggedinSocketEventPayloadDeserializer](const std::string& SerializedLoggedinSocketEventPayload) {
+        // Gets logged in socket event payload
+        const LoggedinSocketEventPayload& LoggedinSocketEventPayload = LoggedinSocketEventPayloadDeserializer.Deserialize(SerializedLoggedinSocketEventPayload);
+        std::cout << "Logged in access token: " << LoggedinSocketEventPayload.AccessToken << std::endl;
 
-    // sleep(1);
+        AppLayerStack->Push(Chat);
+        AppLayerStack->Suspend("Login");
+    };
 
-    // std::string message = "Hello from Client Socket!";
-    // socket_client.Send(message);
-    // socket_client.Close();
+    // Socket client registered event handlers
+    RegisteredSocketEventPayloadDeserializer RegisteredSocketEventPayloadDeserializer = {};
+    SocketClientEventHandler HandleRegisteredSocketEvent = [&AppLayerStack, &Chat, &RegisteredSocketEventPayloadDeserializer](const std::string& SerializedRegisteredSocketEventPayload) {
+        // Gets registered socket event payload
+        const RegisteredSocketEventPayload& RegisteredSocketEventPayload = RegisteredSocketEventPayloadDeserializer.Deserialize(SerializedRegisteredSocketEventPayload);
+        std::cout << "Registered access token: " << RegisteredSocketEventPayload.AccessToken << std::endl;
+
+        AppLayerStack->Pop();
+        AppLayerStack->Push(Chat);
+    };
+
+    SocketClient.On(SocketEventName::LOGGEDIN, HandleLoggedinSocketEvent);
+    SocketClient.On(SocketEventName::REGISTERED, HandleRegisteredSocketEvent);
 
     while(!glfwWindowShouldClose(GlfwWindow))
     {
+        SocketClient.Read();
+
         glfwPollEvents();
 
         AppLayerStack->Update();
@@ -140,6 +157,8 @@ int main()
 
         glfwSwapBuffers(GlfwWindow);
     }
+
+    SocketClient.Close();
 
     AppLayerStack->Clear();
     AppGui.Destroy();

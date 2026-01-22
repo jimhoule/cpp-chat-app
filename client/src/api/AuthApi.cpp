@@ -5,12 +5,27 @@
 // **********
 // * PUBLIC *
 // **********
-void AuthApi::Login(const LoginParams& LoginParams) const
+AuthApi::AuthApi(const SocketClient& SocketClient) : m_SocketClient(SocketClient)
+{}
+
+void AuthApi::Login(const LoginParams& LoginParams)
 {
-    std::cout << "Logging in with email: " << LoginParams.Email << " and password " << LoginParams.Password << std::endl;
+    // Serializes login socket event
+    LoginSocketEventPayload LoginSocketEventPayload(LoginParams.Email, LoginParams.Password);
+    LoginSocketEvent LoginSocketEvent(LoginSocketEventPayload);
+    std::string SerializedLoginSocketEvent = m_LoginSocketEventSerializer.Serialize(LoginSocketEvent);
+
+    // Sends login socket event
+    m_SocketClient.Send(SerializedLoginSocketEvent);
 }
 
-void AuthApi::Register(const RegisterParams& RegisterParams) const
+void AuthApi::Register(const RegisterParams& RegisterParams)
 {
-    std::cout << "Registering with firstname: " << RegisterParams.FirstName << " lastname: " << RegisterParams.LastName << " email: " << RegisterParams.Email << " and password " << RegisterParams.Password << std::endl;
+    // Serializes register socket event
+    RegisterSocketEventPayload RegisterSocketEventPayload(RegisterParams.FirstName, RegisterParams.LastName, RegisterParams.Email, RegisterParams.Password);
+    RegisterSocketEvent RegisterSocketEvent(RegisterSocketEventPayload);
+    std::string SerializedRegisterSocketEvent = m_RegisterSocketEventSerializer.Serialize(RegisterSocketEvent);
+
+    // Sends register socket event
+    m_SocketClient.Send(SerializedRegisterSocketEvent);
 }
