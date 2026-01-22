@@ -7,6 +7,8 @@
 class LayerStack
 {
 public:
+    LayerStack() = default;
+
     void Clear();
     void Pop();
     void Push(std::shared_ptr<Layer> Layer);
