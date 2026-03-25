@@ -9,6 +9,7 @@ enum class SocketEventName
     LOGGEDIN,
     REGISTER,
     REGISTERED,
+    USER_AUTHENTICATED,
 };
 
 // Overloads the stream insertion operator (<<) for the SocketEventName enum class
@@ -34,6 +35,10 @@ static std::ostream& operator<<(std::ostream& Os, const SocketEventName& EventNa
 
         case SocketEventName::REGISTERED:
             Os << "REGISTERED";
+            break;
+
+        case SocketEventName::USER_AUTHENTICATED:
+            Os << "USER AUTHENTICATED";
             break;
 
         // NOTE: Handles cases where the enum value might be out of range

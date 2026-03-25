@@ -5,6 +5,7 @@
 #include "deserializer/RegisterSocketEventPayloadDeserializer.h"
 #include "serializer/LoggedinSocketEventSerializer.h"
 #include "serializer/RegisteredSocketEventSerializer.h"
+#include "serializer/UserAuthenticatedSocketEventSerializer.h"
 #include "socket/SocketServer.h"
 
 class AuthHandler
@@ -24,4 +25,8 @@ private:
 
     RegisteredSocketEventSerializer m_RegisteredSocketEventSerializer = {};
     RegisterSocketEventPayloadDeserializer m_RegisterSocketEventPayloadDeserializer = {};
+
+    UserAuthenticatedSocketEventSerializer m_UserAuthenticatedSocketEventSerializer = {};
+
+    void SendUserAuthenticatedSocketEvent(int ClientSocket, const std::string& AccessToken);
 };

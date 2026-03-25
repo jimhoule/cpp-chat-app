@@ -75,7 +75,7 @@ int main()
 
     // Chat layer
     std::shared_ptr<DebugLogger> ChatLogger = std::make_shared<DebugLogger>("CHAT", "client/src/layer/ChatLayer", AppDebugOverlay);
-    std::shared_ptr<ChatLayer> Chat = std::make_shared<ChatLayer>("Chat", AppGui, ChatLogger);
+    std::shared_ptr<ChatLayer> Chat = std::make_shared<ChatLayer>("Chat", SocketClient, AppGui, ChatLogger);
     Chat->OnLogoutButtonClick = [&AppLayerStack]() {
         AppLayerStack->Pop();
         AppLayerStack->Unsuspend("Login");

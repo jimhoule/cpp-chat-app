@@ -89,25 +89,41 @@ void SocketServer::Listen()
 
 		std::cout << "New connection was accepted for client socket " << ClientSocket << "\n" << std::endl;
 
-		while (ClientSocket >= 0)
-		{
-			// Reads response from client
-			std::array<char, BUFFER_SIZE> SerializedSocketEventBuffer = {0};
-			ssize_t read_result = read(ClientSocket, SerializedSocketEventBuffer.data(), BUFFER_SIZE);
-			if (read_result >= 0)
-			{
+        m_ClientSockets.push_back(ClientSocket);
 
-				const std::string& SerializedSocketEvent(SerializedSocketEventBuffer.data());
+        // Create a new thread to handle the client
+        // The new_socket descriptor is passed by value to the thread function
+        // std::function HandleClientSocketThread = [this, ClientSocket]() {
+        //     ReadClientSocket(ClientSocket);
+        // };
+        m_ClientSocketThreads.emplace_back([this, ClientSocket]() {
+            ReadClientSocket(ClientSocket);
+        });
 
-                SocketEventDeserializer SocketEventDeserializer = {};
-                SocketEvent<std::string> SocketEvent = SocketEventDeserializer.Deserialize(SerializedSocketEvent);
+        // Detach the thread so it runs independently and we don't have to manage joins
+        // This is a simple way to manage many clients without explicit thread management.
+        // The OS will reclaim resources when the thread finishes.
+        m_ClientSocketThreads.back().detach();
 
-                SocketServerEventHandler HandleSocketEvent = m_SocketEventHandlersMap[SocketEvent.Name];
-                HandleSocketEvent(SocketEvent.Payload, ClientSocket);
+		// while (ClientSocket >= 0)
+		// {
+		// 	// Reads response from client
+		// 	std::array<char, BUFFER_SIZE> SerializedSocketEventBuffer = {0};
+		// 	ssize_t read_result = read(ClientSocket, SerializedSocketEventBuffer.data(), BUFFER_SIZE);
+		// 	if (read_result >= 0)
+		// 	{
 
-				std::cout << "Received socket event: " << SocketEvent.Name << std::endl;
-			}
-		}
+		// 		const std::string& SerializedSocketEvent(SerializedSocketEventBuffer.data());
+
+        //         SocketEventDeserializer SocketEventDeserializer = {};
+        //         SocketEvent<std::string> SocketEvent = SocketEventDeserializer.Deserialize(SerializedSocketEvent);
+
+        //         SocketServerEventHandler HandleSocketEvent = m_SocketEventHandlersMap[SocketEvent.Name];
+        //         HandleSocketEvent(SocketEvent.Payload, ClientSocket);
+
+		// 		std::cout << "Received socket event: " << SocketEvent.Name << std::endl;
+		// 	}
+		// }
 	}
 }
 
@@ -116,7 +132,65 @@ void SocketServer::On(SocketEventName SocketEventName, const SocketServerEventHa
     m_SocketEventHandlersMap.insert(std::pair(SocketEventName, SocketEventHandler));
 }
 
-void SocketServer::Send(int ClientSocket, const std::string& SerializedSocketEvent)
+void SocketServer::SendAll(const std::string& SerializedSocketEvent)
+{
+    SendToMany(m_ClientSockets, SerializedSocketEvent);
+}
+
+void SocketServer::SendAllExcept(int ExceptionClientSocket, const std::string& SerializedSocketEvent)
+{
+    for (int ClientSocket : m_ClientSockets)
+    {
+        // If client socket is an exception (client socket not to send to)
+        if (ClientSocket == ExceptionClientSocket) continue;
+
+        SendTo(ClientSocket, SerializedSocketEvent);
+    }
+}
+
+void SocketServer::SendAllExcept(std::unordered_map<int, bool> ExceptionClientSocketsMap, const std::string& SerializedSocketEvent)
+{
+    for (int ClientSocket : m_ClientSockets)
+    {
+        // If client socket is in the exception map (client socket not to send to)
+        std::unordered_map<int, bool>::iterator ExceptionClientSocketIterator = ExceptionClientSocketsMap.find(ClientSocket);
+        if (ExceptionClientSocketIterator == ExceptionClientSocketsMap.end()) continue;
+
+        SendTo(ClientSocket, SerializedSocketEvent);
+    }
+}
+
+void SocketServer::SendTo(int ClientSocket, const std::string& SerializedSocketEvent)
 {
 	send(ClientSocket, SerializedSocketEvent.c_str(), SerializedSocketEvent.length(), 0);
+}
+
+void SocketServer::SendToMany(std::vector<int> ClientSockets, const std::string& SerializedSocketEvent)
+{
+    for (int ClientSocket : ClientSockets)
+    {
+        SendTo(ClientSocket, SerializedSocketEvent);
+    }
+}
+
+// ***********
+// * PRIVATE *
+// ***********
+void SocketServer::ReadClientSocket(int ClientSocket) {
+    // Reads response from client
+    std::array<char, BUFFER_SIZE> SerializedSocketEventBuffer = {0};
+    ssize_t ReadResult = read(ClientSocket, SerializedSocketEventBuffer.data(), BUFFER_SIZE);
+    while (ReadResult >= 0)
+    {
+
+        const std::string& SerializedSocketEvent(SerializedSocketEventBuffer.data());
+
+        SocketEventDeserializer SocketEventDeserializer = {};
+        SocketEvent<std::string> SocketEvent = SocketEventDeserializer.Deserialize(SerializedSocketEvent);
+
+        SocketServerEventHandler HandleSocketEvent = m_SocketEventHandlersMap[SocketEvent.Name];
+        HandleSocketEvent(SocketEvent.Payload, ClientSocket);
+
+        std::cout << "Received socket event: " << SocketEvent.Name << std::endl;
+    }
 }

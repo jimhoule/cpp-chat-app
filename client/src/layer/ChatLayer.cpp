@@ -1,14 +1,16 @@
 #include "layer/ChatLayer.h"
 
+#include "deserializer/UserAuthenticatedSocketEventPayloadDeserializer.h"
+
 constexpr int SERVER_PORT =  5000;
 
 // **********
 // * PUBLIC *
 // **********
-ChatLayer::ChatLayer(const std::string& ID, const Gui& Gui) : Layer(ID, std::make_shared<Logger>(ID, "client/src/layer/ChatLayer")), m_Gui(Gui)
+ChatLayer::ChatLayer(const std::string& ID, const SocketClient& SocketClient, const Gui& Gui) : Layer(ID, std::make_shared<Logger>(ID, "client/src/layer/ChatLayer")), m_SocketClient(SocketClient), m_Gui(Gui)
 {}
 
-ChatLayer::ChatLayer(const std::string& ID, const Gui& Gui, const std::shared_ptr<Logger>& Logger) : Layer(ID, Logger), m_Gui(Gui)
+ChatLayer::ChatLayer(const std::string& ID, const SocketClient& SocketClient, const Gui& Gui, const std::shared_ptr<Logger>& Logger) : Layer(ID, Logger), m_SocketClient(SocketClient), m_Gui(Gui)
 {}
 
 void ChatLayer::OnAttach()
@@ -58,6 +60,16 @@ void ChatLayer::OnAttach()
     };
 
     m_SelectedConversation = m_Conversations[0];
+
+    // Socket
+    UserAuthenticatedSocketEventPayloadDeserializer UserAuthenticatedSocketEventPayloadDeserializer = {};
+    SocketClientEventHandler HandlerUserAuthenticated = [this, &UserAuthenticatedSocketEventPayloadDeserializer](const std::string& SerializedUserAuthenticatedSocketEventPayload) {
+        // Gets registered socket event payload
+        const UserAuthenticatedSocketEventPayload& UserAuthenticatedSocketEventPayload = UserAuthenticatedSocketEventPayloadDeserializer.Deserialize(SerializedUserAuthenticatedSocketEventPayload);
+        m_Logger->Info("Authenticated user ID: " + UserAuthenticatedSocketEventPayload.User.ID);
+    };
+
+    m_SocketClient.On(SocketEventName::USER_AUTHENTICATED, HandlerUserAuthenticated);
 
     // Textures
     m_BlankImageTexture.Load("../../assets/Blank.jpg", 0);

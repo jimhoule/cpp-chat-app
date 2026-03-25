@@ -4,6 +4,7 @@
 #include "layer/Layer.h"
 #include "models/Conversation.h"
 #include "models/User.h"
+#include "socket/SocketClient.h"
 #include "Texture.h"
 
 #include <functional>
@@ -11,8 +12,8 @@
 class ChatLayer : public Layer
 {
 public:
-    ChatLayer(const std::string& ID, const Gui& Gui);
-    ChatLayer(const std::string& ID, const Gui& Gui, const std::shared_ptr<Logger>& Logger);
+    ChatLayer(const std::string& ID, const SocketClient& SocketClient, const Gui& Gui);
+    ChatLayer(const std::string& ID, const SocketClient& SocketClient, const Gui& Gui, const std::shared_ptr<Logger>& Logger);
 
     void OnAttach() override;
     void OnDetach() override;
@@ -40,6 +41,9 @@ private:
     // Conversations
     std::shared_ptr<Conversation> m_SelectedConversation = nullptr;
     std::vector<std::shared_ptr<Conversation>> m_Conversations = {};
+
+    // Socket
+    SocketClient m_SocketClient = {};
 
     // Textures
     Texture m_BlankImageTexture = {};
