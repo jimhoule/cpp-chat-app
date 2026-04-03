@@ -65,6 +65,11 @@ delete_git_submodule:
 	rm -rf $(submodule_path)
 	@echo "Deleting complete"
 
+init_git_submodules:
+	@echo "Initializing submodules"
+	git submodule update --init --recursive
+	@echo "Initializing complete"
+
 setup_git_hooks:
 	@echo "Setting up project"
 	cp .githooks/pre-commit .git/hooks/pre-commit
