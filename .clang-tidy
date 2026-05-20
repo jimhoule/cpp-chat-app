@@ -1,7 +1,6 @@
 ---
 Checks: clang-diagnostic-*,clang-analyzer-*,cppcoreguidelines-*,-cppcoreguidelines-pro-type-reinterpret-cast,-cppcoreguidelines-pro-type-vararg,modernize-*,-modernize-use-trailing-return-type,-modernize-use-auto,-modernize-return-braced-init-list,-modernize-pass-by-value
 WarningsAsErrors: cppcoreguidelines-pro-type-member-init
-HeaderFilterRegex: ^((?!vendor/).)*$
 HeaderFileExtensions: [h]
 ImplementationFileExtensions: [cpp]
 InheritParentConfig: true

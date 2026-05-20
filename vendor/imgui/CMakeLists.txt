@@ -11,5 +11,6 @@ add_library(${IMGUI_VENDOR_NAME} STATIC
     imgui/imgui_impl_glfw.cpp
     imgui/imgui_impl_opengl3.cpp
 )
-target_include_directories(${IMGUI_VENDOR_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/vendor/glfw/include)
-target_include_directories(${IMGUI_VENDOR_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+# NOTE: SYSTEM keyword makes CMake emit -isystem /path/to/vendor/stb instead of -I so both the compiler and clang-tidy unconditionally suppress all diagnostics from system-included headers
+target_include_directories(${IMGUI_VENDOR_NAME} SYSTEM PRIVATE ${CMAKE_SOURCE_DIR}/vendor/glfw/include)
+target_include_directories(${IMGUI_VENDOR_NAME} SYSTEM PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
