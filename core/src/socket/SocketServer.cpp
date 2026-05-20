@@ -90,40 +90,7 @@ void SocketServer::Listen()
 		std::cout << "New connection was accepted for client socket " << ClientSocket << "\n" << std::endl;
 
         m_ClientSockets.push_back(ClientSocket);
-
-        // Create a new thread to handle the client
-        // The new_socket descriptor is passed by value to the thread function
-        // std::function HandleClientSocketThread = [this, ClientSocket]() {
-        //     ReadClientSocket(ClientSocket);
-        // };
-        m_ClientSocketThreads.emplace_back([this, ClientSocket]() {
-            ReadClientSocket(ClientSocket);
-        });
-
-        // Detach the thread so it runs independently and we don't have to manage joins
-        // This is a simple way to manage many clients without explicit thread management.
-        // The OS will reclaim resources when the thread finishes.
-        m_ClientSocketThreads.back().detach();
-
-		// while (ClientSocket >= 0)
-		// {
-		// 	// Reads response from client
-		// 	std::array<char, BUFFER_SIZE> SerializedSocketEventBuffer = {0};
-		// 	ssize_t read_result = read(ClientSocket, SerializedSocketEventBuffer.data(), BUFFER_SIZE);
-		// 	if (read_result >= 0)
-		// 	{
-
-		// 		const std::string& SerializedSocketEvent(SerializedSocketEventBuffer.data());
-
-        //         SocketEventDeserializer SocketEventDeserializer = {};
-        //         SocketEvent<std::string> SocketEvent = SocketEventDeserializer.Deserialize(SerializedSocketEvent);
-
-        //         SocketServerEventHandler HandleSocketEvent = m_SocketEventHandlersMap[SocketEvent.Name];
-        //         HandleSocketEvent(SocketEvent.Payload, ClientSocket);
-
-		// 		std::cout << "Received socket event: " << SocketEvent.Name << std::endl;
-		// 	}
-		// }
+		ReadClientSocket(ClientSocket);
 	}
 }
 
