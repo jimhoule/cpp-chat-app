@@ -9,9 +9,9 @@ SocketEvent<std::string> SocketEventDeserializer::Deserialize(const std::string&
 {
     nlohmann::json Json = nlohmann::json::parse(JsonString);
 
-    SocketEvent<std::string> SocketEvent = {};
-    SocketEvent.Name = Json["name"].get<SocketEventName>();
-    SocketEvent.Payload = Json["payload"].dump();
+    SocketEventName Name = Json["name"].get<SocketEventName>();
+    std::string Payload = Json["payload"].dump();
+    SocketEvent<std::string> SocketEvent(Name, Payload);
 
     return SocketEvent;
 }
