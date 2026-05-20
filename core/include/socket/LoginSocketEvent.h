@@ -16,7 +16,6 @@ struct LoginSocketEventPayload
 
 struct LoginSocketEvent : public SocketEvent<LoginSocketEventPayload>
 {
-    LoginSocketEvent() = default;
     LoginSocketEvent(LoginSocketEventPayload Payload) :  SocketEvent(SocketEventName::LOGIN, Payload)
     {}
 };

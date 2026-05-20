@@ -16,7 +16,6 @@ struct UserAuthenticatedSocketEventPayload
 
 struct UserAuthenticatedSocketEvent : public SocketEvent<UserAuthenticatedSocketEventPayload>
 {
-    UserAuthenticatedSocketEvent() = default;
     UserAuthenticatedSocketEvent(UserAuthenticatedSocketEventPayload Payload) :  SocketEvent(SocketEventName::USER_AUTHENTICATED, Payload)
     {}
 };

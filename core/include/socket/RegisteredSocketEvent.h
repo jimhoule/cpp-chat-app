@@ -15,7 +15,6 @@ struct RegisteredSocketEventPayload
 
 struct RegisteredSocketEvent : public SocketEvent<RegisteredSocketEventPayload>
 {
-    RegisteredSocketEvent() = default;
     RegisteredSocketEvent(RegisteredSocketEventPayload RegisteredSocketEventPayload) :  SocketEvent(SocketEventName::REGISTERED, RegisteredSocketEventPayload)
     {}
 };

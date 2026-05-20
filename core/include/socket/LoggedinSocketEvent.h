@@ -15,7 +15,6 @@ struct LoggedinSocketEventPayload
 
 struct LoggedinSocketEvent : public SocketEvent<LoggedinSocketEventPayload>
 {
-    LoggedinSocketEvent() = default;
     LoggedinSocketEvent(LoggedinSocketEventPayload Payload) :  SocketEvent(SocketEventName::LOGGEDIN, Payload)
     {}
 };

@@ -18,7 +18,6 @@ struct RegisterSocketEventPayload
 
 struct RegisterSocketEvent : public SocketEvent<RegisterSocketEventPayload>
 {
-    RegisterSocketEvent() = default;
     RegisterSocketEvent(RegisterSocketEventPayload RegisterSocketEventPayload) :  SocketEvent(SocketEventName::REGISTER, RegisterSocketEventPayload)
     {}
 };
