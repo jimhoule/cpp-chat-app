@@ -10,3 +10,6 @@
 [submodule "vendor/nlohmannjson"]
 	path = vendor/nlohmannjson
 	url = https://github.com/nlohmann/json.git
+[submodule "vendor/epollshim"]
+	path = vendor/epollshim
+	url = https://github.com/jiixyj/epoll-shim.git
