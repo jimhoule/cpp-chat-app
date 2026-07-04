@@ -1,4 +1,5 @@
 set(CORE_LIB_NAME Core)
+set(EPOLLSHIM_VENDOR_NAME epoll-shim)
 set(GLAD_VENDOR_NAME Glad)
 set(NLOHMANNJSON_VENDOR_NAME nlohmann_json::nlohmann_json)
 set(STB_VENDOR_NAME Stb)
@@ -23,3 +24,8 @@ target_link_libraries(${CORE_LIB_NAME} PRIVATE
     ${STB_VENDOR_NAME}
 )
 target_include_directories(${CORE_LIB_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+if(APPLE)
+    message(STATUS "Setting MacOS epoll-shim to emulate epoll (only available in Linux)")
+    target_link_libraries(${CORE_LIB_NAME} PRIVATE ${EPOLLSHIM_VENDOR_NAME})
+endif()

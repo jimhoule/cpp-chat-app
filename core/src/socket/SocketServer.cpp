@@ -6,8 +6,10 @@
 #include <cstring>
 #include <fcntl.h>
 #include <iostream>
+#include <sys/epoll.h>
 #include <unistd.h>
 
+constexpr int MAX_EPOLL_EVENTS = 10;
 constexpr int MAX_PENDING_CONNECTIONS = 5;
 constexpr int BUFFER_SIZE = 1000000;
 
@@ -28,7 +30,7 @@ void SocketServer::Init()
 	m_Socket = socket(AF_INET, SOCK_STREAM, 0);
 	if (m_Socket < 0)
 	{
-		perror("socket failed");
+		std::cerr << "Failed to create socket" << std::endl;
 		exit(EXIT_FAILURE);
 	}
 
@@ -41,19 +43,13 @@ void SocketServer::Init()
 	int bind_result = bind(m_Socket, reinterpret_cast<sockaddr *>(&m_Address), sizeof(m_Address));
 	if (bind_result < 0)
 	{
-		perror("bind failed");
+		std::cerr << "Failed to bind socket" << std::endl;
 		Close();
 		exit(EXIT_FAILURE);
 	}
 
 	// Sets the server socket to non-blocking mode
-	int fcntl_result = fcntl(m_Socket, F_SETFL, O_NONBLOCK);
-	if (fcntl_result < 0)
-	{
-		perror("fcntl failed");
-		Close();
-		exit(EXIT_FAILURE);
-	}
+	SetNonBlockingSocket(m_Socket);
 }
 
 void SocketServer::Listen()
@@ -62,35 +58,83 @@ void SocketServer::Listen()
 	int listen_result = listen(m_Socket, MAX_PENDING_CONNECTIONS);
 	if (listen_result < 0)
 	{
-		perror("listen failed");
+		std::cerr << "Failed to listen" << std::endl;
 		Close();
+		exit(EXIT_FAILURE);
+	}
+
+	// Creates epoll instance
+    int Epoll = epoll_create1(0);
+	if (Epoll == -1) {
+		std::cerr << "Failed to create epoll" << std::endl;
+		exit(EXIT_FAILURE);
+	}
+
+    // Adds listening socket to epoll
+	struct epoll_event Event;
+	Event.events = EPOLLIN; // We are interested in read events
+	Event.data.fd = m_Socket;
+
+    int EpollCtlResult = epoll_ctl(Epoll, EPOLL_CTL_ADD, m_Socket, &Event);
+	if (EpollCtlResult == -1)
+	{
+		std::cerr << "Failed to add listening socket to epoll" << std::endl;
 		exit(EXIT_FAILURE);
 	}
 
 	std::cout << "Server listening on port " << m_Port << " ..." << "\n" << std::endl;
 
+	struct epoll_event Events[MAX_EPOLL_EVENTS];
 	socklen_t address_length = sizeof(m_Address);
-	std::string message = "Hello from Server Socket!";
 	while (true)
 	{
-		// Accepts new connections
-		int ClientSocket = accept(m_Socket, reinterpret_cast<sockaddr *>(&m_Address), &address_length);
-		// Handles non-blocking accept errors
-		if (ClientSocket < 0 && (errno == EAGAIN || errno == EWOULDBLOCK))
+		int EventsCount = epoll_wait(Epoll, Events, MAX_EPOLL_EVENTS, -1);
+		if (EventsCount == -1)
 		{
-			continue;
+			std::cerr << "Failed to wait for client socket connections" << std::endl;
+			break;
 		}
 
-		if (ClientSocket == -1)
-		{
-            std::cout << "No client socket" << std::endl;
-			continue;
+		// Loops through all the events that have occurred
+		for (int i = 0; i < EventsCount; i++) {
+			// New connection
+			if (Events[i].data.fd == m_Socket)
+			{
+				// Accepts new connections
+				int ClientSocket = accept(m_Socket, reinterpret_cast<sockaddr *>(&m_Address), &address_length);
+				// Handles non-blocking accept errors
+				if (ClientSocket < 0 && (errno == EAGAIN || errno == EWOULDBLOCK))
+				{
+					continue;
+				}
+
+				if (ClientSocket == -1)
+				{
+					std::cerr << "Failed to accept client socket connection" << std::endl;
+					continue;
+				}
+
+				std::cout << "Accepted client socket " << ClientSocket << " new connection" << "\n" << std::endl;
+
+				m_ClientSockets.push_back(ClientSocket);
+				SetNonBlockingSocket(ClientSocket);
+
+				// Adds the new client socket to the epoll interest list
+				Event.events = EPOLLIN | EPOLLET; // Monitor for read events, edge-triggered
+				Event.data.fd = ClientSocket;
+				if (epoll_ctl(Epoll, EPOLL_CTL_ADD, ClientSocket, &Event) == -1)
+				{
+					std::cerr << "Failed to add client socket to epoll" << std::endl;
+					CloseClientSocket(ClientSocket);
+				}
+
+				continue;
+			}
+			
+			// Existing connection
+			int ClientSocket = Events[i].data.fd;
+			ReadClientSocket(ClientSocket);
 		}
-
-		std::cout << "New connection was accepted for client socket " << ClientSocket << "\n" << std::endl;
-
-        m_ClientSockets.push_back(ClientSocket);
-		ReadClientSocket(ClientSocket);
 	}
 }
 
@@ -143,11 +187,19 @@ void SocketServer::SendToMany(std::vector<int> ClientSockets, const std::string&
 // ***********
 // * PRIVATE *
 // ***********
+ void SocketServer::CloseClientSocket(int ClientSocket)
+ {
+	close(ClientSocket);
+	m_ClientSockets.erase(std::remove(m_ClientSockets.begin(), m_ClientSockets.end(), ClientSocket), m_ClientSockets.end()); 
+ }
+
 void SocketServer::ReadClientSocket(int ClientSocket) {
-    // Reads response from client
+    // Reads response from client socket
     std::array<char, BUFFER_SIZE> SerializedSocketEventBuffer = {0};
     ssize_t ReadResult = read(ClientSocket, SerializedSocketEventBuffer.data(), BUFFER_SIZE);
-    while (ReadResult >= 0)
+
+	// Client socket response was read successfully
+	if (ReadResult > 0)
     {
 
         const std::string& SerializedSocketEvent(SerializedSocketEventBuffer.data());
@@ -159,5 +211,29 @@ void SocketServer::ReadClientSocket(int ClientSocket) {
         HandleSocketEvent(SocketEvent.Payload, ClientSocket);
 
         std::cout << "Received socket event: " << SocketEvent.Name << std::endl;
+		
+		return;
     }
+
+	// Client socket closed connection
+	if (ReadResult == 0) {
+		std::cout << "Client socket " << ClientSocket << " disconnected" << std::endl;
+        // NOTE:  This automatically removes it from epoll
+		CloseClientSocket(ClientSocket);
+
+		return;
+    }
+	
+	// Client socket response reading threw an error
+	// NOTE: If errno is EAGAIN, that means we have read all data so we can continue to the next event.
+	if (ReadResult == -1 && errno != EAGAIN) {
+		std::cerr << "Failed to read client socket" << std::endl;
+		CloseClientSocket(ClientSocket);
+    }
+}
+
+void SocketServer::SetNonBlockingSocket(int Socket)
+{
+	int Flags = fcntl(Socket, F_GETFL, 0);
+    fcntl(Socket, F_SETFL, Flags | O_NONBLOCK);
 }

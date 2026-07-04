@@ -9,7 +9,7 @@ SRCS = \
 	$(wildcard test/src/*.cpp)
 
 # Forces command to run every time (even if target already exits)
-.PHONY: build test start_client start_server
+.PHONY: build test start_client start_server start_all
 
 start_client:
 	@echo "Starting client"
@@ -20,6 +20,13 @@ start_server:
 	@echo "Starting server"
 	cd build/server && ./Server
 	@echo "Starting complete"
+
+start_all:
+	tmux new-session -d -s chat 'make start_server' \; \
+	split-window -h 'sleep 1 && make start_client' \; \
+	split-window -v 'sleep 1 && make start_client' \; \
+	select-layout tiled \; \
+	attach
 
 build:
 	@echo "Building project"

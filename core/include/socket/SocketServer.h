@@ -30,5 +30,7 @@ private:
     std::vector<int> m_ClientSockets = {};
     std::unordered_map<SocketEventName, SocketServerEventHandler> m_SocketEventHandlersMap = {};
 
+    void CloseClientSocket(int ClientSocket);
     void ReadClientSocket(int ClientSocket);
+    void SetNonBlockingSocket(int Socket);
 };
