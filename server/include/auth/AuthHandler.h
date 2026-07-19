@@ -6,27 +6,29 @@
 #include "serializer/LoggedinSocketEventSerializer.h"
 #include "serializer/RegisteredSocketEventSerializer.h"
 #include "serializer/UserAuthenticatedSocketEventSerializer.h"
-#include "socket/SocketServer.h"
+#include "socket/SocketServerEventHandler.h"
 
+class SocketServer;
 class AuthHandler
 {
 public:
-    AuthHandler(SocketServer& SocketServer, const AuthService& AuthService);
+    AuthHandler(SocketServer& socketServer, AuthService& authService);
 
     SocketServerEventHandler GetLoginHandler();
     SocketServerEventHandler GetRegisterHandler();
 
 private:
-    SocketServer& m_SocketServer;
-    AuthService m_AuthService;
+    SocketServer& m_socketServer;
+    AuthService& m_authService;
 
-    LoggedinSocketEventSerializer m_LoggedinSocketEventSerializer = {};
-    LoginSocketEventPayloadDeserializer m_LoginSocketEventPayloadDeserializer = {};
+    LoggedinSocketEventSerializer m_loggedinSocketEventSerializer = {};
+    LoginSocketEventPayloadDeserializer m_loginSocketEventPayloadDeserializer = {};
 
-    RegisteredSocketEventSerializer m_RegisteredSocketEventSerializer = {};
-    RegisterSocketEventPayloadDeserializer m_RegisterSocketEventPayloadDeserializer = {};
+    RegisteredSocketEventSerializer m_registeredSocketEventSerializer = {};
+    RegisterSocketEventPayloadDeserializer m_registerSocketEventPayloadDeserializer = {};
 
-    UserAuthenticatedSocketEventSerializer m_UserAuthenticatedSocketEventSerializer = {};
+    UserAuthenticatedSocketEventSerializer m_userAuthenticatedSocketEventSerializer = {};
 
-    void SendUserAuthenticatedSocketEvent(int ClientSocket, const std::string& AccessToken);
+    void SendErrorSocketEvent(int clientSocket);
+    void SendUserAuthenticatedSocketEvent(int clientSocket, const User& user);
 };

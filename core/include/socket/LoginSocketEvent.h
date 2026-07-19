@@ -7,15 +7,15 @@
 struct LoginSocketEventPayload
 {
     LoginSocketEventPayload() = default;
-    LoginSocketEventPayload(const std::string& Email, const std::string& Password) : Email(Email), Password(Password)
+    LoginSocketEventPayload(const std::string& email, const std::string& password) : email(email), password(password)
     {}
 
-    std::string Email;
-    std::string Password;
+    std::string email;
+    std::string password;
 };
 
 struct LoginSocketEvent : public SocketEvent<LoginSocketEventPayload>
 {
-    LoginSocketEvent(LoginSocketEventPayload Payload) :  SocketEvent(SocketEventName::LOGIN, Payload)
+    LoginSocketEvent(LoginSocketEventPayload payload) :  SocketEvent(SocketEventName::LOGIN, payload)
     {}
 };

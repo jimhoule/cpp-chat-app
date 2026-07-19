@@ -5,20 +5,21 @@
 // **********
 // * PUBLIC *
 // **********
-std::string UserAuthenticatedSocketEventSerializer::Serialize(const UserAuthenticatedSocketEvent& UserAuthenticatedSocketEvent)
+std::string UserAuthenticatedSocketEventSerializer::Serialize(const UserAuthenticatedSocketEvent& userAuthenticatedSocketEvent)
 {
-    nlohmann::json UserJson = {};
-    UserJson["id"] = UserAuthenticatedSocketEvent.Payload.User.ID;
-    UserJson["firstName"] = UserAuthenticatedSocketEvent.Payload.User.FirstName;
-    UserJson["lastName"] = UserAuthenticatedSocketEvent.Payload.User.LastName;
-    UserJson["imageUrl"] = UserAuthenticatedSocketEvent.Payload.User.ImageUrl;
+    nlohmann::json userJson = {};
+    userJson["id"] = userAuthenticatedSocketEvent.Payload.User.id;
+    userJson["email"] = userAuthenticatedSocketEvent.Payload.User.email;
+    userJson["firstName"] = userAuthenticatedSocketEvent.Payload.User.firstName;
+    userJson["lastName"] = userAuthenticatedSocketEvent.Payload.User.lastName;
+    userJson["password"] = userAuthenticatedSocketEvent.Payload.User.password;
 
-    nlohmann::json PayloadJson = {};
-    PayloadJson["user"] = UserJson;
+    nlohmann::json payloadJson = {};
+    payloadJson["user"] = userJson;
 
-    nlohmann::json Json = {};
-    Json["name"] = UserAuthenticatedSocketEvent.Name;
-    Json["payload"] = PayloadJson;
+    nlohmann::json json = {};
+    json["name"] = userAuthenticatedSocketEvent.Name;
+    json["payload"] = payloadJson;
 
-    return Json.dump();
+    return json.dump();
 }

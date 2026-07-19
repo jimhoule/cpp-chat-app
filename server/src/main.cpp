@@ -1,10 +1,11 @@
-#include "auth/AuthHandler.h"
+#include "auth/AuthModule.h"
 #include "deserializer/LoginSocketEventPayloadDeserializer.h"
 #include "deserializer/RegisterSocketEventPayloadDeserializer.h"
-#include "messages/MessagesHandler.h"
+#include "messages/MessagesModule.h"
 #include "serializer/LoggedinSocketEventSerializer.h"
 #include "serializer/RegisteredSocketEventSerializer.h"
 #include "socket/SocketServer.h"
+#include "users/UsersModule.h"
 
 #include <cstdlib>
 #include <iostream>
@@ -16,18 +17,14 @@ int main()
 	const unsigned int PORT = 5000;
 	SocketServer server(PORT);
 
-	// Auth
-	AuthService authService;
-	AuthHandler authHandler(server, authService);
+	// Users
+	UsersModule usersModule;
 
-	server.On(SocketEventName::LOGIN, authHandler.GetLoginHandler());
-	server.On(SocketEventName::REGISTER, authHandler.GetRegisterHandler());
+	// Auth
+	AuthModule authModule(server, usersModule.GetService());
 
 	// Messages
-	MessagesService messagesService;
-	MessagesHandler messagesHandler(server, messagesService);
-
-	server.On(SocketEventName::CREATE_MESSAGE, messagesHandler.GetCreateMessageHandler());
+	MessagesModule messagesModule(server);
 
 	server.Init();
 	server.Listen();

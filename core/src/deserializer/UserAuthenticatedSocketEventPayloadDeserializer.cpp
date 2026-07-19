@@ -11,10 +11,11 @@ UserAuthenticatedSocketEventPayload UserAuthenticatedSocketEventPayloadDeseriali
     nlohmann::json UserJson = Json["user"];
 
     UserAuthenticatedSocketEventPayload UserAuthenticatedSocketEventPayload = {};
-    UserAuthenticatedSocketEventPayload.User.ID = UserJson["id"].get<std::string>();
-    UserAuthenticatedSocketEventPayload.User.FirstName = UserJson["firstName"].get<std::string>();
-    UserAuthenticatedSocketEventPayload.User.LastName = UserJson["lastName"].get<std::string>();
-    UserAuthenticatedSocketEventPayload.User.ImageUrl = UserJson["imageUrl"].get<std::string>();
+    UserAuthenticatedSocketEventPayload.User.id = UserJson["id"].get<std::string>();
+    UserAuthenticatedSocketEventPayload.User.email = UserJson["email"].get<std::string>();
+    UserAuthenticatedSocketEventPayload.User.firstName = UserJson["firstName"].get<std::string>();
+    UserAuthenticatedSocketEventPayload.User.lastName = UserJson["lastName"].get<std::string>();
+    UserAuthenticatedSocketEventPayload.User.password = UserJson["password"].get<std::string>();
 
     return UserAuthenticatedSocketEventPayload;
 }

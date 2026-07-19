@@ -5,13 +5,13 @@
 // **********
 // * PUBLIC *
 // **********
-LoginSocketEventPayload LoginSocketEventPayloadDeserializer::Deserialize(const std::string& JsonString)
+LoginSocketEventPayload LoginSocketEventPayloadDeserializer::Deserialize(const std::string& jsonString)
 {
-    nlohmann::json Json = nlohmann::json::parse(JsonString);
+    nlohmann::json json = nlohmann::json::parse(jsonString);
 
-    LoginSocketEventPayload LoginSocketEventPayload = {};
-    LoginSocketEventPayload.Email = Json["email"].get<std::string>();
-    LoginSocketEventPayload.Password = Json["password"].get<std::string>();
+    LoginSocketEventPayload loginSocketEventPayload = {};
+    loginSocketEventPayload.email = json["email"].get<std::string>();
+    loginSocketEventPayload.password = json["password"].get<std::string>();
 
-    return LoginSocketEventPayload;
+    return loginSocketEventPayload;
 }

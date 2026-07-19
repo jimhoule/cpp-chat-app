@@ -8,5 +8,5 @@ class RegisterSocketEventPayloadDeserializer: public IDeserializer<std::string, 
 public:
     RegisterSocketEventPayloadDeserializer() = default;
 
-    RegisterSocketEventPayload Deserialize(const std::string& JsonString) override;
+    RegisterSocketEventPayload Deserialize(const std::string& jsonString) override;
 };

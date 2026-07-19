@@ -5,17 +5,17 @@
 // **********
 // * PUBLIC *
 // **********
-std::string RegisterSocketEventSerializer::Serialize(const RegisterSocketEvent& RegisterSocketEvent)
+std::string RegisterSocketEventSerializer::Serialize(const RegisterSocketEvent& registerSocketEvent)
 {
-    nlohmann::json PayloadJson;
-    PayloadJson["firstName"] = RegisterSocketEvent.Payload.FirstName;
-    PayloadJson["lastName"] = RegisterSocketEvent.Payload.LastName;
-    PayloadJson["email"] = RegisterSocketEvent.Payload.Email;
-    PayloadJson["password"] = RegisterSocketEvent.Payload.Password;
+    nlohmann::json payloadJson;
+    payloadJson["firstName"] = registerSocketEvent.Payload.firstName;
+    payloadJson["lastName"] = registerSocketEvent.Payload.lastName;
+    payloadJson["email"] = registerSocketEvent.Payload.email;
+    payloadJson["password"] = registerSocketEvent.Payload.password;
 
-    nlohmann::json Json;
-    Json["name"] = RegisterSocketEvent.Name;
-    Json["payload"] = PayloadJson;
+    nlohmann::json json;
+    json["name"] = registerSocketEvent.Name;
+    json["payload"] = payloadJson;
 
-    return Json.dump();
+    return json.dump();
 }

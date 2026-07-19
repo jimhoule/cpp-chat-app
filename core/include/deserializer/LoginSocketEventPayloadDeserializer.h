@@ -8,5 +8,5 @@ class LoginSocketEventPayloadDeserializer: public IDeserializer<std::string, Log
 public:
     LoginSocketEventPayloadDeserializer() = default;
 
-    LoginSocketEventPayload Deserialize(const std::string& JsonString) override;
+    LoginSocketEventPayload Deserialize(const std::string& jsonString) override;
 };

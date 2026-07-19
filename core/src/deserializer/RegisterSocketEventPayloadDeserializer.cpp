@@ -5,15 +5,15 @@
 // **********
 // * PUBLIC *
 // **********
-RegisterSocketEventPayload RegisterSocketEventPayloadDeserializer::Deserialize(const std::string& JsonString)
+RegisterSocketEventPayload RegisterSocketEventPayloadDeserializer::Deserialize(const std::string& jsonString)
 {
-    nlohmann::json Json = nlohmann::json::parse(JsonString);
+    nlohmann::json json = nlohmann::json::parse(jsonString);
 
-    RegisterSocketEventPayload RegisterSocketEventPayload = {};
-    RegisterSocketEventPayload.FirstName = Json["firstName"].get<std::string>();
-    RegisterSocketEventPayload.LastName = Json["lastName"].get<std::string>();
-    RegisterSocketEventPayload.Email = Json["email"].get<std::string>();
-    RegisterSocketEventPayload.Password = Json["password"].get<std::string>();
+    RegisterSocketEventPayload registerSocketEventPayload = {};
+    registerSocketEventPayload.firstName = json["firstName"].get<std::string>();
+    registerSocketEventPayload.lastName = json["lastName"].get<std::string>();
+    registerSocketEventPayload.email = json["email"].get<std::string>();
+    registerSocketEventPayload.password = json["password"].get<std::string>();
 
-    return RegisterSocketEventPayload;
+    return registerSocketEventPayload;
 }

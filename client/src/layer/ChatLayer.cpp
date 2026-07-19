@@ -18,24 +18,27 @@ void ChatLayer::OnAttach()
 {
     // Users
     User CurrentUser = {};
-    CurrentUser.ID = "CurrentUser";
-    CurrentUser.FirstName = "Olivier";
-    CurrentUser.LastName = "Perron";
-    CurrentUser.ImageUrl = "http://fake.iamge.url";
+    CurrentUser.id = "CurrentUser";
+    CurrentUser.email = "currentuser@fake.com";
+    CurrentUser.firstName = "Olivier";
+    CurrentUser.lastName = "Perron";
+    CurrentUser.password = "passwordCurrentUser";
 
     m_CurrentUser = std::make_shared<User>(CurrentUser);
 
     User User1 = {};
-    User1.ID = "User1";
-    User1.FirstName = "Marc";
-    User1.LastName = "Bum";
-    User1.ImageUrl = "http://fake.iamge.url";
+    User1.id = "User1";
+    User1.email = "user1@fake.com";
+    User1.firstName = "Marc";
+    User1.lastName = "Bum";
+    User1.password = "passwordUser1";
 
     User User2 = {};
-    User2.ID = "User2";
-    User2.FirstName = "Simon";
-    User2.LastName = "Robichaud";
-    User2.ImageUrl = "http://fake.iamge.url";
+    User2.id = "User2";
+    User1.email = "user2@fake.com";
+    User2.firstName = "Simon";
+    User2.lastName = "Robichaud";
+    User2.password = "passwordUser2";
 
     m_Users = {
         std::make_shared<User>(User1),
@@ -69,14 +72,14 @@ void ChatLayer::OnAttach()
         const MessageCreatedSocketEventPayload& messageCreatedSocketEventPayload = messageCreatedSocketEventPayloadDeserializer.Deserialize(serializedMessageCreatedSocketEventPayload);
         m_Logger->Info("Message sent" + messageCreatedSocketEventPayload.message.text);
         m_Logger->Info("Message sent by " + messageCreatedSocketEventPayload.message.senderId);
-        m_Logger->Info("Message sent to conversation" + messageCreatedSocketEventPayload.message.conversationId);
+        m_Logger->Info("Message sent to conversation " + messageCreatedSocketEventPayload.message.conversationId);
     };
 
     UserAuthenticatedSocketEventPayloadDeserializer userAuthenticatedSocketEventPayloadDeserializer = {};
     SocketClientEventHandler HandleUserAuthenticated = [this, &userAuthenticatedSocketEventPayloadDeserializer](const std::string& serializedUserAuthenticatedSocketEventPayload) {
         // Gets user authenticated socket event payload
         const UserAuthenticatedSocketEventPayload& userAuthenticatedSocketEventPayload = userAuthenticatedSocketEventPayloadDeserializer.Deserialize(serializedUserAuthenticatedSocketEventPayload);
-        m_Logger->Info("Authenticated user ID: " + userAuthenticatedSocketEventPayload.User.ID);
+        m_Logger->Info("Authenticated user ID: " + userAuthenticatedSocketEventPayload.User.id);
     };
 
     m_SocketClient->On(SocketEventName::MESSAGE_CREATED, HandleMessageCreated);
@@ -227,10 +230,10 @@ void ChatLayer::OnRender()
                                     return std::tolower(Character);
                                 };
 
-                                std::string& LowercaseFirstName = User->FirstName;
+                                std::string& LowercaseFirstName = User->firstName;
                                 std::transform(LowercaseFirstName.begin(), LowercaseFirstName.end(), LowercaseFirstName.begin(), ConvertCharToLowercase);
 
-                                std::string& LowercaseLastName = User->LastName;
+                                std::string& LowercaseLastName = User->lastName;
                                 std::transform(LowercaseLastName.begin(), LowercaseLastName.end(), LowercaseLastName.begin(), ConvertCharToLowercase);
 
                                 // std::string& LowercaseValue = m_SearchValue;
@@ -259,7 +262,7 @@ void ChatLayer::OnRender()
 
                             // USER CONTAINER
                             Container UserContainer = {};
-                            UserContainer.ID = User->ID;
+                            UserContainer.ID = User->id;
                             UserContainer.Size = Vector2(SEARCH_MODAL_BODY_CONTAINER_AVAILABLE_SPACE.X, 40.0f);
                             UserContainer.CornerRounding = 10.f;
                             // NOTE: Transparent background
@@ -267,7 +270,7 @@ void ChatLayer::OnRender()
                             UserContainer.BgColorHovered = Rgba(50, 56, 102, 255);
                             UserContainer.IsAutoResizableY = true;
                             UserContainer.OnClick = [this, &SearchModal, &User]() {
-                                m_Logger->Info("selected User with ID " + User->ID);
+                                m_Logger->Info("selected User with ID " + User->id);
                                 m_Gui.CloseModal(SearchModal.ID);
                                 m_SearchValue = "";
                             };
@@ -284,7 +287,7 @@ void ChatLayer::OnRender()
 
                                 // USER TEXT
                                 Text UserText = {};
-                                UserText.Value = User->FirstName + " " + User->LastName;
+                                UserText.Value = User->firstName + " " + User->lastName;
 
                                 m_Gui.DisplayInline();
                                 m_Gui.SetPositionX(UserImage.Size.X * 1.3f);
@@ -499,7 +502,7 @@ void ChatLayer::OnRender()
 
                             // CONVERSATION TEXT
                             Text ConversationText = {};
-                            ConversationText.Value = Conversation->Users[1].FirstName;
+                            ConversationText.Value = Conversation->Users[1].firstName;
 
                             m_Gui.SetPositionX(ConversationImage.Size.X + 10.0f);
                             m_Gui.DrawText(ConversationText);
@@ -710,7 +713,7 @@ void ChatLayer::OnRender()
                 Message newMessage = {};
                 newMessage.id = "TempID";
                 newMessage.conversationId = m_SelectedConversation->ID;
-                newMessage.senderId = m_CurrentUser->ID;
+                newMessage.senderId = m_CurrentUser->id;
                 newMessage.text = m_MessageValue;
                 newMessage.createdAt = std::time(0);
 

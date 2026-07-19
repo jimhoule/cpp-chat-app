@@ -8,5 +8,5 @@ class UserAuthenticatedSocketEventSerializer: public ISerializer<UserAuthenticat
 public:
     UserAuthenticatedSocketEventSerializer() = default;
 
-    std::string Serialize(const UserAuthenticatedSocketEvent& UserAuthenticatedSocketEvent) override;
+    std::string Serialize(const UserAuthenticatedSocketEvent& userAuthenticatedSocketEvent) override;
 };

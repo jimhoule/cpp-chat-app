@@ -1,77 +1,94 @@
 #include "auth/AuthHandler.h"
+#include "socket/SocketServer.h"
 
 // **********
 // * PUBLIC *
 // **********
-AuthHandler::AuthHandler(SocketServer& SocketServer, const AuthService& AuthService) : m_SocketServer(SocketServer), m_AuthService(AuthService)
+AuthHandler::AuthHandler(SocketServer& socketServer, AuthService& authService) : m_socketServer(socketServer), m_authService(authService)
 {}
 
 SocketServerEventHandler AuthHandler::GetLoginHandler()
 {
-    return [this](const std::string& SerializedLoginSocketEventPayload, int ClientSocket) {
+    return [this](const std::string& serializedLoginSocketEventPayload, int clientSocket) {
         // Gets login socket event payload
-        const LoginSocketEventPayload& LoginSocketEventPayload = m_LoginSocketEventPayloadDeserializer.Deserialize(SerializedLoginSocketEventPayload);
+        const LoginSocketEventPayload loginSocketEventPayload = m_loginSocketEventPayloadDeserializer.Deserialize(serializedLoginSocketEventPayload);
 
-        // Generates access token
-        // TODO: Create auth service and integrate jwt library
-        const std::string& AccessToken = LoginSocketEventPayload.Email + "." + LoginSocketEventPayload.Password;
+        // Logs in 
+        LoginDto loginDto = {};
+        loginDto.email = loginSocketEventPayload.email;
+        loginDto.password = loginSocketEventPayload.password;
+        const AuthServiceResult authServiceResult = m_authService.Login(loginDto);
+        if (!authServiceResult.user.has_value())
+        {
+            SendErrorSocketEvent(clientSocket);
+            return;
+        }
 
         // Serializes logged in socket event
-        const LoggedinSocketEventPayload& LoggedinSocketEventPayload(AccessToken);
-        const LoggedinSocketEvent& LoggedinSocketEvent(LoggedinSocketEventPayload);
-        const std::string& SerializedLoggedinSocketEvent = m_LoggedinSocketEventSerializer.Serialize(LoggedinSocketEvent);
+        const LoggedinSocketEventPayload loggedinSocketEventPayload(authServiceResult.sessionId);
+        const LoggedinSocketEvent loggedinSocketEvent(loggedinSocketEventPayload);
+        const std::string serializedLoggedinSocketEvent = m_loggedinSocketEventSerializer.Serialize(loggedinSocketEvent);
 
         // Sends logged in socket event
-        m_SocketServer.SendTo(ClientSocket, SerializedLoggedinSocketEvent);
+        m_socketServer.SendTo(clientSocket, serializedLoggedinSocketEvent);
 
         // Sends user authenticated socket event to others
-        SendUserAuthenticatedSocketEvent(ClientSocket, AccessToken);
+        SendUserAuthenticatedSocketEvent(clientSocket, authServiceResult.user.value());
     };
 }
 
 SocketServerEventHandler AuthHandler::GetRegisterHandler()
 {
-    return [this](const std::string& SerializedRegisterSocketEventPayload, int ClientSocket) {
+    return [this](const std::string& serializedRegisterSocketEventPayload, int clientSocket) {
         // Gets register socket event payload
-        const RegisterSocketEventPayload& RegisterSocketEventPayload = m_RegisterSocketEventPayloadDeserializer.Deserialize(SerializedRegisterSocketEventPayload);
+        const RegisterSocketEventPayload registerSocketEventPayload = m_registerSocketEventPayloadDeserializer.Deserialize(serializedRegisterSocketEventPayload);
 
         // Generates access token
         // TODO: Create auth service and integrate jwt library
-        const std::string& AccessToken = RegisterSocketEventPayload.FirstName + "." + RegisterSocketEventPayload.LastName + "." +RegisterSocketEventPayload.Email + "." + RegisterSocketEventPayload.Password;
+        RegisterDto registerDto = {};
+        registerDto.email = registerSocketEventPayload.email;
+        registerDto.firstName = registerSocketEventPayload.firstName;
+        registerDto.lastName = registerSocketEventPayload.lastName;
+        registerDto.password = registerSocketEventPayload.password;
+        const AuthServiceResult authServiceResult = m_authService.Register(registerDto);
+        if (!authServiceResult.user.has_value())
+        {
+            SendErrorSocketEvent(clientSocket);
+            return;
+        }
 
         // Serializes registered socket event
-        const RegisteredSocketEventPayload& RegisteredSocketEventPayload(AccessToken);
-        const RegisteredSocketEvent& RegisteredSocketEvent(RegisteredSocketEventPayload);
-        const std::string& SerializedRegisteredSocketEvent = m_RegisteredSocketEventSerializer.Serialize(RegisteredSocketEvent);
+        const RegisteredSocketEventPayload registeredSocketEventPayload(authServiceResult.sessionId);
+        const RegisteredSocketEvent registeredSocketEvent(registeredSocketEventPayload);
+        const std::string serializedRegisteredSocketEvent = m_registeredSocketEventSerializer.Serialize(registeredSocketEvent);
 
         // Sends registered socket event
-        m_SocketServer.SendTo(ClientSocket, SerializedRegisteredSocketEvent);
+        m_socketServer.SendTo(clientSocket, serializedRegisteredSocketEvent);
 
         // Sends user authenticated socket event to others
-        SendUserAuthenticatedSocketEvent(ClientSocket, AccessToken);
+        SendUserAuthenticatedSocketEvent(clientSocket, authServiceResult.user.value());
     };
 }
 
 // ***********
 // * PRIVATE *
 // ***********
-void AuthHandler::SendUserAuthenticatedSocketEvent(int ClientSocket, const std::string& AccessToken)
+void AuthHandler::SendErrorSocketEvent(int clientSocket)
 {
-    // TODO: Decode access token to get user ID and fetch user
-    User FakeUser = {};
-    FakeUser.ID = "Fake ID";
-    FakeUser.FirstName = "Fake Firstname";
-    FakeUser.LastName = "Fake Lastname";
-    FakeUser.ImageUrl = "https://www.fakeimageurl.com";
+    // TODO: Send ERROR socket event
+    std::cout << "Invalid email or password for client socket " << clientSocket << std::endl;
+}
 
+void AuthHandler::SendUserAuthenticatedSocketEvent(int clientSocket, const User& user)
+{
     // Binds user to server
-    m_SocketServer.BindSocketConnectionUser(ClientSocket, FakeUser);
+    m_socketServer.BindSocketConnectionUser(clientSocket, user);
 
     // Serializes user authenticated socket event
-    const UserAuthenticatedSocketEventPayload& UserAuthenticatedSocketEventPayload(FakeUser);
-    const UserAuthenticatedSocketEvent& UserAuthenticatedSocketEvent(UserAuthenticatedSocketEventPayload);
-    const std::string& SerializedUserAuthenticatedSocketEvent = m_UserAuthenticatedSocketEventSerializer.Serialize(UserAuthenticatedSocketEvent);
+    const UserAuthenticatedSocketEventPayload userAuthenticatedSocketEventPayload(user);
+    const UserAuthenticatedSocketEvent userAuthenticatedSocketEvent(userAuthenticatedSocketEventPayload);
+    const std::string serializedUserAuthenticatedSocketEvent = m_userAuthenticatedSocketEventSerializer.Serialize(userAuthenticatedSocketEvent);
 
     // Sends user authenticated socket event to others
-    m_SocketServer.SendAllExcept(ClientSocket, SerializedUserAuthenticatedSocketEvent);
+    m_socketServer.SendAllExcept(clientSocket, serializedUserAuthenticatedSocketEvent);
 }

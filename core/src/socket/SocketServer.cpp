@@ -30,7 +30,7 @@ void SocketServer::BindSocketConnectionUser(int clientSocket, const User& user)
 
 	socketConnectionsMapIterator->second.user = user;
 	// NOTE: If key does not exist, this line creates it inside the map with an empty vector
-	m_userClientSocketsMap[user.ID].push_back(clientSocket);
+	m_userClientSocketsMap[user.id].push_back(clientSocket);
 }
 
 void SocketServer::Close()
@@ -258,14 +258,14 @@ void SocketServer::SendToMany(std::vector<int> ClientSockets, const std::string&
 	if (socketConnectionUser.has_value())
 	{
 		// Removes socket from user's sockets
-		std::unordered_map<std::string, std::vector<int>>::iterator userClientSocketsMapIterator = m_userClientSocketsMap.find(socketConnectionUser.value().ID);
+		std::unordered_map<std::string, std::vector<int>>::iterator userClientSocketsMapIterator = m_userClientSocketsMap.find(socketConnectionUser.value().id);
 		userClientSocketsMapIterator->second.erase(std::remove(userClientSocketsMapIterator->second.begin(), userClientSocketsMapIterator->second.end(), ClientSocket));
 
 		// If after removing socket user does not have sockets anymore
 		if (!userClientSocketsMapIterator->second.size())
 		{
 			// Removes sockets vector from map
-			m_userClientSocketsMap.erase(socketConnectionUser.value().ID);
+			m_userClientSocketsMap.erase(socketConnectionUser.value().id);
 		}
 	}
 

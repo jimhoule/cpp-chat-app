@@ -8,5 +8,5 @@ class LoginSocketEventSerializer: public ISerializer<LoginSocketEvent, std::stri
 public:
     LoginSocketEventSerializer() = default;
 
-    std::string Serialize(const LoginSocketEvent& LoginSocketEvent) override;
+    std::string Serialize(const LoginSocketEvent& loginSocketEvent) override;
 };

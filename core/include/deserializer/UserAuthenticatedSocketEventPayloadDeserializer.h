@@ -8,5 +8,5 @@ class UserAuthenticatedSocketEventPayloadDeserializer: public IDeserializer<std:
 public:
     UserAuthenticatedSocketEventPayloadDeserializer() = default;
 
-    UserAuthenticatedSocketEventPayload Deserialize(const std::string& JsonString) override;
+    UserAuthenticatedSocketEventPayload Deserialize(const std::string& jsonString) override;
 };

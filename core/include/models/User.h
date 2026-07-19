@@ -6,8 +6,9 @@ struct User
 {
     User() = default;
 
-    std::string ID;
-    std::string FirstName;
-    std::string LastName;
-    std::string ImageUrl;
+    std::string id;
+    std::string email;
+    std::string firstName;
+    std::string lastName;
+    std::string password;
 };

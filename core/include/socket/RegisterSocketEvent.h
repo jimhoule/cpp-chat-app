@@ -7,17 +7,17 @@
 struct RegisterSocketEventPayload
 {
     RegisterSocketEventPayload() = default;
-    RegisterSocketEventPayload(const std::string& FirstName, const std::string& LastName, const std::string& Email, const std::string& Password) : FirstName(FirstName), LastName(LastName), Email(Email), Password(Password)
+    RegisterSocketEventPayload(const std::string& firstName, const std::string& lastName, const std::string& email, const std::string& password) : firstName(firstName), lastName(lastName), email(email), password(password)
     {}
 
-    std::string FirstName;
-    std::string LastName;
-    std::string Email;
-    std::string Password;
+    std::string firstName;
+    std::string lastName;
+    std::string email;
+    std::string password;
 };
 
 struct RegisterSocketEvent : public SocketEvent<RegisterSocketEventPayload>
 {
-    RegisterSocketEvent(RegisterSocketEventPayload RegisterSocketEventPayload) :  SocketEvent(SocketEventName::REGISTER, RegisterSocketEventPayload)
+    RegisterSocketEvent(RegisterSocketEventPayload payload) :  SocketEvent(SocketEventName::REGISTER, payload)
     {}
 };

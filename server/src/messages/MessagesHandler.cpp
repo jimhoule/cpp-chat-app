@@ -1,9 +1,11 @@
 #include "messages/MessagesHandler.h"
 
+#include "socket/SocketServer.h"
+
 // **********
 // * PUBLIC *
 // **********
-MessagesHandler::MessagesHandler(SocketServer& socketServer, const MessagesService& messagesService) : m_socketServer(socketServer), m_messagesService(messagesService)
+MessagesHandler::MessagesHandler(SocketServer& socketServer, MessagesService& messagesService) : m_socketServer(socketServer), m_messagesService(messagesService)
 {}
 
 SocketServerEventHandler MessagesHandler::GetCreateMessageHandler()
@@ -13,16 +15,14 @@ SocketServerEventHandler MessagesHandler::GetCreateMessageHandler()
         const CreateMessageSocketEventPayload& createMessageSocketEventPayload = m_createMessageSocketEventPayloadDeserializer.Deserialize(serializedCreateMessageSocketEventPayload);
 
         // Creates message
-        // TODO: Create message service
-        Message fakeMessage = {};
-        fakeMessage.id = "FakeId";
-        fakeMessage.conversationId = "fakeConversationId";
-        fakeMessage.senderId = "fakeSenderId";
-        fakeMessage.text = "fakeText";
-        fakeMessage.createdAt = std::time(0);
+        CreateMessageDto createMessageDto = {};
+        createMessageDto.conversationId = createMessageSocketEventPayload.conversationID;
+        createMessageDto.senderId = m_socketServer.GetSocketConnectionUser(clientSocket)->id;
+        createMessageDto.text = createMessageSocketEventPayload.text;
+        const Message message = m_messagesService.Create(createMessageDto);
         
         // Serializes message created socket event
-        const MessageCreatedSocketEventPayload& messageCreatedSocketEventPayload(fakeMessage);
+        const MessageCreatedSocketEventPayload& messageCreatedSocketEventPayload(message);
         const MessageCreatedSocketEvent& messageCreatedSocketEvent(messageCreatedSocketEventPayload);
         const std::string& serializedMessageCreatedSocketEvent = m_messageCreatedSocketEventSerializer.Serialize(messageCreatedSocketEvent);
 

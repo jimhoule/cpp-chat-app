@@ -3,8 +3,18 @@
 // **********
 // * PUBLIC *
 // **********
-MessagesService::MessagesService()
+MessagesService::MessagesService(std::unique_ptr<IMessagesRepository> messagesRepository) : m_messagesRepository(std::move(messagesRepository))
 {}
 
-void MessagesService::Create()
-{}
+Message MessagesService::Create(const CreateMessageDto& createMessageDto)
+{
+    Message message = {};
+    message.id = "uuid." + createMessageDto.conversationId + "." + createMessageDto.senderId;
+    message.conversationId = createMessageDto.conversationId;
+    message.senderId = createMessageDto.senderId;
+    message.text = createMessageDto.text;
+    message.createdAt = std::time(0);
+
+
+    return m_messagesRepository->Create(message);
+}
