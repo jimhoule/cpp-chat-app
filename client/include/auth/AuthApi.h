@@ -4,8 +4,6 @@
 #include "serializer/RegisterSocketEventSerializer.h"
 #include "socket/SocketClient.h"
 
-#include <string>
-
 struct LoginParams
 {
     std::string Email;
@@ -25,7 +23,7 @@ struct RegisterParams
 class AuthApi
 {
 public:
-    AuthApi(const SocketClient& SocketClient);
+    AuthApi(std::shared_ptr<SocketClient> SocketClient);
 
     void Login(const LoginParams& LoginParams);
     void Register(const RegisterParams& RegisterParams);
@@ -33,5 +31,5 @@ public:
 private:
     LoginSocketEventSerializer m_LoginSocketEventSerializer = {};
     RegisterSocketEventSerializer m_RegisterSocketEventSerializer = {};
-    SocketClient m_SocketClient = {};
+    std::shared_ptr<SocketClient> m_SocketClient = nullptr;
 };

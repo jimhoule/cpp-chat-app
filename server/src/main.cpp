@@ -1,6 +1,7 @@
 #include "auth/AuthHandler.h"
 #include "deserializer/LoginSocketEventPayloadDeserializer.h"
 #include "deserializer/RegisterSocketEventPayloadDeserializer.h"
+#include "messages/MessagesHandler.h"
 #include "serializer/LoggedinSocketEventSerializer.h"
 #include "serializer/RegisteredSocketEventSerializer.h"
 #include "socket/SocketServer.h"
@@ -13,18 +14,24 @@ int main()
 {
 	// const int PORT = std::stoi(std::getenv("PORT"));
 	const unsigned int PORT = 5000;
-	SocketServer Server(PORT);
+	SocketServer server(PORT);
 
 	// Auth
-	AuthService AppAuthService;
-	AuthHandler AppAuthHandler(Server, AppAuthService);
+	AuthService authService;
+	AuthHandler authHandler(server, authService);
 
-	Server.On(SocketEventName::LOGIN, AppAuthHandler.GetLoginHandler());
-	Server.On(SocketEventName::REGISTER, AppAuthHandler.GetRegisterHandler());
+	server.On(SocketEventName::LOGIN, authHandler.GetLoginHandler());
+	server.On(SocketEventName::REGISTER, authHandler.GetRegisterHandler());
 
-	Server.Init();
-	Server.Listen();
-	Server.Close();
+	// Messages
+	MessagesService messagesService;
+	MessagesHandler messagesHandler(server, messagesService);
+
+	server.On(SocketEventName::CREATE_MESSAGE, messagesHandler.GetCreateMessageHandler());
+
+	server.Init();
+	server.Listen();
+	server.Close();
 
 	return 0;
 }

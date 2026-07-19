@@ -1,5 +1,6 @@
 #include "layer/ChatLayer.h"
 
+#include "deserializer/MessageCreatedSocketEventPayloadDeserializer.h"
 #include "deserializer/UserAuthenticatedSocketEventPayloadDeserializer.h"
 
 constexpr int SERVER_PORT =  5000;
@@ -7,10 +8,10 @@ constexpr int SERVER_PORT =  5000;
 // **********
 // * PUBLIC *
 // **********
-ChatLayer::ChatLayer(const std::string& ID, const SocketClient& SocketClient, const Gui& Gui) : Layer(ID, std::make_shared<Logger>(ID, "client/src/layer/ChatLayer")), m_SocketClient(SocketClient), m_Gui(Gui)
+ChatLayer::ChatLayer(const std::string& ID, std::shared_ptr<SocketClient> SocketClient, const Gui& Gui) : Layer(ID, std::make_shared<Logger>(ID, "client/src/layer/ChatLayer")), m_SocketClient(SocketClient), m_Gui(Gui)
 {}
 
-ChatLayer::ChatLayer(const std::string& ID, const SocketClient& SocketClient, const Gui& Gui, const std::shared_ptr<Logger>& Logger) : Layer(ID, Logger), m_SocketClient(SocketClient), m_Gui(Gui)
+ChatLayer::ChatLayer(const std::string& ID, std::shared_ptr<SocketClient> SocketClient, const Gui& Gui, const std::shared_ptr<Logger>& Logger) : Layer(ID, Logger), m_SocketClient(SocketClient), m_Gui(Gui)
 {}
 
 void ChatLayer::OnAttach()
@@ -62,14 +63,24 @@ void ChatLayer::OnAttach()
     m_SelectedConversation = m_Conversations[0];
 
     // Socket
-    UserAuthenticatedSocketEventPayloadDeserializer UserAuthenticatedSocketEventPayloadDeserializer = {};
-    SocketClientEventHandler HandlerUserAuthenticated = [this, &UserAuthenticatedSocketEventPayloadDeserializer](const std::string& SerializedUserAuthenticatedSocketEventPayload) {
-        // Gets registered socket event payload
-        const UserAuthenticatedSocketEventPayload& UserAuthenticatedSocketEventPayload = UserAuthenticatedSocketEventPayloadDeserializer.Deserialize(SerializedUserAuthenticatedSocketEventPayload);
-        m_Logger->Info("Authenticated user ID: " + UserAuthenticatedSocketEventPayload.User.ID);
+    MessageCreatedSocketEventPayloadDeserializer messageCreatedSocketEventPayloadDeserializer = {};
+    SocketClientEventHandler HandleMessageCreated = [this, &messageCreatedSocketEventPayloadDeserializer](const std::string& serializedMessageCreatedSocketEventPayload) {
+        // Gets message created event payload
+        const MessageCreatedSocketEventPayload& messageCreatedSocketEventPayload = messageCreatedSocketEventPayloadDeserializer.Deserialize(serializedMessageCreatedSocketEventPayload);
+        m_Logger->Info("Message sent" + messageCreatedSocketEventPayload.message.text);
+        m_Logger->Info("Message sent by " + messageCreatedSocketEventPayload.message.senderId);
+        m_Logger->Info("Message sent to conversation" + messageCreatedSocketEventPayload.message.conversationId);
     };
 
-    m_SocketClient.On(SocketEventName::USER_AUTHENTICATED, HandlerUserAuthenticated);
+    UserAuthenticatedSocketEventPayloadDeserializer userAuthenticatedSocketEventPayloadDeserializer = {};
+    SocketClientEventHandler HandleUserAuthenticated = [this, &userAuthenticatedSocketEventPayloadDeserializer](const std::string& serializedUserAuthenticatedSocketEventPayload) {
+        // Gets user authenticated socket event payload
+        const UserAuthenticatedSocketEventPayload& userAuthenticatedSocketEventPayload = userAuthenticatedSocketEventPayloadDeserializer.Deserialize(serializedUserAuthenticatedSocketEventPayload);
+        m_Logger->Info("Authenticated user ID: " + userAuthenticatedSocketEventPayload.User.ID);
+    };
+
+    m_SocketClient->On(SocketEventName::MESSAGE_CREATED, HandleMessageCreated);
+    m_SocketClient->On(SocketEventName::USER_AUTHENTICATED, HandleUserAuthenticated);
 
     // Textures
     m_BlankImageTexture.Load("../../assets/Blank.jpg", 0);
@@ -599,11 +610,11 @@ void ChatLayer::OnRender()
                         MessageDetailsContainer.DrawContent = [this, &MESSAGE](const ContainerState& State) {
                             // MESSAGE SENDER FIRSTNAME TEXT
                             Text MessageSenderFirstNameText = {};
-                            MessageSenderFirstNameText.Value = MESSAGE.SenderFirstName;
+                            MessageSenderFirstNameText.Value = "Firstname of " + MESSAGE.senderId;
                             m_Gui.DrawText(MessageSenderFirstNameText);
 
                             // MESSAGE CREATED AT TEXT
-                            std::tm* MessageCreatedAtDate = std::localtime(&MESSAGE.CreatedAt);
+                            std::tm* MessageCreatedAtDate = std::localtime(&MESSAGE.createdAt);
                             const std::string& MESSAGE_CREATED_AT_STRING_DATE = asctime(MessageCreatedAtDate);
 
                             Text MessageCreatedAtText = {};
@@ -613,7 +624,7 @@ void ChatLayer::OnRender()
 
                             // MESSAGE TEXT
                             Text MessageText = {};
-                            MessageText.Value = MESSAGE.Text;
+                            MessageText.Value = MESSAGE.text;
                             m_Gui.DrawTextWrapped(MessageText);
 
                         };
@@ -696,18 +707,17 @@ void ChatLayer::OnRender()
             SendButton.CornerRounding = 10.0f;
             SendButton.IsDisabled = m_MessageValue.empty();
             SendButton.OnClick = [this]() {
-                Message NewMessage = {};
-                NewMessage.ID = "FakeID";
-                NewMessage.ConversationID = m_SelectedConversation->ID;
-                NewMessage.SenderID = m_CurrentUser->ID;
-                NewMessage.SenderFirstName = m_CurrentUser->FirstName;
-                NewMessage.SenderImageUrl = m_CurrentUser->ImageUrl;
-                NewMessage.Text = m_MessageValue;
-                NewMessage.CreatedAt = std::time(0);
+                Message newMessage = {};
+                newMessage.id = "TempID";
+                newMessage.conversationId = m_SelectedConversation->ID;
+                newMessage.senderId = m_CurrentUser->ID;
+                newMessage.text = m_MessageValue;
+                newMessage.createdAt = std::time(0);
+
+                m_SelectedConversation->Messages.push_back(newMessage);
 
                 // TODO: Server call to persist message will go there
-
-                m_SelectedConversation->Messages.push_back(NewMessage);
+                OnSendMessageButtonClick(m_SelectedConversation->ID, m_MessageValue);
 
                 m_Logger->Info("SENT: " + m_MessageValue);
             };

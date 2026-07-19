@@ -19,9 +19,41 @@ constexpr int BUFFER_SIZE = 1000000;
 SocketServer::SocketServer(unsigned int Port) : m_Port(Port)
 {}
 
+void SocketServer::BindSocketConnectionUser(int clientSocket, const User& user)
+{
+	std::unordered_map<int, SocketConnection>::iterator socketConnectionsMapIterator = m_socketConnectionsMap.find(clientSocket);
+	if (socketConnectionsMapIterator == m_socketConnectionsMap.end())
+	{
+		std::cerr << "Socket connection not found" << std::endl;
+		return;
+	}
+
+	socketConnectionsMapIterator->second.user = user;
+	// NOTE: If key does not exist, this line creates it inside the map with an empty vector
+	m_userClientSocketsMap[user.ID].push_back(clientSocket);
+}
+
 void SocketServer::Close()
 {
 	close(m_Socket);
+}
+
+const User* SocketServer::GetSocketConnectionUser(int clientSocket)
+{
+	std::unordered_map<int, SocketConnection>::iterator socketConnectionsMapIterator = m_socketConnectionsMap.find(clientSocket);
+	if (socketConnectionsMapIterator == m_socketConnectionsMap.end())
+	{
+		std::cerr << "Socket connection user not found" << std::endl;
+		return nullptr;
+	}
+
+	if (!socketConnectionsMapIterator->second.user.has_value())
+	{
+		std::cerr << "Socket connection user not authenticated" << std::endl;
+		return nullptr;
+	}
+
+	return &socketConnectionsMapIterator->second.user.value();
 }
 
 void SocketServer::Init()
@@ -97,43 +129,46 @@ void SocketServer::Listen()
 
 		// Loops through all the events that have occurred
 		for (int i = 0; i < EventsCount; i++) {
-			// New connection
-			if (Events[i].data.fd == m_Socket)
+			// Existing connection
+			if (Events[i].data.fd != m_Socket)
 			{
-				// Accepts new connections
-				int ClientSocket = accept(m_Socket, reinterpret_cast<sockaddr *>(&m_Address), &address_length);
-				// Handles non-blocking accept errors
-				if (ClientSocket < 0 && (errno == EAGAIN || errno == EWOULDBLOCK))
-				{
-					continue;
-				}
-
-				if (ClientSocket == -1)
-				{
-					std::cerr << "Failed to accept client socket connection" << std::endl;
-					continue;
-				}
-
-				std::cout << "Accepted client socket " << ClientSocket << " new connection" << "\n" << std::endl;
-
-				m_ClientSockets.push_back(ClientSocket);
-				SetNonBlockingSocket(ClientSocket);
-
-				// Adds the new client socket to the epoll interest list
-				Event.events = EPOLLIN | EPOLLET; // Monitor for read events, edge-triggered
-				Event.data.fd = ClientSocket;
-				if (epoll_ctl(Epoll, EPOLL_CTL_ADD, ClientSocket, &Event) == -1)
-				{
-					std::cerr << "Failed to add client socket to epoll" << std::endl;
-					CloseClientSocket(ClientSocket);
-				}
+				int ClientSocket = Events[i].data.fd;
+				ReadClientSocket(ClientSocket);
 
 				continue;
 			}
-			
-			// Existing connection
-			int ClientSocket = Events[i].data.fd;
-			ReadClientSocket(ClientSocket);
+
+			// New connection
+			// Accepts new connections
+			int ClientSocket = accept(m_Socket, reinterpret_cast<sockaddr *>(&m_Address), &address_length);
+			// Handles non-blocking accept errors
+			if (ClientSocket < 0 && (errno == EAGAIN || errno == EWOULDBLOCK))
+			{
+				continue;
+			}
+
+			if (ClientSocket == -1)
+			{
+				std::cerr << "Failed to accept client socket connection" << std::endl;
+				continue;
+			}
+
+			std::cout << "Accepted client socket " << ClientSocket << " new connection" << "\n" << std::endl;
+
+			//m_ClientSockets.push_back(ClientSocket);
+			SocketConnection socketConnection = {};
+			socketConnection.clientSocket = ClientSocket;
+			m_socketConnectionsMap.insert(std::pair(ClientSocket, socketConnection));
+			SetNonBlockingSocket(ClientSocket);
+
+			// Adds the new client socket to the epoll interest list
+			Event.events = EPOLLIN | EPOLLET; // Monitor for read events, edge-triggered
+			Event.data.fd = ClientSocket;
+			if (epoll_ctl(Epoll, EPOLL_CTL_ADD, ClientSocket, &Event) == -1)
+			{
+				std::cerr << "Failed to add client socket to epoll" << std::endl;
+				CloseClientSocket(ClientSocket);
+			}
 		}
 	}
 }
@@ -145,35 +180,54 @@ void SocketServer::On(SocketEventName SocketEventName, const SocketServerEventHa
 
 void SocketServer::SendAll(const std::string& SerializedSocketEvent)
 {
-    SendToMany(m_ClientSockets, SerializedSocketEvent);
+	for (const std::pair<int, SocketConnection>& pair : m_socketConnectionsMap)
+	{
+		SendTo(pair.first, SerializedSocketEvent);
+	}
 }
 
 void SocketServer::SendAllExcept(int ExceptionClientSocket, const std::string& SerializedSocketEvent)
 {
-    for (int ClientSocket : m_ClientSockets)
+	for (const std::pair<int, SocketConnection>& pair : m_socketConnectionsMap)
     {
+		// If connection has no user, it means the client is not authenticated yet
+		if (!pair.second.user.has_value()) continue;
         // If client socket is an exception (client socket not to send to)
-        if (ClientSocket == ExceptionClientSocket) continue;
+        if (pair.first == ExceptionClientSocket) continue;
 
-        SendTo(ClientSocket, SerializedSocketEvent);
+        SendTo(pair.first, SerializedSocketEvent);
     }
 }
 
 void SocketServer::SendAllExcept(std::unordered_map<int, bool> ExceptionClientSocketsMap, const std::string& SerializedSocketEvent)
 {
-    for (int ClientSocket : m_ClientSockets)
+	for (const std::pair<int, SocketConnection>& pair : m_socketConnectionsMap)
     {
+		// If connection has no user, it means the client is not authenticated yet
+		if (!pair.second.user.has_value()) continue;
         // If client socket is in the exception map (client socket not to send to)
-        std::unordered_map<int, bool>::iterator ExceptionClientSocketIterator = ExceptionClientSocketsMap.find(ClientSocket);
-        if (ExceptionClientSocketIterator == ExceptionClientSocketsMap.end()) continue;
+        std::unordered_map<int, bool>::iterator exceptionClientSocketMapIterator = ExceptionClientSocketsMap.find(pair.first);
+        if (exceptionClientSocketMapIterator == ExceptionClientSocketsMap.end()) continue;
 
-        SendTo(ClientSocket, SerializedSocketEvent);
+        SendTo(pair.first, SerializedSocketEvent);
     }
 }
 
 void SocketServer::SendTo(int ClientSocket, const std::string& SerializedSocketEvent)
 {
 	send(ClientSocket, SerializedSocketEvent.c_str(), SerializedSocketEvent.length(), 0);
+}
+
+void SocketServer::SendTo(const std::string& userId, const std::string& serializedSocketEvent)
+{
+	std::unordered_map<std::string, std::vector<int>>::iterator userClientSocketsMapIterator = m_userClientSocketsMap.find(userId);
+	if (userClientSocketsMapIterator == m_userClientSocketsMap.end())
+	{
+		std::cerr << "User not found in user sockets map" << std::endl;
+		return;
+	}
+
+	SendToMany(userClientSocketsMapIterator->second, serializedSocketEvent);
 }
 
 void SocketServer::SendToMany(std::vector<int> ClientSockets, const std::string& SerializedSocketEvent)
@@ -190,7 +244,35 @@ void SocketServer::SendToMany(std::vector<int> ClientSockets, const std::string&
  void SocketServer::CloseClientSocket(int ClientSocket)
  {
 	close(ClientSocket);
-	m_ClientSockets.erase(std::remove(m_ClientSockets.begin(), m_ClientSockets.end(), ClientSocket), m_ClientSockets.end()); 
+
+
+	std::unordered_map<int, SocketConnection>::iterator socketConnectionsMapIterator = m_socketConnectionsMap.find(ClientSocket);
+	if (socketConnectionsMapIterator == m_socketConnectionsMap.end())
+	{
+		std::cout << "No socket connections found" << std::endl;
+		return;
+	}
+
+	// If connection has a user
+	const std::optional<User>& socketConnectionUser = socketConnectionsMapIterator->second.user;
+	if (socketConnectionUser.has_value())
+	{
+		// Removes socket from user's sockets
+		std::unordered_map<std::string, std::vector<int>>::iterator userClientSocketsMapIterator = m_userClientSocketsMap.find(socketConnectionUser.value().ID);
+		userClientSocketsMapIterator->second.erase(std::remove(userClientSocketsMapIterator->second.begin(), userClientSocketsMapIterator->second.end(), ClientSocket));
+
+		// If after removing socket user does not have sockets anymore
+		if (!userClientSocketsMapIterator->second.size())
+		{
+			// Removes sockets vector from map
+			m_userClientSocketsMap.erase(socketConnectionUser.value().ID);
+		}
+	}
+
+	// Removes socket connection from map
+	m_socketConnectionsMap.erase(ClientSocket);
+
+	//m_ClientSockets.erase(std::remove(m_ClientSockets.begin(), m_ClientSockets.end(), ClientSocket), m_ClientSockets.end()); 
  }
 
 void SocketServer::ReadClientSocket(int ClientSocket) {
@@ -216,7 +298,8 @@ void SocketServer::ReadClientSocket(int ClientSocket) {
     }
 
 	// Client socket closed connection
-	if (ReadResult == 0) {
+	if (ReadResult == 0)
+	{
 		std::cout << "Client socket " << ClientSocket << " disconnected" << std::endl;
         // NOTE:  This automatically removes it from epoll
 		CloseClientSocket(ClientSocket);
@@ -226,7 +309,8 @@ void SocketServer::ReadClientSocket(int ClientSocket) {
 	
 	// Client socket response reading threw an error
 	// NOTE: If errno is EAGAIN, that means we have read all data so we can continue to the next event.
-	if (ReadResult == -1 && errno != EAGAIN) {
+	if (ReadResult == -1 && errno != EAGAIN)
+	{
 		std::cerr << "Failed to read client socket" << std::endl;
 		CloseClientSocket(ClientSocket);
     }

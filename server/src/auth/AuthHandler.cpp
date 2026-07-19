@@ -3,7 +3,7 @@
 // **********
 // * PUBLIC *
 // **********
-AuthHandler::AuthHandler(const SocketServer& SocketServer, const AuthService& AuthService) : m_SocketServer(SocketServer), m_AuthService(AuthService)
+AuthHandler::AuthHandler(SocketServer& SocketServer, const AuthService& AuthService) : m_SocketServer(SocketServer), m_AuthService(AuthService)
 {}
 
 SocketServerEventHandler AuthHandler::GetLoginHandler()
@@ -63,6 +63,9 @@ void AuthHandler::SendUserAuthenticatedSocketEvent(int ClientSocket, const std::
     FakeUser.FirstName = "Fake Firstname";
     FakeUser.LastName = "Fake Lastname";
     FakeUser.ImageUrl = "https://www.fakeimageurl.com";
+
+    // Binds user to server
+    m_SocketServer.BindSocketConnectionUser(ClientSocket, FakeUser);
 
     // Serializes user authenticated socket event
     const UserAuthenticatedSocketEventPayload& UserAuthenticatedSocketEventPayload(FakeUser);

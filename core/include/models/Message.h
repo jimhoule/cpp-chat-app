@@ -5,11 +5,9 @@
 
 struct Message
 {
-    std::string ID;
-    std::string ConversationID;
-    std::string SenderID;
-    std::string SenderFirstName;
-    std::string SenderImageUrl;
-    std::string Text;
-    std::time_t CreatedAt;
+    std::string id;
+    std::string conversationId;
+    std::string senderId;
+    std::string text;
+    std::time_t createdAt;
 };

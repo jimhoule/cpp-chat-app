@@ -1,11 +1,9 @@
-#include "api/AuthApi.h"
-
-#include <iostream>
+#include "auth/AuthApi.h"
 
 // **********
 // * PUBLIC *
 // **********
-AuthApi::AuthApi(const SocketClient& SocketClient) : m_SocketClient(SocketClient)
+AuthApi::AuthApi(std::shared_ptr<SocketClient> SocketClient) : m_SocketClient(SocketClient)
 {}
 
 void AuthApi::Login(const LoginParams& LoginParams)
@@ -16,7 +14,7 @@ void AuthApi::Login(const LoginParams& LoginParams)
     std::string SerializedLoginSocketEvent = m_LoginSocketEventSerializer.Serialize(LoginSocketEvent);
 
     // Sends login socket event
-    m_SocketClient.Send(SerializedLoginSocketEvent);
+    m_SocketClient->Send(SerializedLoginSocketEvent);
 }
 
 void AuthApi::Register(const RegisterParams& RegisterParams)
@@ -27,5 +25,5 @@ void AuthApi::Register(const RegisterParams& RegisterParams)
     std::string SerializedRegisterSocketEvent = m_RegisterSocketEventSerializer.Serialize(RegisterSocketEvent);
 
     // Sends register socket event
-    m_SocketClient.Send(SerializedRegisterSocketEvent);
+    m_SocketClient->Send(SerializedRegisterSocketEvent);
 }

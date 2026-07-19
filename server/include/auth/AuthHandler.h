@@ -11,13 +11,13 @@
 class AuthHandler
 {
 public:
-    AuthHandler(const SocketServer& SocketServer, const AuthService& AuthService);
+    AuthHandler(SocketServer& SocketServer, const AuthService& AuthService);
 
     SocketServerEventHandler GetLoginHandler();
     SocketServerEventHandler GetRegisterHandler();
 
 private:
-    SocketServer m_SocketServer;
+    SocketServer& m_SocketServer;
     AuthService m_AuthService;
 
     LoggedinSocketEventSerializer m_LoggedinSocketEventSerializer = {};
