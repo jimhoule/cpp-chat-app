@@ -12,7 +12,7 @@ User UsersInMemoryRepository::Create(const User& user)
 
 std::optional<User> UsersInMemoryRepository::FindByEmail(const std::string& email) const
 {
-    for (const User& user: m_users)
+    for (const User& user : m_users)
     {
         if (user.email == email) return user;
     }

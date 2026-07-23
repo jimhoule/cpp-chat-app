@@ -18,5 +18,5 @@ public:
     IMessagesRepository(const IMessagesRepository&) = delete;
     IMessagesRepository& operator=(const IMessagesRepository&) = delete;
 
-    virtual Message Create(const Message& user) = 0;
+    virtual Message Create(const Message& message) = 0;
 };

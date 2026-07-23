@@ -4,6 +4,7 @@
 #include "messages/MessagesModule.h"
 #include "serializer/LoggedinSocketEventSerializer.h"
 #include "serializer/RegisteredSocketEventSerializer.h"
+#include "sessions/SessionsModule.h"
 #include "socket/SocketServer.h"
 #include "users/UsersModule.h"
 
@@ -17,13 +18,10 @@ int main()
 	const unsigned int PORT = 5000;
 	SocketServer server(PORT);
 
-	// Users
+	// Modules
+	SessionsModule sessionsModule;
 	UsersModule usersModule;
-
-	// Auth
 	AuthModule authModule(server, usersModule.GetService());
-
-	// Messages
 	MessagesModule messagesModule(server);
 
 	server.Init();
