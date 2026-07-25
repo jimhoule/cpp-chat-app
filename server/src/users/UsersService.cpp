@@ -3,7 +3,9 @@
 // **********
 // * PUBLIC *
 // **********
-UsersService::UsersService(std::unique_ptr<IUsersRepository> usersRepository) : m_usersRepository(std::move(usersRepository))
+UsersService::UsersService(std::unique_ptr<IUsersRepository> usersRepository, Logger& logger)
+    : m_usersRepository(std::move(usersRepository))
+    , m_logger(logger)
 {}
 
 User UsersService::Create(const CreateUserDto& createUserDto)

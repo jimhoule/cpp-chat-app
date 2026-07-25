@@ -3,7 +3,10 @@
 // **********
 // * PUBLIC *
 // **********
-AuthService::AuthService(SessionsService& sessionsService,UsersService& usersService) : m_sessionsService(sessionsService), m_usersService(usersService)
+AuthService::AuthService(SessionsService& sessionsService, UsersService& usersService, Logger& logger)
+    : m_sessionsService(sessionsService)
+    , m_usersService(usersService)
+    , m_logger(logger)
 {}
 
 AuthServiceResult AuthService::Login(const LoginDto& loginDto)

@@ -2,6 +2,9 @@
 
 #include "messages/repositories/IMessagesRepository.h"
 
+// Forward declarations
+class Logger;
+
 struct CreateMessageDto
 {
     std::string conversationId;
@@ -12,10 +15,13 @@ struct CreateMessageDto
 class MessagesService
 {
 public:
-    MessagesService(std::unique_ptr<IMessagesRepository> messagesRepository);
+    MessagesService(std::unique_ptr<IMessagesRepository> messagesRepository, Logger& logger);
 
     Message Create(const CreateMessageDto& createMessageDto);
 
 private:
     std::unique_ptr<IMessagesRepository> m_messagesRepository = nullptr;
+
+    // NOTE: Borrowed from the module, which owns it and outlives this service
+    Logger& m_logger;
 };

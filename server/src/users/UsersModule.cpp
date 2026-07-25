@@ -5,7 +5,10 @@
 // **********
 // * PUBLIC *
 // **********
-UsersModule::UsersModule() : m_usersService(std::make_unique<UsersInMemoryRepository>())
+UsersModule::UsersModule()
+    : m_usersRepositoryLogger("USERS", "server/src/users/repositories/UsersInMemoryRepository")
+    , m_usersServiceLogger("USERS", "server/src/users/UserssService")
+    , m_usersService(std::make_unique<UsersInMemoryRepository>(m_usersRepositoryLogger), m_usersServiceLogger)
 {}
 
 UsersService& UsersModule::GetService()

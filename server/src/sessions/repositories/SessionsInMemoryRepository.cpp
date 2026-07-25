@@ -3,6 +3,10 @@
 // **********
 // * PUBLIC *
 // **********
+SessionsInMemoryRepository::SessionsInMemoryRepository(Logger& logger)
+    : m_logger(logger)
+{}
+
 Session SessionsInMemoryRepository::Create(const Session& session)
 {
     m_sessions.push_back(session);

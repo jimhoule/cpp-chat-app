@@ -3,7 +3,9 @@
 // **********
 // * PUBLIC *
 // **********
-MessagesService::MessagesService(std::unique_ptr<IMessagesRepository> messagesRepository) : m_messagesRepository(std::move(messagesRepository))
+MessagesService::MessagesService(std::unique_ptr<IMessagesRepository> messagesRepository, Logger& logger)
+    : m_messagesRepository(std::move(messagesRepository))
+    , m_logger(logger)
 {}
 
 Message MessagesService::Create(const CreateMessageDto& createMessageDto)

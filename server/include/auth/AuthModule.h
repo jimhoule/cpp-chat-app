@@ -1,5 +1,7 @@
 #pragma once
 
+#include "log/Logger.h"
+#include "auth/AuthService.h"
 #include "auth/AuthHandler.h"
 
 class SocketServer;
@@ -18,6 +20,14 @@ public:
     AuthService& GetService();
 
 private:
+/**
+     * NOTES
+     *  - Declaration order is initialization order because these loggers must be declared before the service and the handler that borrow them
+     *  - Their order relative to each other does not matter, they are sorted by dependency depth for readability only
+     */
+    Logger m_authServiceLogger;
+    Logger m_authHandlerLogger;
+
     AuthHandler m_authHandler;
     AuthService m_authService;
 };

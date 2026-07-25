@@ -3,7 +3,12 @@
 #include "messages/repositories/MessagesInMemoryRepository.h"
 #include "socket/SocketServer.h"
 
-MessagesModule::MessagesModule(SocketServer& socketServer) : m_messagesService(std::make_unique<MessagesInMemoryRepository>()), m_messagesHandler(socketServer, m_messagesService)
+MessagesModule::MessagesModule(SocketServer& socketServer)
+    : m_messagesRepositoryLogger("MESSAGES", "server/src/messages/repositories/MessagesInMemoryRepository")
+    , m_messagesServiceLogger("MESSAGES", "server/src/messages/MessagesService")
+    , m_messagesHandlerLogger("MESSAGES", "server/src/messages/MessagesHandler")
+    , m_messagesService(std::make_unique<MessagesInMemoryRepository>(m_messagesRepositoryLogger), m_messagesServiceLogger)
+    , m_messagesHandler(socketServer, m_messagesService, m_messagesHandlerLogger)
 {
     socketServer.On(SocketEventName::CREATE_MESSAGE, m_messagesHandler.GetCreateMessageHandler());
 }

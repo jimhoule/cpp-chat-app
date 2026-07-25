@@ -1,6 +1,5 @@
 #pragma once
 
-#include "auth/AuthService.h"
 #include "deserializer/LoginSocketEventPayloadDeserializer.h"
 #include "deserializer/RegisterSocketEventPayloadDeserializer.h"
 #include "serializer/LoggedinSocketEventSerializer.h"
@@ -8,11 +7,15 @@
 #include "serializer/UserAuthenticatedSocketEventSerializer.h"
 #include "socket/SocketServerEventHandler.h"
 
+// Forward declarations
 class SocketServer;
+class AuthService;
+class Logger;
+
 class AuthHandler
 {
 public:
-    AuthHandler(SocketServer& socketServer, AuthService& authService);
+    AuthHandler(SocketServer& socketServer, AuthService& authService, Logger& logger);
 
     SocketServerEventHandler GetLoginHandler();
     SocketServerEventHandler GetRegisterHandler();
@@ -20,6 +23,9 @@ public:
 private:
     SocketServer& m_socketServer;
     AuthService& m_authService;
+
+    // NOTE: Borrowed from the module, which owns it and outlives this handler
+    Logger& m_logger;
 
     LoggedinSocketEventSerializer m_loggedinSocketEventSerializer = {};
     LoginSocketEventPayloadDeserializer m_loginSocketEventPayloadDeserializer = {};
@@ -29,6 +35,6 @@ private:
 
     UserAuthenticatedSocketEventSerializer m_userAuthenticatedSocketEventSerializer = {};
 
-    void SendErrorSocketEvent(int clientSocket);
+    void SendErrorSocketEvent(int clientSocket, const std::string& message);
     void SendUserAuthenticatedSocketEvent(int clientSocket, const User& user);
 };

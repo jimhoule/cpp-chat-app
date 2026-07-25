@@ -1,10 +1,16 @@
 #include "auth/AuthHandler.h"
+
+#include "auth/AuthService.h"
+#include "log/Logger.h"
 #include "socket/SocketServer.h"
 
 // **********
 // * PUBLIC *
 // **********
-AuthHandler::AuthHandler(SocketServer& socketServer, AuthService& authService) : m_socketServer(socketServer), m_authService(authService)
+AuthHandler::AuthHandler(SocketServer& socketServer, AuthService& authService, Logger& logger)
+    : m_socketServer(socketServer)
+    , m_authService(authService)
+    , m_logger(logger)
 {}
 
 SocketServerEventHandler AuthHandler::GetLoginHandler()
@@ -20,7 +26,8 @@ SocketServerEventHandler AuthHandler::GetLoginHandler()
         const AuthServiceResult authServiceResult = m_authService.Login(loginDto);
         if (!authServiceResult.user.has_value())
         {
-            SendErrorSocketEvent(clientSocket);
+            // TODO: Implement better error propagation system
+            SendErrorSocketEvent(clientSocket, "Login failed for client socket " + std::to_string(clientSocket));
             return;
         }
 
@@ -53,7 +60,8 @@ SocketServerEventHandler AuthHandler::GetRegisterHandler()
         const AuthServiceResult authServiceResult = m_authService.Register(registerDto);
         if (!authServiceResult.user.has_value())
         {
-            SendErrorSocketEvent(clientSocket);
+            // TODO: Implement better error propagation system
+            SendErrorSocketEvent(clientSocket, "Registration failed for socket " + std::to_string(clientSocket));
             return;
         }
 
@@ -73,10 +81,10 @@ SocketServerEventHandler AuthHandler::GetRegisterHandler()
 // ***********
 // * PRIVATE *
 // ***********
-void AuthHandler::SendErrorSocketEvent(int clientSocket)
+void AuthHandler::SendErrorSocketEvent(int clientSocket, const std::string& message)
 {
     // TODO: Send ERROR socket event
-    std::cout << "Invalid email or password for client socket " << clientSocket << std::endl;
+    m_logger.Warning(message);
 }
 
 void AuthHandler::SendUserAuthenticatedSocketEvent(int clientSocket, const User& user)

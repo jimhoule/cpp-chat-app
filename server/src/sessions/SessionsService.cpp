@@ -3,7 +3,9 @@
 // **********
 // * PUBLIC *
 // **********
-SessionsService::SessionsService(std::unique_ptr<ISessionsRepository> sessionsRepository) : m_sessionsRepository(std::move(sessionsRepository))
+SessionsService::SessionsService(std::unique_ptr<ISessionsRepository> sessionsRepository, Logger& logger)
+    : m_sessionsRepository(std::move(sessionsRepository))
+    , m_logger(logger)
 {}
 
 Session SessionsService::Create(const CreateSessionDto& createSessionDto)

@@ -3,6 +3,10 @@
 // **********
 // * PUBLIC *
 // **********
+UsersInMemoryRepository::UsersInMemoryRepository(Logger& logger)
+    : m_logger(logger)
+{}
+
 User UsersInMemoryRepository::Create(const User& user)
 {
     m_users.push_back(user);

@@ -11,6 +11,9 @@ public:
     Logger() = default;
     Logger(const std::string& Name, const std::string& Context);
 
+    // NOTE: ALWAYS provide a public virtual destructor
+    virtual ~Logger() = default;
+
     virtual void Error(const std::string& Message);
     virtual void Info(const std::string& Message);
     virtual void Warning(const std::string& Message);

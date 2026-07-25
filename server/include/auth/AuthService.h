@@ -3,6 +3,9 @@
 #include "sessions/SessionsService.h"
 #include "users/UsersService.h"
 
+// Forward declarations
+class Logger;
+
 struct AuthServiceResult
 {
     std::string sessionId;
@@ -26,7 +29,7 @@ struct RegisterDto
 class AuthService
 {
 public:
-    AuthService(SessionsService& sessionsService, UsersService& usersService);
+    AuthService(SessionsService& sessionsService, UsersService& usersService, Logger& logger);
 
     AuthServiceResult Login(const LoginDto& loginDto);
     AuthServiceResult Register(const RegisterDto& registerDto);
@@ -35,6 +38,9 @@ private:
     // NOTE: Here services must be a references because they are "borrowed" from other modules
     SessionsService& m_sessionsService;
     UsersService& m_usersService;
+
+    // NOTE: Borrowed from the module, which owns it and outlives this service
+    Logger& m_logger;
 
     Session CreateSession(const std::string& userId);
 };
