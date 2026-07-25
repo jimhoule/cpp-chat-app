@@ -3,7 +3,7 @@
 // **********
 // * PUBLIC *
 // **********
-AuthService::AuthService(UsersService& usersService) : m_usersService(usersService)
+AuthService::AuthService(SessionsService& sessionsService,UsersService& usersService) : m_sessionsService(sessionsService), m_usersService(usersService)
 {}
 
 AuthServiceResult AuthService::Login(const LoginDto& loginDto)
@@ -22,10 +22,9 @@ AuthServiceResult AuthService::Login(const LoginDto& loginDto)
     if (!isPasswordValid) return authServiceResult;
 
     // Creates session
-    // TODO: Create Sessions service
-    std::string sessionId = "sessionId." + user.value().id;
+    const Session session = CreateSession(user.value().id);
 
-    authServiceResult.sessionId =  sessionId;
+    authServiceResult.sessionId =  session.id;
     authServiceResult.user = user;
 
     return authServiceResult;
@@ -50,11 +49,22 @@ AuthServiceResult AuthService::Register(const RegisterDto& registerDto)
     User user = m_usersService.Create(createUserDto);
     
     // Creates session
-    // TODO: Create Sessions service
-    std::string sessionId = "sessionId." + user.id;
+    const Session session = CreateSession(user.id);
 
-    authServiceResult.sessionId =  sessionId;
+    authServiceResult.sessionId =  session.id;
     authServiceResult.user = user;
 
     return authServiceResult;
+}
+
+// ***********
+// * PRIVATE *
+// ***********
+Session AuthService::CreateSession(const std::string& userId)
+{
+    CreateSessionDto createSessionDto = {};
+    createSessionDto.userId = userId;
+
+    return m_sessionsService.Create(createSessionDto);
+
 }

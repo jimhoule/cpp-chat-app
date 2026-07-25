@@ -21,7 +21,7 @@ int main()
 	// Modules
 	SessionsModule sessionsModule;
 	UsersModule usersModule;
-	AuthModule authModule(server, usersModule.GetService());
+	AuthModule authModule(server, sessionsModule.GetService(), usersModule.GetService());
 	MessagesModule messagesModule(server);
 
 	server.Init();

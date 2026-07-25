@@ -3,12 +3,13 @@
 #include "auth/AuthHandler.h"
 
 class SocketServer;
+class SessionsService;
 class UsersService;
 
 class AuthModule
 {
 public:
-    AuthModule(SocketServer& socketServer, UsersService& usersService);
+    AuthModule(SocketServer& socketServer, SessionsService& sessionsService, UsersService& usersService);
 
     // Deletes move constructor and assign operator
     AuthModule(const AuthModule&) = delete;

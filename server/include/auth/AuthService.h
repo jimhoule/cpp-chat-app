@@ -1,5 +1,6 @@
 #pragma once
 
+#include "sessions/SessionsService.h"
 #include "users/UsersService.h"
 
 struct AuthServiceResult
@@ -25,12 +26,15 @@ struct RegisterDto
 class AuthService
 {
 public:
-    AuthService(UsersService& usersService);
+    AuthService(SessionsService& sessionsService, UsersService& usersService);
 
     AuthServiceResult Login(const LoginDto& loginDto);
     AuthServiceResult Register(const RegisterDto& registerDto);
 
 private:
-    // NOTE: Here the service must be a reference because it is "borrowing" users service owned by users module
+    // NOTE: Here services must be a references because they are "borrowed" from other modules
+    SessionsService& m_sessionsService;
     UsersService& m_usersService;
+
+    Session CreateSession(const std::string& userId);
 };
