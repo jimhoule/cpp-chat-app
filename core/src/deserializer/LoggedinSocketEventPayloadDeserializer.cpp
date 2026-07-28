@@ -5,12 +5,12 @@
 // **********
 // * PUBLIC *
 // **********
-LoggedinSocketEventPayload LoggedinSocketEventPayloadDeserializer::Deserialize(const std::string& JsonString)
+LoggedinSocketEventPayload LoggedinSocketEventPayloadDeserializer::Deserialize(const std::string& jsonString)
 {
-    nlohmann::json Json = nlohmann::json::parse(JsonString);
+    nlohmann::json json = nlohmann::json::parse(jsonString);
 
-    LoggedinSocketEventPayload LoggedinSocketEventPayload = {};
-    LoggedinSocketEventPayload.AccessToken = Json["accessToken"].get<std::string>();
+    LoggedinSocketEventPayload loggedinSocketEventPayload = {};
+    loggedinSocketEventPayload.sessionId = json["sessionId"].get<std::string>();
 
-    return LoggedinSocketEventPayload;
+    return loggedinSocketEventPayload;
 }

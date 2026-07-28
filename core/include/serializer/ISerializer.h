@@ -15,5 +15,5 @@ public:
     ISerializer(ISerializer&&) = delete;
     ISerializer& operator=(ISerializer&&) = delete;
 
-    virtual TSerialized Serialize(const TData& Data) = 0;
+    virtual TSerialized Serialize(const TData& data) = 0;
 };

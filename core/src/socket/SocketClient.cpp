@@ -16,35 +16,35 @@ constexpr int BUFFER_SIZE = 1024;
 // **********
 void SocketClient::Close()
 {
-	close(m_Socket);
+	close(m_socket);
 }
 
-void SocketClient::Connect(int ServerPort, const std::string &ServerIpAddress)
+void SocketClient::Connect(int serverPort, const std::string &serverIpAddress)
 {
 	// Creates socket file descriptor
-	m_Socket = socket(AF_INET, SOCK_STREAM, 0);
-	if (m_Socket < 0)
+	m_socket = socket(AF_INET, SOCK_STREAM, 0);
+	if (m_socket < 0)
 	{
 		perror("socket creation failed");
 		exit(EXIT_FAILURE);
 	}
 
 	// Sets the socket to non-blocking mode
-	int FcntlResult = fcntl(m_Socket, F_SETFL, O_NONBLOCK);
-	if (FcntlResult < 0)
+	int fcntlResult = fcntl(m_socket, F_SETFL, O_NONBLOCK);
+	if (fcntlResult < 0)
 	{
 		perror("fcntl failed");
 		exit(EXIT_FAILURE);
 	}
 
 	// Connects to server
-	sockaddr_in ServerAddress = sockaddr_in{};
-	ServerAddress.sin_family = AF_INET;
-	ServerAddress.sin_port = htons(ServerPort);
-	ServerAddress.sin_addr.s_addr = inet_addr(ServerIpAddress.c_str());
+	sockaddr_in serverAddress = sockaddr_in{};
+	serverAddress.sin_family = AF_INET;
+	serverAddress.sin_port = htons(serverPort);
+	serverAddress.sin_addr.s_addr = inet_addr(serverIpAddress.c_str());
 
-	int ConnectResult = connect(m_Socket, reinterpret_cast<sockaddr *>(&ServerAddress), sizeof(ServerAddress));
-	if (ConnectResult < 0)
+	int connectResult = connect(m_socket, reinterpret_cast<sockaddr *>(&serverAddress), sizeof(serverAddress));
+	if (connectResult < 0)
 	{
 		// Non-blocking connect will return immediately
 		// Checks errno to distinguish between connection in progress and connection failed
@@ -56,37 +56,45 @@ void SocketClient::Connect(int ServerPort, const std::string &ServerIpAddress)
 	}
 }
 
-void SocketClient::On(SocketEventName SocketEventName, const SocketClientEventHandler& SocketEventHandler)
+void SocketClient::On(SocketEventName socketEventName, const SocketClientEventHandler& socketEventHandler)
 {
-    m_SocketEventHandlersMap.insert(std::pair(SocketEventName, SocketEventHandler));
+    m_socketEventHandlersMap.insert(std::pair(socketEventName, socketEventHandler));
 }
 
 void SocketClient::Read()
 {
     // Reads response from server
-	std::array<char, BUFFER_SIZE> SerializedSocketEventBuffer = {0};
-    ssize_t ReadResult = read(m_Socket, SerializedSocketEventBuffer.data(), BUFFER_SIZE);
+	std::array<char, BUFFER_SIZE> serializedSocketEventBuffer = {0};
+    ssize_t readResult = read(m_socket, serializedSocketEventBuffer.data(), BUFFER_SIZE);
 
-    if (ReadResult == 0)
+    if (readResult == 0)
     {
         std::cout << "Server closed" << std::endl;
         return;
     }
 
 
-    if (ReadResult > 0)
+    if (readResult > 0)
     {
-        const std::string& SerializedSocketEvent(SerializedSocketEventBuffer.data());
+        const std::string& serializedSocketEvent(serializedSocketEventBuffer.data());
 
-        SocketEventDeserializer SocketEventDeserializer = {};
-        SocketEvent<std::string> SocketEvent = SocketEventDeserializer.Deserialize(SerializedSocketEvent);
+        SocketEventDeserializer socketEventDeserializer = {};
+        SocketEvent<std::string> socketEvent = socketEventDeserializer.Deserialize(serializedSocketEvent);
 
-        SocketClientEventHandler HandleSocketEvent = m_SocketEventHandlersMap[SocketEvent.Name];
-        HandleSocketEvent(SocketEvent.Payload);
+		// NOTE: find, not operator[], which would insert an empty handler for an unknown event name and then call it
+        std::map<SocketEventName, SocketClientEventHandler>::iterator socketEventHandlersMapIterator = m_socketEventHandlersMap.find(socketEvent.name);
+        if (socketEventHandlersMapIterator == m_socketEventHandlersMap.end())
+        {
+            std::cout << "No handler registered for socket event " << socketEvent.name << std::endl;
+            return;
+        }
+
+        SocketClientEventHandler HandleSocketEvent = socketEventHandlersMapIterator->second;
+        HandleSocketEvent(socketEvent.payload);
     }
 }
 
-void SocketClient::Send(const std::string &SerializedSocketEvent)
+void SocketClient::Send(const std::string &serializedSocketEvent)
 {
-	send(m_Socket, SerializedSocketEvent.c_str(), SerializedSocketEvent.length(), 0);
+	send(m_socket, serializedSocketEvent.c_str(), serializedSocketEvent.length(), 0);
 }

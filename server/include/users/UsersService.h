@@ -1,9 +1,20 @@
 #pragma once
 
+#include "results/ServiceResult.h"
 #include "users/repositories/IUsersRepository.h"
 
 // Forward declarations
 class Logger;
+
+enum class UsersResultCode
+{
+    OK,
+    EMAIL_ALREADY_USED
+};
+
+std::string ConvertUsersResultCodeToString(UsersResultCode usersResultCode);
+
+using UserResult = ServiceResult<UsersResultCode, std::optional<User>>;
 
 struct CreateUserDto
 {
@@ -23,8 +34,8 @@ class UsersService
 public:
     UsersService(std::unique_ptr<IUsersRepository> usersRepository, Logger& logger);
 
-    User Create(const CreateUserDto& createUserDto);
-    std::optional<User> FindByEmail(const FindUserByEmailDto& findUserByEmailDto);
+    UserResult Create(const CreateUserDto& createUserDto);
+    UserResult FindByEmail(const FindUserByEmailDto& findUserByEmailDto);
 
 private:
     std::unique_ptr<IUsersRepository> m_usersRepository = nullptr;

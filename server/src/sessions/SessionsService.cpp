@@ -1,5 +1,20 @@
 #include "sessions/SessionsService.h"
 
+std::string ConvertSessionsResultCodeToString(SessionsResultCode sessionsResultCode)
+{
+    switch (sessionsResultCode)
+    {
+        case SessionsResultCode::OK:
+            return "OK";
+
+        case SessionsResultCode::SESSION_EXPIRED:
+            return "SESSION EXPIRED";
+
+        default:
+            return "Unknown sessions result code";
+    }
+}
+
 // **********
 // * PUBLIC *
 // **********
@@ -8,7 +23,7 @@ SessionsService::SessionsService(std::unique_ptr<ISessionsRepository> sessionsRe
     , m_logger(logger)
 {}
 
-Session SessionsService::Create(const CreateSessionDto& createSessionDto)
+SessionResult SessionsService::Create(const CreateSessionDto& createSessionDto)
 {
     // 7 days in seconds
     const std::time_t sessionTtlSeconds = 7 * 24 * 60 * 60;
@@ -19,10 +34,24 @@ Session SessionsService::Create(const CreateSessionDto& createSessionDto)
     session.createdAt = std::time(0);
     session.expiredAt = std::time(0) + sessionTtlSeconds;
 
-    return m_sessionsRepository->Create(session);
+    SessionResult sessionResult = {};
+    sessionResult.data = m_sessionsRepository->Create(session);
+
+    return sessionResult;
 }
 
-std::optional<Session> SessionsService::FindById(const FindSessionByIdDto& findSessionByIdDto)
+SessionResult SessionsService::FindById(const FindSessionByIdDto& findSessionByIdDto)
 {
-    return m_sessionsRepository->FindById(findSessionByIdDto.id);
+    SessionResult sessionResult = {};
+
+    std::optional<Session> session = m_sessionsRepository->FindById(findSessionByIdDto.id);
+    if (session.value().expiredAt <= std::time(0))
+    {
+        sessionResult.code = SessionsResultCode::SESSION_EXPIRED;
+        return sessionResult;
+    }
+
+    sessionResult.data = session;
+
+    return sessionResult;
 }

@@ -1,5 +1,20 @@
 #include "users/UsersService.h"
 
+std::string ConvertUsersResultCodeToString(UsersResultCode usersResultCode)
+{
+    switch (usersResultCode)
+    {
+        case UsersResultCode::OK:
+            return "OK";
+
+        case UsersResultCode::EMAIL_ALREADY_USED:
+            return "EMAIL ALREADY USED";
+
+        default:
+            return "Unknown users result code";
+    }
+}
+
 // **********
 // * PUBLIC *
 // **********
@@ -8,8 +23,18 @@ UsersService::UsersService(std::unique_ptr<IUsersRepository> usersRepository, Lo
     , m_logger(logger)
 {}
 
-User UsersService::Create(const CreateUserDto& createUserDto)
+UserResult UsersService::Create(const CreateUserDto& createUserDto)
 {
+    UserResult userResult = {};
+
+    // Checks if a user with this email already exists
+    std::optional<User> existingUser = m_usersRepository->FindByEmail(createUserDto.email);
+    if (existingUser.has_value())
+    {
+        userResult.code = UsersResultCode::EMAIL_ALREADY_USED;
+        return userResult;
+    }
+
     User user = {};
     user.id = "uuid." + createUserDto.email;
     user.email = createUserDto.email;
@@ -17,11 +42,15 @@ User UsersService::Create(const CreateUserDto& createUserDto)
     user.lastName = createUserDto.lastName;
     user.password = "hashed." + createUserDto.password;
 
+    userResult.data = m_usersRepository->Create(user);
 
-    return m_usersRepository->Create(user);
+    return userResult;
 }
 
-std::optional<User> UsersService::FindByEmail(const FindUserByEmailDto& findUserByEmailDto)
+UserResult UsersService::FindByEmail(const FindUserByEmailDto& findUserByEmailDto)
 {
-    return m_usersRepository->FindByEmail(findUserByEmailDto.email);
+    UserResult userResult = {};
+    userResult.data = m_usersRepository->FindByEmail(findUserByEmailDto.email);
+
+    return userResult;
 }

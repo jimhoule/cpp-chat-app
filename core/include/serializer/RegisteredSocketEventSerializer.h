@@ -8,5 +8,5 @@ class RegisteredSocketEventSerializer: public ISerializer<RegisteredSocketEvent,
 public:
     RegisteredSocketEventSerializer() = default;
 
-    std::string Serialize(const RegisteredSocketEvent& LoggedinSocketEvent) override;
+    std::string Serialize(const RegisteredSocketEvent& loggedinSocketEvent) override;
 };

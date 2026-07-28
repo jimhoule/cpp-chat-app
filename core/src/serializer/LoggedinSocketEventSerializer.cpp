@@ -5,14 +5,14 @@
 // **********
 // * PUBLIC *
 // **********
-std::string LoggedinSocketEventSerializer::Serialize(const LoggedinSocketEvent& LoggedinSocketEvent)
+std::string LoggedinSocketEventSerializer::Serialize(const LoggedinSocketEvent& loggedinSocketEvent)
 {
-    nlohmann::json PayloadJson;
-    PayloadJson["accessToken"] = LoggedinSocketEvent.Payload.AccessToken;
+    nlohmann::json payloadJson;
+    payloadJson["sessionId"] = loggedinSocketEvent.payload.sessionId;
 
-    nlohmann::json Json;
-    Json["name"] = LoggedinSocketEvent.Name;
-    Json["payload"] = PayloadJson;
+    nlohmann::json json;
+    json["name"] = loggedinSocketEvent.name;
+    json["payload"] = payloadJson;
 
-    return Json.dump();
+    return json.dump();
 }

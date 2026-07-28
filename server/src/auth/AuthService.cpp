@@ -1,5 +1,27 @@
 #include "auth/AuthService.h"
 
+std::string ConvertAuthResultCodeToString(AuthResultCode authResultCode)
+{
+    switch (authResultCode)
+    {
+        case AuthResultCode::OK:
+            return "OK";
+
+        case AuthResultCode::USER_NOT_FOUND:
+            return "USER NOT FOUND";
+
+        case AuthResultCode::INVALID_PASSWORD:
+            return "INVALID PASSWORD";
+
+        case AuthResultCode::EMAIL_ALREADY_USED:
+            return "EMAIL ALREADY USED";
+
+        // NOTE: Handles cases where the enum value might be out of range
+        default:
+            return "Unknown auth result code";
+    }
+}
+
 // **********
 // * PUBLIC *
 // **********
@@ -9,39 +31,43 @@ AuthService::AuthService(SessionsService& sessionsService, UsersService& usersSe
     , m_logger(logger)
 {}
 
-AuthServiceResult AuthService::Login(const LoginDto& loginDto)
+AuthResult AuthService::Login(const LoginDto& loginDto)
 {
-    AuthServiceResult authServiceResult;
+    AuthResult authResult = {};
 
     // Checks if user with this email exists
     FindUserByEmailDto findUserByEmailDto = {};
     findUserByEmailDto.email = loginDto.email;
-    std::optional<User> user = m_usersService.FindByEmail(findUserByEmailDto);
-    if (!user.has_value()) return authServiceResult;
+    UserResult userResult = m_usersService.FindByEmail(findUserByEmailDto);
+    if (!userResult.data.has_value())
+    {
+        authResult.code = AuthResultCode::USER_NOT_FOUND;
+        return authResult;
+    }
+
+    const User& user = userResult.data.value();
 
     // Validates password
     // TODO: Create Encryption service for hashing logic
-    const bool isPasswordValid = user.value().password == "hashed." + loginDto.password;
-    if (!isPasswordValid) return authServiceResult;
+    const bool isPasswordValid = user.password == "hashed." + loginDto.password;
+    if (!isPasswordValid)
+    {
+        authResult.code = AuthResultCode::INVALID_PASSWORD;
+        return authResult;
+    }
 
     // Creates session
-    const Session session = CreateSession(user.value().id);
+    const Session session = CreateSession(user.id);
 
-    authServiceResult.sessionId =  session.id;
-    authServiceResult.user = user;
+    authResult.data.sessionId = session.id;
+    authResult.data.user = user;
 
-    return authServiceResult;
+    return authResult;
 }
 
-AuthServiceResult AuthService::Register(const RegisterDto& registerDto)
+AuthResult AuthService::Register(const RegisterDto& registerDto)
 {
-    AuthServiceResult authServiceResult;
-
-    // Checks if user with this email exists
-    FindUserByEmailDto findUserByEmailDto = {};
-    findUserByEmailDto.email = registerDto.email;
-    std::optional<User> existingUser = m_usersService.FindByEmail(findUserByEmailDto);
-    if (existingUser.has_value()) return authServiceResult;
+    AuthResult authResult = {};
 
     // Creates user
     CreateUserDto createUserDto = {};
@@ -49,15 +75,22 @@ AuthServiceResult AuthService::Register(const RegisterDto& registerDto)
     createUserDto.firstName = registerDto.firstName;
     createUserDto.lastName = registerDto.lastName;
     createUserDto.password = registerDto.password;
-    User user = m_usersService.Create(createUserDto);
+    const UserResult userResult = m_usersService.Create(createUserDto);
+    if (userResult.code != UsersResultCode::OK)
+    {
+        authResult.code = AuthResultCode::EMAIL_ALREADY_USED;
+        return authResult;
+    }
+
+    const User& user = userResult.data.value();
     
     // Creates session
     const Session session = CreateSession(user.id);
 
-    authServiceResult.sessionId =  session.id;
-    authServiceResult.user = user;
+    authResult.data.sessionId =  session.id;
+    authResult.data.user = user;
 
-    return authServiceResult;
+    return authResult;
 }
 
 // ***********
@@ -67,7 +100,7 @@ Session AuthService::CreateSession(const std::string& userId)
 {
     CreateSessionDto createSessionDto = {};
     createSessionDto.userId = userId;
+    const SessionResult sessionResult = m_sessionsService.Create(createSessionDto);
 
-    return m_sessionsService.Create(createSessionDto);
-
+    return sessionResult.data.value();
 }

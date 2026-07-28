@@ -7,13 +7,13 @@
 // **********
 std::string LoginSocketEventSerializer::Serialize(const LoginSocketEvent& loginSocketEvent)
 {
-    nlohmann::json PayloadJson;
-    PayloadJson["email"] = loginSocketEvent.Payload.email;
-    PayloadJson["password"] = loginSocketEvent.Payload.password;
+    nlohmann::json payloadJson;
+    payloadJson["email"] = loginSocketEvent.payload.email;
+    payloadJson["password"] = loginSocketEvent.payload.password;
 
-    nlohmann::json Json;
-    Json["name"] = loginSocketEvent.Name;
-    Json["payload"] = PayloadJson;
+    nlohmann::json json;
+    json["name"] = loginSocketEvent.name;
+    json["payload"] = payloadJson;
 
-    return Json.dump();
+    return json.dump();
 }

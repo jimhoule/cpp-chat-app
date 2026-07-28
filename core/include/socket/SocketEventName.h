@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <string>
 
 enum class SocketEventName
 {
@@ -18,51 +19,16 @@ enum class SocketEventName
     MESSAGE_CREATED,
 };
 
-// Overloads the stream insertion operator (<<) for the SocketEventName enum class
-static std::ostream& operator<<(std::ostream& Os, const SocketEventName& EventName)
-{
-    switch (EventName)
-    {
-        case SocketEventName::ERROR:
-            Os << "ERROR";
-            break;
+std::string ConvertSocketEventNameToString(SocketEventName socketEventName);
 
-        // Auth
-        case SocketEventName::LOGIN:
-            Os << "LOGIN";
-            break;
+// NOTE: Overloads the stream insertion operator (<<) for the SocketEventName enum class
+std::ostream& operator<<(std::ostream& Os, SocketEventName SocketEventName);
 
-        case SocketEventName::LOGGEDIN:
-            Os << "LOGGEDIN";
-            break;
-
-        case SocketEventName::REGISTER:
-            Os << "REGISTER";
-            break;
-
-        case SocketEventName::REGISTERED:
-            Os << "REGISTERED";
-            break;
-
-        case SocketEventName::USER_AUTHENTICATED:
-            Os << "USER AUTHENTICATED";
-            break;
-
-        // Messages
-        case SocketEventName::CREATE_MESSAGE:
-            Os << "CREATE MESSAGE";
-            break;
-
-        case SocketEventName::MESSAGE_CREATED:
-            Os << "MESSAGE CREATED";
-            break;
-
-        // NOTE: Handles cases where the enum value might be out of range
-        default:
-            Os << "Unknown socket event name";
-            break;
-    }
-
-    // NOTE: Enables chaining
-    return Os;
-};
+// NOTE:  Overloads concatenation operator for std::string on the left side
+std::string operator+(const std::string& string, SocketEventName socketEventName);
+// NOTE: Overloads concatenation operator for std::string on the right side
+std::string operator+(SocketEventName socketEventName, const std::string& string);
+// NOTE: Overloads concatenation operator for c style string on the left side
+std::string operator+(const char* cString, SocketEventName socketEventName);
+// NOTE: Overloads concatenation operator for c style string on the right side
+std::string operator+(SocketEventName socketEventName, const char* cString);

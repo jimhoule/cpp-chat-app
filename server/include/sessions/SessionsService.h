@@ -1,9 +1,20 @@
 #pragma once
 
+#include "results/ServiceResult.h"
 #include "sessions/repositories/ISessionsRepository.h"
 
 // Forward declarations
 class Logger;
+
+enum class SessionsResultCode
+{
+    OK,
+    SESSION_EXPIRED
+};
+
+std::string ConvertSessionsResultCodeToString(SessionsResultCode sessionsResultCode);
+
+using SessionResult = ServiceResult<SessionsResultCode, std::optional<Session>>;
 
 struct CreateSessionDto
 {
@@ -20,8 +31,8 @@ class SessionsService
 public:
     SessionsService(std::unique_ptr<ISessionsRepository> usersRepository, Logger& logger);
 
-    Session Create(const CreateSessionDto& createSessionDto);
-    std::optional<Session> FindById(const FindSessionByIdDto& findSessionByIdDto);
+    SessionResult Create(const CreateSessionDto& createSessionDto);
+    SessionResult FindById(const FindSessionByIdDto& findSessionByIdDto);
 
 private:
     std::unique_ptr<ISessionsRepository> m_sessionsRepository = nullptr;

@@ -8,14 +8,14 @@
 struct UserAuthenticatedSocketEventPayload
 {
     UserAuthenticatedSocketEventPayload() = default;
-    UserAuthenticatedSocketEventPayload(const User& User) : User(User)
+    UserAuthenticatedSocketEventPayload(const User& user) : user(user)
     {}
 
-    User User = {};
+    User user = {};
 };
 
 struct UserAuthenticatedSocketEvent : public SocketEvent<UserAuthenticatedSocketEventPayload>
 {
-    UserAuthenticatedSocketEvent(UserAuthenticatedSocketEventPayload Payload) :  SocketEvent(SocketEventName::USER_AUTHENTICATED, Payload)
+    UserAuthenticatedSocketEvent(UserAuthenticatedSocketEventPayload payload) :  SocketEvent(SocketEventName::USER_AUTHENTICATED, payload)
     {}
 };

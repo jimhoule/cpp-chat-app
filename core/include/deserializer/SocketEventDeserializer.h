@@ -8,5 +8,5 @@ class SocketEventDeserializer: public IDeserializer<std::string, SocketEvent<std
 public:
     SocketEventDeserializer() = default;
 
-    SocketEvent<std::string> Deserialize(const std::string& JsonString) override;
+    SocketEvent<std::string> Deserialize(const std::string& jsonString) override;
 };

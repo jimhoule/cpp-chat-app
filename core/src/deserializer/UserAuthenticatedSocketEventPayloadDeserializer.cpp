@@ -5,17 +5,17 @@
 // **********
 // * PUBLIC *
 // **********
-UserAuthenticatedSocketEventPayload UserAuthenticatedSocketEventPayloadDeserializer::Deserialize(const std::string& JsonString)
+UserAuthenticatedSocketEventPayload UserAuthenticatedSocketEventPayloadDeserializer::Deserialize(const std::string& jsonString)
 {
-    nlohmann::json Json = nlohmann::json::parse(JsonString);
-    nlohmann::json UserJson = Json["user"];
+    nlohmann::json json = nlohmann::json::parse(jsonString);
+    nlohmann::json userJson = json["user"];
 
-    UserAuthenticatedSocketEventPayload UserAuthenticatedSocketEventPayload = {};
-    UserAuthenticatedSocketEventPayload.User.id = UserJson["id"].get<std::string>();
-    UserAuthenticatedSocketEventPayload.User.email = UserJson["email"].get<std::string>();
-    UserAuthenticatedSocketEventPayload.User.firstName = UserJson["firstName"].get<std::string>();
-    UserAuthenticatedSocketEventPayload.User.lastName = UserJson["lastName"].get<std::string>();
-    UserAuthenticatedSocketEventPayload.User.password = UserJson["password"].get<std::string>();
+    UserAuthenticatedSocketEventPayload userAuthenticatedSocketEventPayload = {};
+    userAuthenticatedSocketEventPayload.user.id = userJson["id"].get<std::string>();
+    userAuthenticatedSocketEventPayload.user.email = userJson["email"].get<std::string>();
+    userAuthenticatedSocketEventPayload.user.firstName = userJson["firstName"].get<std::string>();
+    userAuthenticatedSocketEventPayload.user.lastName = userJson["lastName"].get<std::string>();
+    userAuthenticatedSocketEventPayload.user.password = userJson["password"].get<std::string>();
 
-    return UserAuthenticatedSocketEventPayload;
+    return userAuthenticatedSocketEventPayload;
 }

@@ -16,6 +16,6 @@ struct MessageCreatedSocketEventPayload
 
 struct MessageCreatedSocketEvent : public SocketEvent<MessageCreatedSocketEventPayload>
 {
-    MessageCreatedSocketEvent(MessageCreatedSocketEventPayload Payload) :  SocketEvent(SocketEventName::MESSAGE_CREATED, Payload)
+    MessageCreatedSocketEvent(MessageCreatedSocketEventPayload payload) :  SocketEvent(SocketEventName::MESSAGE_CREATED, payload)
     {}
 };

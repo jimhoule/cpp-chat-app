@@ -8,11 +8,11 @@
 std::string CreateMessageSocketEventSerializer::Serialize(const CreateMessageSocketEvent& createMessageSocketEvent)
 {
     nlohmann::json payloadJson;
-    payloadJson["conversationID"] = createMessageSocketEvent.Payload.conversationID;
-    payloadJson["text"] = createMessageSocketEvent.Payload.text;
+    payloadJson["conversationId"] = createMessageSocketEvent.payload.conversationId;
+    payloadJson["text"] = createMessageSocketEvent.payload.text;
 
     nlohmann::json json;
-    json["name"] = createMessageSocketEvent.Name;
+    json["name"] = createMessageSocketEvent.name;
     json["payload"] = payloadJson;
 
     return json.dump();

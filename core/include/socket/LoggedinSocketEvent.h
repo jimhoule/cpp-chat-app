@@ -7,14 +7,14 @@
 struct LoggedinSocketEventPayload
 {
     LoggedinSocketEventPayload() = default;
-    LoggedinSocketEventPayload(const std::string& AccessToken) : AccessToken(AccessToken)
+    LoggedinSocketEventPayload(const std::string& sessionId) : sessionId(sessionId)
     {}
 
-    std::string AccessToken;
+    std::string sessionId;
 };
 
 struct LoggedinSocketEvent : public SocketEvent<LoggedinSocketEventPayload>
 {
-    LoggedinSocketEvent(LoggedinSocketEventPayload Payload) :  SocketEvent(SocketEventName::LOGGEDIN, Payload)
+    LoggedinSocketEvent(LoggedinSocketEventPayload payload) :  SocketEvent(SocketEventName::LOGGEDIN, payload)
     {}
 };

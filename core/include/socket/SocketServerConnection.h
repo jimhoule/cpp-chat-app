@@ -2,7 +2,7 @@
 
 #include "models/User.h"
 
-struct SocketConnection
+struct SocketServerConnection
 {
     int clientSocket = -1;
     std::optional<User> user = std::nullopt;

@@ -2,7 +2,10 @@
 
 #include "auth/AuthService.h"
 #include "log/Logger.h"
+#include "exceptions/ExpectedException.h"
+#include "socket/SocketErrorCode.h"
 #include "socket/SocketServer.h"
+#include "socket/SocketEventContext.h"
 
 // **********
 // * PUBLIC *
@@ -15,40 +18,38 @@ AuthHandler::AuthHandler(SocketServer& socketServer, AuthService& authService, L
 
 SocketServerEventHandler AuthHandler::GetLoginHandler()
 {
-    return [this](const std::string& serializedLoginSocketEventPayload, int clientSocket) {
+    return [this](const SocketEventContext& context) {
         // Gets login socket event payload
-        const LoginSocketEventPayload loginSocketEventPayload = m_loginSocketEventPayloadDeserializer.Deserialize(serializedLoginSocketEventPayload);
+        const LoginSocketEventPayload loginSocketEventPayload = m_loginSocketEventPayloadDeserializer.Deserialize(context.serializedPayload);
 
         // Logs in 
         LoginDto loginDto = {};
         loginDto.email = loginSocketEventPayload.email;
         loginDto.password = loginSocketEventPayload.password;
-        const AuthServiceResult authServiceResult = m_authService.Login(loginDto);
-        if (!authServiceResult.user.has_value())
+        const AuthResult authResult = m_authService.Login(loginDto);
+        if (authResult.code != AuthResultCode::OK)
         {
-            // TODO: Implement better error propagation system
-            SendErrorSocketEvent(clientSocket, "Login failed for client socket " + std::to_string(clientSocket));
-            return;
+            throw ExpectedException(SocketErrorCode::INVALID_CREDENTIALS, "Invalid email or password");
         }
 
         // Serializes logged in socket event
-        const LoggedinSocketEventPayload loggedinSocketEventPayload(authServiceResult.sessionId);
+        const LoggedinSocketEventPayload loggedinSocketEventPayload(authResult.data.sessionId);
         const LoggedinSocketEvent loggedinSocketEvent(loggedinSocketEventPayload);
         const std::string serializedLoggedinSocketEvent = m_loggedinSocketEventSerializer.Serialize(loggedinSocketEvent);
 
         // Sends logged in socket event
-        m_socketServer.SendTo(clientSocket, serializedLoggedinSocketEvent);
+        m_socketServer.SendTo(context.clientSocket, serializedLoggedinSocketEvent);
 
         // Sends user authenticated socket event to others
-        SendUserAuthenticatedSocketEvent(clientSocket, authServiceResult.user.value());
+        SendUserAuthenticatedSocketEvent(context.clientSocket, authResult.data.user);
     };
 }
 
 SocketServerEventHandler AuthHandler::GetRegisterHandler()
 {
-    return [this](const std::string& serializedRegisterSocketEventPayload, int clientSocket) {
+    return [this](const SocketEventContext& context) {
         // Gets register socket event payload
-        const RegisterSocketEventPayload registerSocketEventPayload = m_registerSocketEventPayloadDeserializer.Deserialize(serializedRegisterSocketEventPayload);
+        const RegisterSocketEventPayload registerSocketEventPayload = m_registerSocketEventPayloadDeserializer.Deserialize(context.serializedPayload);
 
         // Generates access token
         // TODO: Create auth service and integrate jwt library
@@ -57,40 +58,32 @@ SocketServerEventHandler AuthHandler::GetRegisterHandler()
         registerDto.firstName = registerSocketEventPayload.firstName;
         registerDto.lastName = registerSocketEventPayload.lastName;
         registerDto.password = registerSocketEventPayload.password;
-        const AuthServiceResult authServiceResult = m_authService.Register(registerDto);
-        if (!authServiceResult.user.has_value())
+        const AuthResult authResult = m_authService.Register(registerDto);
+        if (authResult.code != AuthResultCode::OK)
         {
-            // TODO: Implement better error propagation system
-            SendErrorSocketEvent(clientSocket, "Registration failed for socket " + std::to_string(clientSocket));
-            return;
+            throw ExpectedException(SocketErrorCode::ALREADY_EXISTS, "Registration failed for email " + registerDto.email + ", " + ConvertAuthResultCodeToString(authResult.code));
         }
 
         // Serializes registered socket event
-        const RegisteredSocketEventPayload registeredSocketEventPayload(authServiceResult.sessionId);
+        const RegisteredSocketEventPayload registeredSocketEventPayload(authResult.data.sessionId);
         const RegisteredSocketEvent registeredSocketEvent(registeredSocketEventPayload);
         const std::string serializedRegisteredSocketEvent = m_registeredSocketEventSerializer.Serialize(registeredSocketEvent);
 
         // Sends registered socket event
-        m_socketServer.SendTo(clientSocket, serializedRegisteredSocketEvent);
+        m_socketServer.SendTo(context.clientSocket, serializedRegisteredSocketEvent);
 
         // Sends user authenticated socket event to others
-        SendUserAuthenticatedSocketEvent(clientSocket, authServiceResult.user.value());
+        SendUserAuthenticatedSocketEvent(context.clientSocket, authResult.data.user);
     };
 }
 
 // ***********
 // * PRIVATE *
 // ***********
-void AuthHandler::SendErrorSocketEvent(int clientSocket, const std::string& message)
-{
-    // TODO: Send ERROR socket event
-    m_logger.Warning(message);
-}
-
 void AuthHandler::SendUserAuthenticatedSocketEvent(int clientSocket, const User& user)
 {
     // Binds user to server
-    m_socketServer.BindSocketConnectionUser(clientSocket, user);
+    m_socketServer.BindConnectionUser(clientSocket, user);
 
     // Serializes user authenticated socket event
     const UserAuthenticatedSocketEventPayload userAuthenticatedSocketEventPayload(user);

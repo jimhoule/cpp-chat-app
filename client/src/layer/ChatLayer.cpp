@@ -79,7 +79,7 @@ void ChatLayer::OnAttach()
     SocketClientEventHandler HandleUserAuthenticated = [this, &userAuthenticatedSocketEventPayloadDeserializer](const std::string& serializedUserAuthenticatedSocketEventPayload) {
         // Gets user authenticated socket event payload
         const UserAuthenticatedSocketEventPayload& userAuthenticatedSocketEventPayload = userAuthenticatedSocketEventPayloadDeserializer.Deserialize(serializedUserAuthenticatedSocketEventPayload);
-        m_Logger->Info("Authenticated user ID: " + userAuthenticatedSocketEventPayload.User.id);
+        m_Logger->Info("Authenticated user ID: " + userAuthenticatedSocketEventPayload.user.id);
     };
 
     m_SocketClient->On(SocketEventName::MESSAGE_CREATED, HandleMessageCreated);

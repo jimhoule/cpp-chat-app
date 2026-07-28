@@ -2,6 +2,7 @@
 #include "deserializer/LoginSocketEventPayloadDeserializer.h"
 #include "deserializer/RegisterSocketEventPayloadDeserializer.h"
 #include "messages/MessagesModule.h"
+#include "middlewares/HandleErrors.h"
 #include "serializer/LoggedinSocketEventSerializer.h"
 #include "serializer/RegisteredSocketEventSerializer.h"
 #include "sessions/SessionsModule.h"
@@ -16,7 +17,13 @@ int main()
 {
 	// const int PORT = std::stoi(std::getenv("PORT"));
 	const unsigned int PORT = 5000;
-	SocketServer server(PORT);
+
+	// NOTE: Declared before the server and the error handler that borrow them
+	Logger socketServerLogger("SERVER", "core/src/socket/SocketServer");
+	Logger handleErrorsLogger("SERVER", "server/src/middlewares/HandleErrors");
+
+	SocketServer server(PORT, socketServerLogger);
+	server.OnError(HandleErrors(server, handleErrorsLogger));
 
 	// Modules
 	SessionsModule sessionsModule;

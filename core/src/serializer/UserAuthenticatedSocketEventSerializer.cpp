@@ -8,17 +8,17 @@
 std::string UserAuthenticatedSocketEventSerializer::Serialize(const UserAuthenticatedSocketEvent& userAuthenticatedSocketEvent)
 {
     nlohmann::json userJson = {};
-    userJson["id"] = userAuthenticatedSocketEvent.Payload.User.id;
-    userJson["email"] = userAuthenticatedSocketEvent.Payload.User.email;
-    userJson["firstName"] = userAuthenticatedSocketEvent.Payload.User.firstName;
-    userJson["lastName"] = userAuthenticatedSocketEvent.Payload.User.lastName;
-    userJson["password"] = userAuthenticatedSocketEvent.Payload.User.password;
+    userJson["id"] = userAuthenticatedSocketEvent.payload.user.id;
+    userJson["email"] = userAuthenticatedSocketEvent.payload.user.email;
+    userJson["firstName"] = userAuthenticatedSocketEvent.payload.user.firstName;
+    userJson["lastName"] = userAuthenticatedSocketEvent.payload.user.lastName;
+    userJson["password"] = userAuthenticatedSocketEvent.payload.user.password;
 
     nlohmann::json payloadJson = {};
     payloadJson["user"] = userJson;
 
     nlohmann::json json = {};
-    json["name"] = userAuthenticatedSocketEvent.Name;
+    json["name"] = userAuthenticatedSocketEvent.name;
     json["payload"] = payloadJson;
 
     return json.dump();

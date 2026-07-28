@@ -7,15 +7,15 @@
 struct CreateMessageSocketEventPayload
 {
     CreateMessageSocketEventPayload() = default;
-    CreateMessageSocketEventPayload(const std::string& conversationID, const std::string& text) : conversationID(conversationID), text(text)
+    CreateMessageSocketEventPayload(const std::string& conversationId, const std::string& text) : conversationId(conversationId), text(text)
     {}
 
-    std::string conversationID;
+    std::string conversationId;
     std::string text;
 };
 
 struct CreateMessageSocketEvent : public SocketEvent<CreateMessageSocketEventPayload>
 {
-    CreateMessageSocketEvent(CreateMessageSocketEventPayload Payload) :  SocketEvent(SocketEventName::CREATE_MESSAGE, Payload)
+    CreateMessageSocketEvent(CreateMessageSocketEventPayload payload) :  SocketEvent(SocketEventName::CREATE_MESSAGE, payload)
     {}
 };

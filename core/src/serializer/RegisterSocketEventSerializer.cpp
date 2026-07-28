@@ -8,13 +8,13 @@
 std::string RegisterSocketEventSerializer::Serialize(const RegisterSocketEvent& registerSocketEvent)
 {
     nlohmann::json payloadJson;
-    payloadJson["firstName"] = registerSocketEvent.Payload.firstName;
-    payloadJson["lastName"] = registerSocketEvent.Payload.lastName;
-    payloadJson["email"] = registerSocketEvent.Payload.email;
-    payloadJson["password"] = registerSocketEvent.Payload.password;
+    payloadJson["firstName"] = registerSocketEvent.payload.firstName;
+    payloadJson["lastName"] = registerSocketEvent.payload.lastName;
+    payloadJson["email"] = registerSocketEvent.payload.email;
+    payloadJson["password"] = registerSocketEvent.payload.password;
 
     nlohmann::json json;
-    json["name"] = registerSocketEvent.Name;
+    json["name"] = registerSocketEvent.name;
     json["payload"] = payloadJson;
 
     return json.dump();

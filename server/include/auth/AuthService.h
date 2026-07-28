@@ -1,16 +1,28 @@
 #pragma once
 
+#include "results/ServiceResult.h"
 #include "sessions/SessionsService.h"
 #include "users/UsersService.h"
 
 // Forward declarations
 class Logger;
 
-struct AuthServiceResult
+enum class AuthResultCode
 {
-    std::string sessionId;
-    std::optional<User> user;
+    OK,
+    USER_NOT_FOUND,
+    INVALID_PASSWORD,
+    EMAIL_ALREADY_USED
 };
+
+std::string ConvertAuthResultCodeToString(AuthResultCode authResultCode);
+
+struct Auth
+{
+    std::string sessionId = "";
+    User user = {};
+};
+using AuthResult = ServiceResult<AuthResultCode, Auth>;
 
 struct LoginDto
 {
@@ -31,8 +43,8 @@ class AuthService
 public:
     AuthService(SessionsService& sessionsService, UsersService& usersService, Logger& logger);
 
-    AuthServiceResult Login(const LoginDto& loginDto);
-    AuthServiceResult Register(const RegisterDto& registerDto);
+    AuthResult Login(const LoginDto& loginDto);
+    AuthResult Register(const RegisterDto& registerDto);
 
 private:
     // NOTE: Here services must be a references because they are "borrowed" from other modules

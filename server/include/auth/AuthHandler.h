@@ -35,6 +35,5 @@ private:
 
     UserAuthenticatedSocketEventSerializer m_userAuthenticatedSocketEventSerializer = {};
 
-    void SendErrorSocketEvent(int clientSocket, const std::string& message);
     void SendUserAuthenticatedSocketEvent(int clientSocket, const User& user);
 };

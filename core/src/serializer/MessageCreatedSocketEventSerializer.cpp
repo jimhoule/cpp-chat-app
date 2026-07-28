@@ -8,17 +8,17 @@
 std::string MessageCreatedSocketEventSerializer::Serialize(const MessageCreatedSocketEvent& messageCreatedSocketEvent)
 {
     nlohmann::json messageJson = {};
-    messageJson["id"] = messageCreatedSocketEvent.Payload.message.id;
-    messageJson["conversationId"] = messageCreatedSocketEvent.Payload.message.conversationId;
-    messageJson["senderId"] = messageCreatedSocketEvent.Payload.message.senderId;
-    messageJson["text"] = messageCreatedSocketEvent.Payload.message.text;
-    messageJson["createdAt"] = messageCreatedSocketEvent.Payload.message.createdAt;
+    messageJson["id"] = messageCreatedSocketEvent.payload.message.id;
+    messageJson["conversationId"] = messageCreatedSocketEvent.payload.message.conversationId;
+    messageJson["senderId"] = messageCreatedSocketEvent.payload.message.senderId;
+    messageJson["text"] = messageCreatedSocketEvent.payload.message.text;
+    messageJson["createdAt"] = messageCreatedSocketEvent.payload.message.createdAt;
 
     nlohmann::json payloadJson = {};
     payloadJson["message"] = messageJson;
 
     nlohmann::json json = {};
-    json["name"] = messageCreatedSocketEvent.Name;
+    json["name"] = messageCreatedSocketEvent.name;
     json["payload"] = payloadJson;
 
     return json.dump();

@@ -7,14 +7,14 @@
 struct RegisteredSocketEventPayload
 {
     RegisteredSocketEventPayload() = default;
-    RegisteredSocketEventPayload(const std::string& AccessToken) : AccessToken(AccessToken)
+    RegisteredSocketEventPayload(const std::string& sessionId) : sessionId(sessionId)
     {}
 
-    std::string AccessToken;
+    std::string sessionId;
 };
 
 struct RegisteredSocketEvent : public SocketEvent<RegisteredSocketEventPayload>
 {
-    RegisteredSocketEvent(RegisteredSocketEventPayload RegisteredSocketEventPayload) :  SocketEvent(SocketEventName::REGISTERED, RegisteredSocketEventPayload)
+    RegisteredSocketEvent(RegisteredSocketEventPayload payload) :  SocketEvent(SocketEventName::REGISTERED, payload)
     {}
 };

@@ -6,9 +6,9 @@ template<typename TPayload>
 struct SocketEvent
 {
 public:
-    SocketEvent(SocketEventName Name, TPayload Payload) : Name(Name), Payload(Payload)
+    SocketEvent(SocketEventName name, TPayload payload) : name(name), payload(payload)
     {}
 
-    SocketEventName Name;
-    TPayload Payload;
+    SocketEventName name;
+    TPayload payload;
 };

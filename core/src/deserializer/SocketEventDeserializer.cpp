@@ -5,13 +5,13 @@
 // **********
 // * PUBLIC *
 // **********
-SocketEvent<std::string> SocketEventDeserializer::Deserialize(const std::string& JsonString)
+SocketEvent<std::string> SocketEventDeserializer::Deserialize(const std::string& jsonString)
 {
-    nlohmann::json Json = nlohmann::json::parse(JsonString);
+    nlohmann::json json = nlohmann::json::parse(jsonString);
 
-    SocketEventName Name = Json["name"].get<SocketEventName>();
-    std::string Payload = Json["payload"].dump();
-    SocketEvent<std::string> SocketEvent(Name, Payload);
+    SocketEventName name = json["name"].get<SocketEventName>();
+    std::string payload = json["payload"].dump();
+    SocketEvent<std::string> socketEvent(name, payload);
 
-    return SocketEvent;
+    return socketEvent;
 }

@@ -1,6 +1,7 @@
 #include "messages/MessagesModule.h"
 
 #include "messages/repositories/MessagesInMemoryRepository.h"
+#include "middlewares/RequireAuthentication.h"
 #include "socket/SocketServer.h"
 
 MessagesModule::MessagesModule(SocketServer& socketServer)
@@ -10,7 +11,11 @@ MessagesModule::MessagesModule(SocketServer& socketServer)
     , m_messagesService(std::make_unique<MessagesInMemoryRepository>(m_messagesRepositoryLogger), m_messagesServiceLogger)
     , m_messagesHandler(socketServer, m_messagesService, m_messagesHandlerLogger)
 {
-    socketServer.On(SocketEventName::CREATE_MESSAGE, m_messagesHandler.GetCreateMessageHandler());
+    socketServer.On(
+        SocketEventName::CREATE_MESSAGE,
+        { RequireAuthentication(socketServer) },
+        m_messagesHandler.GetCreateMessageHandler()
+    );
 }
 
 MessagesService& MessagesModule::GetService()

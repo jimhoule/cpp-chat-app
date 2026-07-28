@@ -126,7 +126,7 @@ int main()
     SocketClientEventHandler HandleLoggedinSocketEvent = [&layerStack, &Chat, &loggedinSocketEventPayloadDeserializer](const std::string& SerializedLoggedinSocketEventPayload) {
         // Gets logged in socket event payload
         const LoggedinSocketEventPayload& loggedinSocketEventPayload = loggedinSocketEventPayloadDeserializer.Deserialize(SerializedLoggedinSocketEventPayload);
-        std::cout << "Logged in access token: " << loggedinSocketEventPayload.AccessToken << std::endl;
+        std::cout << "Logged in session id: " << loggedinSocketEventPayload.sessionId << std::endl;
 
         layerStack->Push(Chat);
         layerStack->Suspend("Login");
@@ -137,7 +137,7 @@ int main()
     SocketClientEventHandler HandleRegisteredSocketEvent = [&layerStack, &Chat, &registeredSocketEventPayloadDeserializer](const std::string& SerializedRegisteredSocketEventPayload) {
         // Gets registered socket event payload
         const RegisteredSocketEventPayload& registeredSocketEventPayload = registeredSocketEventPayloadDeserializer.Deserialize(SerializedRegisteredSocketEventPayload);
-        std::cout << "Registered access token: " << registeredSocketEventPayload.AccessToken << std::endl;
+        std::cout << "Registered session id: " << registeredSocketEventPayload.sessionId << std::endl;
 
         layerStack->Pop();
         layerStack->Push(Chat);
