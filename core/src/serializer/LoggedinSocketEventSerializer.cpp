@@ -1,18 +1,18 @@
 #include "serializer/LoggedinSocketEventSerializer.h"
 
-#include <nlohmann/json.hpp>
+#include "json/Json.h"
 
 // **********
 // * PUBLIC *
 // **********
 std::string LoggedinSocketEventSerializer::Serialize(const LoggedinSocketEvent& loggedinSocketEvent)
 {
-    nlohmann::json payloadJson;
-    payloadJson["sessionId"] = loggedinSocketEvent.payload.sessionId;
+    Json payloadJson = {};
+    payloadJson.Set("sessionId", loggedinSocketEvent.payload.sessionId);
 
-    nlohmann::json json;
-    json["name"] = loggedinSocketEvent.name;
-    json["payload"] = payloadJson;
+    Json json = {};
+    json.SetEnum<SocketEventName>("name", loggedinSocketEvent.name);
+    json.Set("payload", payloadJson);
 
-    return json.dump();
+    return json.ToString();
 }

@@ -1,17 +1,17 @@
 #include "deserializer/CreateMessageSocketEventPayloadDeserializer.h"
 
-#include <nlohmann/json.hpp>
+#include "json/Json.h"
 
 // **********
 // * PUBLIC *
 // **********
 CreateMessageSocketEventPayload CreateMessageSocketEventPayloadDeserializer::Deserialize(const std::string& jsonString)
 {
-    nlohmann::json json = nlohmann::json::parse(jsonString);
+    Json json = Json::Parse(jsonString);
 
     CreateMessageSocketEventPayload createMessageSocketEventPayload = {};
-    createMessageSocketEventPayload.conversationId = json["conversationId"].get<std::string>();
-    createMessageSocketEventPayload.text = json["text"].get<std::string>();
+    createMessageSocketEventPayload.conversationId = json.GetString("conversationId");
+    createMessageSocketEventPayload.text = json.GetString("text");
 
     return createMessageSocketEventPayload;
 }

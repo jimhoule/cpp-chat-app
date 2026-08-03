@@ -1,16 +1,16 @@
 #include "deserializer/LoggedinSocketEventPayloadDeserializer.h"
 
-#include <nlohmann/json.hpp>
+#include "json/Json.h"
 
 // **********
 // * PUBLIC *
 // **********
 LoggedinSocketEventPayload LoggedinSocketEventPayloadDeserializer::Deserialize(const std::string& jsonString)
 {
-    nlohmann::json json = nlohmann::json::parse(jsonString);
+    Json json = Json::Parse(jsonString);
 
     LoggedinSocketEventPayload loggedinSocketEventPayload = {};
-    loggedinSocketEventPayload.sessionId = json["sessionId"].get<std::string>();
+    loggedinSocketEventPayload.sessionId = json.GetString("sessionId");
 
     return loggedinSocketEventPayload;
 }

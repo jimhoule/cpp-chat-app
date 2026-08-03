@@ -1,6 +1,7 @@
 #pragma once
 
 #include <iostream>
+#include <nlohmann/json.hpp>
 #include <string>
 
 enum class SocketEventName
@@ -18,6 +19,27 @@ enum class SocketEventName
     CREATE_MESSAGE,
     MESSAGE_CREATED,
 };
+
+/**
+ * NOTES:
+ *  - Makes the enum travel as a string instead of its position, so adding a value in the middle cannot silently change the meaning of the ones after it
+ *  - The strings below are the protocol, ConvertSocketEventNameToString is for logs only
+ *  - An unknown name falls back to the first pair instead of throwing, which is what lets Json::GetEnum stay non throwing
+ */
+NLOHMANN_JSON_SERIALIZE_ENUM(SocketEventName, {
+    { SocketEventName::ERROR, "ERROR" },
+    
+    // Auth
+    { SocketEventName::LOGIN, "LOGIN" },
+    { SocketEventName::LOGGEDIN, "LOGGEDIN" },
+    { SocketEventName::REGISTER, "REGISTER" },
+    { SocketEventName::REGISTERED, "REGISTERED" },
+    { SocketEventName::USER_AUTHENTICATED, "USER_AUTHENTICATED" },
+
+    // Messages
+    { SocketEventName::CREATE_MESSAGE, "CREATE_MESSAGE" },
+    { SocketEventName::MESSAGE_CREATED, "MESSAGE_CREATED" },
+});
 
 std::string ConvertSocketEventNameToString(SocketEventName socketEventName);
 

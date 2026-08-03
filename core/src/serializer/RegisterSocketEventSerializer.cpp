@@ -1,21 +1,21 @@
 #include "serializer/RegisterSocketEventSerializer.h"
 
-#include <nlohmann/json.hpp>
+#include "json/Json.h"
 
 // **********
 // * PUBLIC *
 // **********
 std::string RegisterSocketEventSerializer::Serialize(const RegisterSocketEvent& registerSocketEvent)
 {
-    nlohmann::json payloadJson;
-    payloadJson["firstName"] = registerSocketEvent.payload.firstName;
-    payloadJson["lastName"] = registerSocketEvent.payload.lastName;
-    payloadJson["email"] = registerSocketEvent.payload.email;
-    payloadJson["password"] = registerSocketEvent.payload.password;
+    Json payloadJson = {};
+    payloadJson.Set("firstName", registerSocketEvent.payload.firstName);
+    payloadJson.Set("lastName", registerSocketEvent.payload.lastName);
+    payloadJson.Set("email", registerSocketEvent.payload.email);
+    payloadJson.Set("password", registerSocketEvent.payload.password);
 
-    nlohmann::json json;
-    json["name"] = registerSocketEvent.name;
-    json["payload"] = payloadJson;
+    Json json = {};
+    json.SetEnum<SocketEventName>("name", registerSocketEvent.name);
+    json.Set("payload", payloadJson);
 
-    return json.dump();
+    return json.ToString();
 }

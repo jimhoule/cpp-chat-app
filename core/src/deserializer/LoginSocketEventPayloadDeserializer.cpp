@@ -1,17 +1,17 @@
 #include "deserializer/LoginSocketEventPayloadDeserializer.h"
 
-#include <nlohmann/json.hpp>
+#include "json/Json.h"
 
 // **********
 // * PUBLIC *
 // **********
 LoginSocketEventPayload LoginSocketEventPayloadDeserializer::Deserialize(const std::string& jsonString)
 {
-    nlohmann::json json = nlohmann::json::parse(jsonString);
+    Json json = Json::Parse(jsonString);
 
     LoginSocketEventPayload loginSocketEventPayload = {};
-    loginSocketEventPayload.email = json["email"].get<std::string>();
-    loginSocketEventPayload.password = json["password"].get<std::string>();
+    loginSocketEventPayload.email = json.GetString("email");
+    loginSocketEventPayload.password = json.GetString("password");
 
     return loginSocketEventPayload;
 }

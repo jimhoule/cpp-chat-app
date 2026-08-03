@@ -1,16 +1,16 @@
 #include "deserializer/SocketEventDeserializer.h"
 
-#include <nlohmann/json.hpp>
+#include "json/Json.h"
 
 // **********
 // * PUBLIC *
 // **********
 SocketEvent<std::string> SocketEventDeserializer::Deserialize(const std::string& jsonString)
 {
-    nlohmann::json json = nlohmann::json::parse(jsonString);
+    Json json = Json::Parse(jsonString);
 
-    SocketEventName name = json["name"].get<SocketEventName>();
-    std::string payload = json["payload"].dump();
+    SocketEventName name = json.GetEnum<SocketEventName>("name");
+    std::string payload = json.GetRaw("payload");
     SocketEvent<std::string> socketEvent(name, payload);
 
     return socketEvent;

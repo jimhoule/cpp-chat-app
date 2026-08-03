@@ -1,18 +1,18 @@
 #include "serializer/ErrorSocketEventSerializer.h"
 
-#include <nlohmann/json.hpp>
+#include "json/Json.h"
 
 // **********
 // * PUBLIC *
 // **********
 std::string ErrorSocketEventSerializer::Serialize(const ErrorSocketEvent& errorSocketEvent)
 {
-    nlohmann::json payloadJson = {};
-    payloadJson["code"] = errorSocketEvent.payload.code;
+    Json payloadJson = {};
+    payloadJson.SetEnum<SocketErrorCode>("code", errorSocketEvent.payload.code);
 
-    nlohmann::json json = {};
-    json["name"] = errorSocketEvent.name;
-    json["payload"] = payloadJson;
+    Json json = {};
+    json.SetEnum<SocketEventName>("name", errorSocketEvent.name);
+    json.Set("payload", payloadJson);
 
-    return json.dump();
+    return json.ToString();
 }

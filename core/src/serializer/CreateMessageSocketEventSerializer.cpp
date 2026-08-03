@@ -1,19 +1,19 @@
 #include "serializer/CreateMessageSocketEventSerializer.h"
 
-#include <nlohmann/json.hpp>
+#include "json/Json.h"
 
 // **********
 // * PUBLIC *
 // **********
 std::string CreateMessageSocketEventSerializer::Serialize(const CreateMessageSocketEvent& createMessageSocketEvent)
 {
-    nlohmann::json payloadJson;
-    payloadJson["conversationId"] = createMessageSocketEvent.payload.conversationId;
-    payloadJson["text"] = createMessageSocketEvent.payload.text;
+    Json payloadJson = {};
+    payloadJson.Set("conversationId", createMessageSocketEvent.payload.conversationId);
+    payloadJson.Set("text", createMessageSocketEvent.payload.text);
 
-    nlohmann::json json;
-    json["name"] = createMessageSocketEvent.name;
-    json["payload"] = payloadJson;
+    Json json = {};
+    json.SetEnum<SocketEventName>("name", createMessageSocketEvent.name);
+    json.Set("payload", payloadJson);
 
-    return json.dump();
+    return json.ToString();
 }

@@ -1,17 +1,17 @@
 #include "deserializer/ErrorSocketEventPayloadDeserializer.h"
 #include "socket/SocketErrorCode.h"
 
-#include <nlohmann/json.hpp>
+#include "json/Json.h"
 
 // **********
 // * PUBLIC *
 // **********
 ErrorSocketEventPayload ErrorSocketEventPayloadDeserializer::Deserialize(const std::string& jsonString)
 {
-    nlohmann::json json = nlohmann::json::parse(jsonString);
+    Json json = Json::Parse(jsonString);
 
     ErrorSocketEventPayload errorSocketEventPayload = {};
-    errorSocketEventPayload.code = json["code"].get<SocketErrorCode>();
+    errorSocketEventPayload.code = json.GetEnum<SocketErrorCode>("code");
 
     return errorSocketEventPayload;
 }

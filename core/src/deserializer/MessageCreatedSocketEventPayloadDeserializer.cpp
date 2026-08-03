@@ -1,21 +1,21 @@
 #include "deserializer/MessageCreatedSocketEventPayloadDeserializer.h"
 
-#include <nlohmann/json.hpp>
+#include "json/Json.h"
 
 // **********
 // * PUBLIC *
 // **********
 MessageCreatedSocketEventPayload MessageCreatedSocketEventPayloadDeserializer::Deserialize(const std::string& jsonString)
 {
-    nlohmann::json json = nlohmann::json::parse(jsonString);
-    nlohmann::json messageJson = json["message"];
+    Json json = Json::Parse(jsonString);
+    Json messageJson = json.GetObject("message");
 
     MessageCreatedSocketEventPayload messageCreatedSocketEventPayload = {};
-    messageCreatedSocketEventPayload.message.id = messageJson["id"].get<std::string>();
-    messageCreatedSocketEventPayload.message.conversationId = messageJson["conversationId"].get<std::string>();
-    messageCreatedSocketEventPayload.message.senderId = messageJson["senderId"].get<std::string>();
-    messageCreatedSocketEventPayload.message.text = messageJson["text"].get<std::string>();
-    messageCreatedSocketEventPayload.message.createdAt = messageJson["createdAt"].get<std::time_t>();
+    messageCreatedSocketEventPayload.message.id = messageJson.GetString("id");
+    messageCreatedSocketEventPayload.message.conversationId = messageJson.GetString("conversationId");
+    messageCreatedSocketEventPayload.message.senderId = messageJson.GetString("senderId");
+    messageCreatedSocketEventPayload.message.text = messageJson.GetString("text");
+    messageCreatedSocketEventPayload.message.createdAt = messageJson.GetTime("createdAt");
 
     return messageCreatedSocketEventPayload;
 }

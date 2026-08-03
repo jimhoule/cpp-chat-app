@@ -1,21 +1,21 @@
 #include "deserializer/UserAuthenticatedSocketEventPayloadDeserializer.h"
 
-#include <nlohmann/json.hpp>
+#include "json/Json.h"
 
 // **********
 // * PUBLIC *
 // **********
 UserAuthenticatedSocketEventPayload UserAuthenticatedSocketEventPayloadDeserializer::Deserialize(const std::string& jsonString)
 {
-    nlohmann::json json = nlohmann::json::parse(jsonString);
-    nlohmann::json userJson = json["user"];
+    Json json = Json::Parse(jsonString);
+    Json userJson = json.GetObject("user");
 
     UserAuthenticatedSocketEventPayload userAuthenticatedSocketEventPayload = {};
-    userAuthenticatedSocketEventPayload.user.id = userJson["id"].get<std::string>();
-    userAuthenticatedSocketEventPayload.user.email = userJson["email"].get<std::string>();
-    userAuthenticatedSocketEventPayload.user.firstName = userJson["firstName"].get<std::string>();
-    userAuthenticatedSocketEventPayload.user.lastName = userJson["lastName"].get<std::string>();
-    userAuthenticatedSocketEventPayload.user.password = userJson["password"].get<std::string>();
+    userAuthenticatedSocketEventPayload.user.id = userJson.GetString("id");
+    userAuthenticatedSocketEventPayload.user.email = userJson.GetString("email");
+    userAuthenticatedSocketEventPayload.user.firstName = userJson.GetString("firstName");
+    userAuthenticatedSocketEventPayload.user.lastName = userJson.GetString("lastName");
+    userAuthenticatedSocketEventPayload.user.password = userJson.GetString("password");
 
     return userAuthenticatedSocketEventPayload;
 }
