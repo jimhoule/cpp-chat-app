@@ -6,11 +6,12 @@
 
 // Forward declarations
 class SocketServer;
+class UuidService;
 
 class MessagesModule
 {
 public:
-    MessagesModule(SocketServer& socketServer);
+    MessagesModule(SocketServer& socketServer, UuidService& uuidService);
 
     // Deletes move constructor and assign operator
     MessagesModule(const MessagesModule&) = delete;

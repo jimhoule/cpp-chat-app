@@ -1,5 +1,7 @@
 #include "sessions/SessionsService.h"
 
+#include "uuid/UuidService.h"
+
 std::string ConvertSessionsResultCodeToString(SessionsResultCode sessionsResultCode)
 {
     switch (sessionsResultCode)
@@ -18,8 +20,9 @@ std::string ConvertSessionsResultCodeToString(SessionsResultCode sessionsResultC
 // **********
 // * PUBLIC *
 // **********
-SessionsService::SessionsService(std::unique_ptr<ISessionsRepository> sessionsRepository, Logger& logger)
+SessionsService::SessionsService(std::unique_ptr<ISessionsRepository> sessionsRepository, UuidService& uuidService, Logger& logger)
     : m_sessionsRepository(std::move(sessionsRepository))
+    , m_uuidService(uuidService)
     , m_logger(logger)
 {}
 
@@ -29,7 +32,7 @@ SessionResult SessionsService::Create(const CreateSessionDto& createSessionDto)
     const std::time_t sessionTtlSeconds = 7 * 24 * 60 * 60;
 
     Session session = {};
-    session.id = "uuid." + createSessionDto.userId;
+    session.id = m_uuidService.Generate();
     session.userId = createSessionDto.userId;
     session.createdAt = std::time(0);
     session.expiredAt = std::time(0) + sessionTtlSeconds;

@@ -5,6 +5,7 @@ set(GLM_SUBDIRECTORY_NAME glm)
 set(IMGUI_SUBDIRECTORY_NAME imgui)
 set(NLOHMANNJSON_SUBDIRECTORY_NAME nlohmannjson)
 set(STB_SUBDIRECTORY_NAME stb)
+set(STDUUID_SUBDIRECTORY_NAME stduuid)
 
 # epoll-shim
 set(BUILD_SHARED_LIBS OFF CACHE INTERNAL "")
@@ -34,3 +35,11 @@ add_subdirectory(${NLOHMANNJSON_SUBDIRECTORY_NAME})
 
 # stb
 add_subdirectory(${STB_SUBDIRECTORY_NAME})
+
+# stduuid
+set(UUID_BUILD_TESTS OFF CACHE INTERNAL "")
+# NOTE: Same reason as nlohmann json, this third party only appears in PRIVATE source files so it does not need to be installed with the project
+set(UUID_ENABLE_INSTALL OFF CACHE INTERNAL "")
+# NOTE: Stays OFF because the project is C++17, stduuid then uses the gsl span implementation it vendors itself
+set(UUID_USING_CXX20_SPAN OFF CACHE INTERNAL "")
+add_subdirectory(${STDUUID_SUBDIRECTORY_NAME})

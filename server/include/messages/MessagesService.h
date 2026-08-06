@@ -5,6 +5,7 @@
 
 // Forward declarations
 class Logger;
+class UuidService;
 
 enum class MessagesResultCode
 {
@@ -27,12 +28,14 @@ struct CreateMessageDto
 class MessagesService
 {
 public:
-    MessagesService(std::unique_ptr<IMessagesRepository> messagesRepository, Logger& logger);
+    MessagesService(std::unique_ptr<IMessagesRepository> messagesRepository, UuidService& uuidService, Logger& logger);
 
     MessageResult Create(const CreateMessageDto& createMessageDto);
 
 private:
     std::unique_ptr<IMessagesRepository> m_messagesRepository = nullptr;
+
+    UuidService& m_uuidService;
 
     // NOTE: Borrowed from the module, which owns it and outlives this service
     Logger& m_logger;

@@ -5,6 +5,7 @@
 
 // Forward declarations
 class Logger;
+class UuidService;
 
 enum class SessionsResultCode
 {
@@ -29,13 +30,15 @@ struct FindSessionByIdDto
 class SessionsService
 {
 public:
-    SessionsService(std::unique_ptr<ISessionsRepository> usersRepository, Logger& logger);
+    SessionsService(std::unique_ptr<ISessionsRepository> usersRepository, UuidService& uuidService, Logger& logger);
 
     SessionResult Create(const CreateSessionDto& createSessionDto);
     SessionResult FindById(const FindSessionByIdDto& findSessionByIdDto);
 
 private:
     std::unique_ptr<ISessionsRepository> m_sessionsRepository = nullptr;
+
+    UuidService& m_uuidService;
 
     // NOTE: Borrowed from the module, which owns it and outlives this service
     Logger& m_logger;

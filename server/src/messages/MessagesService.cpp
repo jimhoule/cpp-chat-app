@@ -1,6 +1,7 @@
 #include "messages/MessagesService.h"
 
 #include "log/Logger.h"
+#include "uuid/UuidService.h"
 
 constexpr size_t MAX_MESSAGE_TEXT_LENGTH = 4000;
 
@@ -26,8 +27,9 @@ std::string ConvertMessagesResultCodeToString(MessagesResultCode messagesResultC
 // **********
 // * PUBLIC *
 // **********
-MessagesService::MessagesService(std::unique_ptr<IMessagesRepository> messagesRepository, Logger& logger)
+MessagesService::MessagesService(std::unique_ptr<IMessagesRepository> messagesRepository, UuidService& uuidService, Logger& logger)
     : m_messagesRepository(std::move(messagesRepository))
+    , m_uuidService(uuidService)
     , m_logger(logger)
 {}
 
@@ -50,7 +52,7 @@ MessageResult MessagesService::Create(const CreateMessageDto& createMessageDto)
 
     // Creates message
     Message message = {};
-    message.id = "uuid." + createMessageDto.conversationId + "." + createMessageDto.senderId;
+    message.id = m_uuidService.Generate();
     message.conversationId = createMessageDto.conversationId;
     message.senderId = createMessageDto.senderId;
     message.text = createMessageDto.text;

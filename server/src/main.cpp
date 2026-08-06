@@ -8,6 +8,7 @@
 #include "sessions/SessionsModule.h"
 #include "socket/SocketServer.h"
 #include "users/UsersModule.h"
+#include "uuid/UuidModule.h"
 
 #include <cstdlib>
 #include <iostream>
@@ -26,10 +27,11 @@ int main()
 	server.OnError(HandleErrors(server, handleErrorsLogger));
 
 	// Modules
-	SessionsModule sessionsModule;
-	UsersModule usersModule;
+	UuidModule uuidModule;
+	SessionsModule sessionsModule(uuidModule.GetService());
+	UsersModule usersModule(uuidModule.GetService());
 	AuthModule authModule(server, sessionsModule.GetService(), usersModule.GetService());
-	MessagesModule messagesModule(server);
+	MessagesModule messagesModule(server, uuidModule.GetService());
 
 	server.Init();
 	server.Listen();

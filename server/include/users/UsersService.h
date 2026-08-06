@@ -5,6 +5,7 @@
 
 // Forward declarations
 class Logger;
+class UuidService;
 
 enum class UsersResultCode
 {
@@ -32,13 +33,15 @@ struct FindUserByEmailDto
 class UsersService
 {
 public:
-    UsersService(std::unique_ptr<IUsersRepository> usersRepository, Logger& logger);
+    UsersService(std::unique_ptr<IUsersRepository> usersRepository, UuidService& uuidService, Logger& logger);
 
     UserResult Create(const CreateUserDto& createUserDto);
     UserResult FindByEmail(const FindUserByEmailDto& findUserByEmailDto);
 
 private:
     std::unique_ptr<IUsersRepository> m_usersRepository = nullptr;
+
+    UuidService& m_uuidService;
 
     // NOTE: Borrowed from the module, which owns it and outlives this service
     Logger& m_logger;

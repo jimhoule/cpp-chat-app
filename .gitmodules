@@ -13,3 +13,6 @@
 [submodule "vendor/epollshim"]
 	path = vendor/epollshim
 	url = https://github.com/jiixyj/epoll-shim.git
+[submodule "vendor/stduuid"]
+	path = vendor/stduuid
+	url = https://github.com/mariusbancila/stduuid.git

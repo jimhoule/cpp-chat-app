@@ -3,10 +3,13 @@
 #include "log/Logger.h"
 #include "users/UsersService.h"
 
+// Forward declaration
+class UuidService;
+
 class UsersModule
 {
 public:
-    UsersModule();
+    UsersModule(UuidService& uuidService);
 
     UsersService& GetService();
 

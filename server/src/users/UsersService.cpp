@@ -1,5 +1,7 @@
 #include "users/UsersService.h"
 
+#include "uuid/UuidService.h"
+
 std::string ConvertUsersResultCodeToString(UsersResultCode usersResultCode)
 {
     switch (usersResultCode)
@@ -18,8 +20,9 @@ std::string ConvertUsersResultCodeToString(UsersResultCode usersResultCode)
 // **********
 // * PUBLIC *
 // **********
-UsersService::UsersService(std::unique_ptr<IUsersRepository> usersRepository, Logger& logger)
+UsersService::UsersService(std::unique_ptr<IUsersRepository> usersRepository, UuidService& uuidService, Logger& logger)
     : m_usersRepository(std::move(usersRepository))
+    , m_uuidService(uuidService)
     , m_logger(logger)
 {}
 
@@ -36,7 +39,7 @@ UserResult UsersService::Create(const CreateUserDto& createUserDto)
     }
 
     User user = {};
-    user.id = "uuid." + createUserDto.email;
+    user.id = m_uuidService.Generate();
     user.email = createUserDto.email;
     user.firstName = createUserDto.firstName;
     user.lastName = createUserDto.lastName;
