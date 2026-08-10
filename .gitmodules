@@ -16,3 +16,6 @@
 [submodule "vendor/stduuid"]
 	path = vendor/stduuid
 	url = https://github.com/mariusbancila/stduuid.git
+[submodule "vendor/libsodium"]
+	path = vendor/libsodium
+	url = https://github.com/robinlinden/libsodium-cmake.git

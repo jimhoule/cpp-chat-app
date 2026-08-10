@@ -4,6 +4,9 @@
 #include "middlewares/RequireAuthentication.h"
 #include "socket/SocketServer.h"
 
+// **********
+// * PUBLIC *
+// **********
 MessagesModule::MessagesModule(SocketServer& socketServer, UuidService& uuidService)
     : m_messagesRepositoryLogger("MESSAGES", "server/src/messages/repositories/MessagesInMemoryRepository")
     , m_messagesServiceLogger("MESSAGES", "server/src/messages/MessagesService")

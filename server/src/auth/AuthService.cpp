@@ -34,11 +34,12 @@ AuthService::AuthService(SessionsService& sessionsService, UsersService& usersSe
 AuthResult AuthService::Login(const LoginDto& loginDto)
 {
     AuthResult authResult = {};
+    UserResult userResult = {};
 
     // Checks if user with this email exists
     FindUserByEmailDto findUserByEmailDto = {};
     findUserByEmailDto.email = loginDto.email;
-    UserResult userResult = m_usersService.FindByEmail(findUserByEmailDto);
+    userResult = m_usersService.FindByEmail(findUserByEmailDto);
     if (!userResult.data.has_value())
     {
         authResult.code = AuthResultCode::USER_NOT_FOUND;
@@ -48,9 +49,11 @@ AuthResult AuthService::Login(const LoginDto& loginDto)
     const User& user = userResult.data.value();
 
     // Validates password
-    // TODO: Create Encryption service for hashing logic
-    const bool isPasswordValid = user.password == "hashed." + loginDto.password;
-    if (!isPasswordValid)
+    VerifyUserPasswordDto verifyUserPasswordDto = {};
+    verifyUserPasswordDto.password = loginDto.password;
+    verifyUserPasswordDto.hashedPassword = user.password;
+    userResult = m_usersService.VerifyPassword(verifyUserPasswordDto);
+    if (userResult.code != UsersResultCode::OK)
     {
         authResult.code = AuthResultCode::INVALID_PASSWORD;
         return authResult;

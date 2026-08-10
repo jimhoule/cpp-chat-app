@@ -4,12 +4,13 @@
 #include "users/UsersService.h"
 
 // Forward declaration
+class EncryptionService;
 class UuidService;
 
 class UsersModule
 {
 public:
-    UsersModule(UuidService& uuidService);
+    UsersModule(EncryptionService& encryptionService, UuidService& uuidService);
 
     UsersService& GetService();
 

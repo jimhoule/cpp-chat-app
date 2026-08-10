@@ -4,8 +4,8 @@
 
 class IUuidProvider
 {
-    public:
-// NOTE: Explicitly default the constructor (Optional but recommended for clarity)
+public:
+    // NOTE: Explicitly default the constructor (Optional but recommended for clarity)
     IUuidProvider() = default;
 
     // NOTE: ALWAYS provide a public virtual destructor

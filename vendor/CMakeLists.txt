@@ -3,6 +3,7 @@ set(GLAD_SUBDIRECTORY_NAME glad)
 set(GLFW_SUBDIRECTORY_NAME glfw)
 set(GLM_SUBDIRECTORY_NAME glm)
 set(IMGUI_SUBDIRECTORY_NAME imgui)
+set(LIBSODIUM_SUBDIRECTORY_NAME libsodium)
 set(NLOHMANNJSON_SUBDIRECTORY_NAME nlohmannjson)
 set(STB_SUBDIRECTORY_NAME stb)
 set(STDUUID_SUBDIRECTORY_NAME stduuid)
@@ -26,6 +27,14 @@ add_subdirectory(${GLM_SUBDIRECTORY_NAME})
 
 # imgui
 add_subdirectory(${IMGUI_SUBDIRECTORY_NAME})
+
+# libsodium
+# NOTE: Upstream libsodium has no CMake support, this submodule is the robinlinden/libsodium-cmake wrapper which vendors jedisct1/libsodium itself as a nested submodule
+set(SODIUM_DISABLE_TESTS ON CACHE INTERNAL "")
+# NOTE: Keeps the full API available, the minimal build drops sealed boxes, generichash and pwhash
+set(SODIUM_MINIMAL OFF CACHE INTERNAL "")
+# NOTE: SYSTEM keyword propagates -isystem to consumers so clang-tidy stays quiet on sodium headers
+add_subdirectory(${LIBSODIUM_SUBDIRECTORY_NAME} SYSTEM)
 
 # nlohmann json
 set(JSON_BuildTests OFF CACHE INTERNAL "")

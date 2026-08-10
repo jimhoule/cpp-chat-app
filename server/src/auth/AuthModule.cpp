@@ -2,6 +2,9 @@
 
 #include "socket/SocketServer.h"
 
+// **********
+// * PUBLIC *
+// **********
 AuthModule::AuthModule(SocketServer& socketServer,  SessionsService& sessionsService, UsersService& usersService)
     : m_authServiceLogger("AUTH", "server/src/auth/AuthService")
     , m_authHandlerLogger("AUTH", "server/src/auth/AuthHandler")

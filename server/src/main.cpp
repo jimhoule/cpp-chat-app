@@ -1,6 +1,7 @@
 #include "auth/AuthModule.h"
 #include "deserializer/LoginSocketEventPayloadDeserializer.h"
 #include "deserializer/RegisterSocketEventPayloadDeserializer.h"
+#include "encryption/EncryptionModule.h"
 #include "messages/MessagesModule.h"
 #include "middlewares/HandleErrors.h"
 #include "serializer/LoggedinSocketEventSerializer.h"
@@ -27,9 +28,10 @@ int main()
 	server.OnError(HandleErrors(server, handleErrorsLogger));
 
 	// Modules
+	EncryptionModule encryptionModule;
 	UuidModule uuidModule;
 	SessionsModule sessionsModule(uuidModule.GetService());
-	UsersModule usersModule(uuidModule.GetService());
+	UsersModule usersModule(encryptionModule.GetService(), uuidModule.GetService());
 	AuthModule authModule(server, sessionsModule.GetService(), usersModule.GetService());
 	MessagesModule messagesModule(server, uuidModule.GetService());
 
