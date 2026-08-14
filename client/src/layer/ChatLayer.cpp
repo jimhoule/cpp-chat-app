@@ -45,18 +45,31 @@ void ChatLayer::OnAttach()
         std::make_shared<User>(User2),
     };
 
+    m_usersMap[User1.id] = User1;
+    m_usersMap[User2.id] = User2;
+
+    ConversationUser currentConversationUser = {};
+    currentConversationUser.userId = m_CurrentUser->id;
+    currentConversationUser.isOpen = false;
+
+    ConversationUser conversationUser1 = {};
+    conversationUser1.userId = User1.id;
+    conversationUser1.isOpen = false;
+
+    ConversationUser conversationUser2 = {};
+    conversationUser1.userId = User2.id;
+    conversationUser1.isOpen = false;
+
     // Conversations
     Conversation Conversation1 = {};
-    Conversation1.ID = "Conversation1";
-    Conversation1.Users = { CurrentUser, User1 };
-    Conversation1.Messages = {};
-    Conversation1.CreatedAt = std::time(0);
+    Conversation1.id = "Conversation1";
+    Conversation1.users = { currentConversationUser, conversationUser1 };
+    Conversation1.createdAt = std::time(0);
 
     Conversation Conversation2 = {};
-    Conversation2.ID = "Conversation2";
-    Conversation2.Users = { CurrentUser, User2 };
-    Conversation2.Messages = {};
-    Conversation2.CreatedAt = std::time(0);
+    Conversation2.id = "Conversation2";
+    Conversation2.users = { currentConversationUser, conversationUser2 };
+    Conversation2.createdAt = std::time(0);
 
     m_Conversations = {
         std::make_shared<Conversation>(Conversation1),
@@ -64,6 +77,9 @@ void ChatLayer::OnAttach()
     };
 
     m_SelectedConversation = m_Conversations[0];
+
+    m_conversationMessagesMap[Conversation1.id] = {};
+    m_conversationMessagesMap[Conversation2.id] = {};
 
     // Socket
     MessageCreatedSocketEventPayloadDeserializer messageCreatedSocketEventPayloadDeserializer = {};
@@ -477,10 +493,10 @@ void ChatLayer::OnRender()
 
                         // CONVERSATION CONTAINER
                         Rgba BgColor = Rgba(50, 56, 102, 255);
-                        if (Conversation->ID == m_SelectedConversation->ID) BgColor = Rgba(100, 100, 100, 255);
+                        if (Conversation->id == m_SelectedConversation->id) BgColor = Rgba(100, 100, 100, 255);
 
                         Container ConversationContainer = {};
-                        ConversationContainer.ID = "ConversationContainer" + Conversation->ID;
+                        ConversationContainer.ID = "ConversationContainer" + Conversation->id;
                         ConversationContainer.Size = Vector2(CONVERSATIONS_NODE_AVAILABLE_SPACE.X, CONVERSATIONS_NODE_AVAILABLE_SPACE.Y * 0.05f);
                         ConversationContainer.CornerRounding = 10.f;
                         ConversationContainer.BgColor = BgColor;
@@ -488,7 +504,7 @@ void ChatLayer::OnRender()
                         ConversationContainer.IsAutoResizableY = true;
                         ConversationContainer.OnClick = [this, &Conversation]() {
                             m_SelectedConversation = Conversation;
-                            m_Logger->Info("SELECTED CONVERSATION ID: " + m_SelectedConversation->ID);
+                            m_Logger->Info("SELECTED CONVERSATION ID: " + m_SelectedConversation->id);
                         };
                         ConversationContainer.DrawContent = [this, &Conversation, Index](const ContainerState& State) {
                             const Vector2 CONVERSATION_CONTAINER_AVAILABLE_SPACE = m_Gui.GetAvailableSpace();
@@ -502,7 +518,7 @@ void ChatLayer::OnRender()
 
                             // CONVERSATION TEXT
                             Text ConversationText = {};
-                            ConversationText.Value = Conversation->Users[1].firstName;
+                            ConversationText.Value = m_usersMap[Conversation->users[1].userId].firstName;
 
                             m_Gui.SetPositionX(ConversationImage.Size.X + 10.0f);
                             m_Gui.DrawText(ConversationText);
@@ -511,7 +527,7 @@ void ChatLayer::OnRender()
                             if (!State.IsHovered) return;
 
                             Container CloseConversationImageButtonContainer = {};
-                            CloseConversationImageButtonContainer.ID = "CloseConversationImageButtonContainer" + Conversation->ID;
+                            CloseConversationImageButtonContainer.ID = "CloseConversationImageButtonContainer" + Conversation->id;
                             CloseConversationImageButtonContainer.Size = ConversationImage.Size;
                             CloseConversationImageButtonContainer.Padding = Vector2(5.0f, 5.0f);
                             // NOTE: Transparent background
@@ -525,16 +541,16 @@ void ChatLayer::OnRender()
                                 CloseConversationImageButtonImage.CornerRounding = 0.0f;
 
                                 ImageButton CloseConversationImageButton = {};
-                                CloseConversationImageButton.ID = "CloseConversationImageButton" + Conversation->ID;
+                                CloseConversationImageButton.ID = "CloseConversationImageButton" + Conversation->id;
                                 CloseConversationImageButton.Image = CloseConversationImageButtonImage;
                                 CloseConversationImageButton.TintColorHovered = Rgba(200, 200, 0, 255);
                                 CloseConversationImageButton.OnClick = [this, Index]() {
-                                    const std::string& ID = m_Conversations[Index]->ID;
+                                    const std::string& ID = m_Conversations[Index]->id;
 
                                     // Deletes conversation
                                     m_Conversations.erase(m_Conversations.begin() + Index);
                                     // Selects first conversation if deleted conversation is the selected one
-                                    if (m_SelectedConversation->ID == ID) m_SelectedConversation = m_Conversations[0];
+                                    if (m_SelectedConversation->id == ID) m_SelectedConversation = m_Conversations[0];
 
                                     m_Logger->Info("DELETED CONVERSATION ID: " + ID);
                                 };
@@ -578,10 +594,12 @@ void ChatLayer::OnRender()
             MessagesContainer.DrawContent = [this](const ContainerState& State) {
                 const Vector2 MESSAGES_CONTAINER_AVAILABLE_SPACE = m_Gui.GetAvailableSpace();
 
-                for (int Index = 0; Index < m_SelectedConversation->Messages.size(); Index++)
+                std::vector<Message> selectedConversationMessage = m_conversationMessagesMap[m_SelectedConversation->id];
+                for (int Index = 0; Index < selectedConversationMessage.size(); Index++)
                 {
                     // MESSAGE CONTAINER
-                    const Message& MESSAGE = m_SelectedConversation->Messages[Index];
+
+                    const Message& MESSAGE = selectedConversationMessage[Index];
                     const std::string& ID = "MessageContainer" + std::to_string(Index);
 
                     Container MessageContainer = {};
@@ -712,15 +730,16 @@ void ChatLayer::OnRender()
             SendButton.OnClick = [this]() {
                 Message newMessage = {};
                 newMessage.id = "TempID";
-                newMessage.conversationId = m_SelectedConversation->ID;
+                newMessage.conversationId = m_SelectedConversation->id;
                 newMessage.senderId = m_CurrentUser->id;
                 newMessage.text = m_MessageValue;
                 newMessage.createdAt = std::time(0);
 
-                m_SelectedConversation->Messages.push_back(newMessage);
+                std::vector<Message> selectedConversationMessages = m_conversationMessagesMap[m_SelectedConversation->id];
+                selectedConversationMessages.push_back(newMessage);
 
                 // TODO: Server call to persist message will go there
-                OnSendMessageButtonClick(m_SelectedConversation->ID, m_MessageValue);
+                OnSendMessageButtonClick(m_SelectedConversation->id, m_MessageValue);
 
                 m_Logger->Info("SENT: " + m_MessageValue);
             };

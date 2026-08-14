@@ -7,6 +7,7 @@ std::string ConvertSocketEventNameToString(SocketEventName socketEventName)
         case SocketEventName::ERROR:
             return "ERROR";
 
+
         // Auth
         case SocketEventName::LOGIN:
             return "LOGIN";
@@ -22,6 +23,33 @@ std::string ConvertSocketEventNameToString(SocketEventName socketEventName)
 
         case SocketEventName::USER_AUTHENTICATED:
             return "USER AUTHENTICATED";
+
+
+        // Conversations
+        case SocketEventName::CLOSE_CONVERSATION:
+            return "CLOSE CONVERSATION";
+
+        case SocketEventName::CONVERSATION_CLOSED:
+            return "CONVERSATION CLOSED";
+
+        case SocketEventName::OPEN_CONVERSATION:
+            return "OPEN CONVERSATION";
+
+        case SocketEventName::CONVERSATION_OPENED:
+            return "CONVERSATION OPENED";
+
+        case SocketEventName::FIND_ALL_OPEN_CONVERSATIONS_BY_USER_ID:
+            return "FIND ALL OPEN CONVERSATIONS BY USER ID";
+
+        case SocketEventName::ALL_OPEN_CONVERSATIONS_FOUND_BY_USER_ID:
+            return "ALL OPEN CONVERSATIONS FOUND BY USER ID";
+
+        case SocketEventName::FIND_CONVERSATION_BY_USER_IDS:
+            return "FIND CONVERSATION BY USER IDS";
+
+        case SocketEventName::CONVERSATION_FOUND_BY_USER_IDS:
+            return "CONVERSATION FOUND BY USER IDS";
+
 
         // Messages
         case SocketEventName::CREATE_MESSAGE:

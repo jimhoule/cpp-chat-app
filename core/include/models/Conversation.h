@@ -1,7 +1,6 @@
 #pragma once
 
-#include "Message.h"
-#include "User.h"
+#include "models/ConversationUser.h"
 
 #include <ctime>
 #include <string>
@@ -9,8 +8,7 @@
 
 struct Conversation
 {
-    std::string ID;
-    std::vector<Message> Messages;
-    std::vector<User> Users;
-    std::time_t CreatedAt;
+    std::string id;
+    std::vector<ConversationUser> users;
+    std::time_t createdAt;
 };

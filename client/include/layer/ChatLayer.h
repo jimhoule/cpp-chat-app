@@ -3,10 +3,14 @@
 #include "Gui.h"
 #include "layer/Layer.h"
 #include "models/Conversation.h"
+#include "models/ConversationUser.h"
+#include "models/Message.h"
+#include "models/User.h"
 #include "socket/SocketClient.h"
 #include "Texture.h"
 
 #include <functional>
+#include <map>
 
 class ChatLayer : public Layer
 {
@@ -37,10 +41,13 @@ private:
     // Users
     std::shared_ptr<User> m_CurrentUser = nullptr;
     std::vector<std::shared_ptr<User>> m_Users = {};
+    std::unordered_map<std::string, User> m_usersMap = {};
 
     // Conversations
     std::shared_ptr<Conversation> m_SelectedConversation = nullptr;
     std::vector<std::shared_ptr<Conversation>> m_Conversations = {};
+    std::unordered_map<std::string, std::vector<Message>> m_conversationMessagesMap = {};
+
 
     // Socket
     std::shared_ptr<SocketClient> m_SocketClient = nullptr;
