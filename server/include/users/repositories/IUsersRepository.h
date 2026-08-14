@@ -20,4 +20,5 @@ public:
 
     virtual User Create(const User& user) = 0;
     virtual std::optional<User> FindByEmail(const std::string& email) const = 0;
+    virtual std::optional<User> FindById(const std::string& id) const = 0;
 };

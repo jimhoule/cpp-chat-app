@@ -14,6 +14,7 @@ public:
 
     User Create(const User& user) override;
     std::optional<User> FindByEmail(const std::string& email) const override;
+    std::optional<User> FindById(const std::string& id) const override;
 
 private:
     std::vector<User> m_users = {};

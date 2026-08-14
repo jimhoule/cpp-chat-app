@@ -66,6 +66,14 @@ UserResult UsersService::FindByEmail(const FindUserByEmailDto& findUserByEmailDt
     return userResult;
 }
 
+UserResult UsersService::FindById(const FindUserByIdDto& findUserByIdDto)
+{
+    UserResult userResult = {};
+    userResult.data = m_usersRepository->FindById(findUserByIdDto.id);
+
+    return userResult;
+}
+
 UserResult UsersService::VerifyPassword(const VerifyUserPasswordDto& verifyUserPasswordDto)
 {
     UserResult userResult = {};

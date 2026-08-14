@@ -18,7 +18,23 @@ std::optional<User> UsersInMemoryRepository::FindByEmail(const std::string& emai
 {
     for (const User& user : m_users)
     {
-        if (user.email == email) return user;
+        if (user.email == email)
+        {
+            return user;
+        }
+    }
+
+    return std::nullopt;
+}
+
+std::optional<User> UsersInMemoryRepository::FindById(const std::string& id) const
+{
+    for (const User& user : m_users)
+    {
+        if (user.id == id)
+        {
+            return user;
+        }
     }
 
     return std::nullopt;

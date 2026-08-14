@@ -32,6 +32,11 @@ struct FindUserByEmailDto
     std::string email;
 };
 
+struct FindUserByIdDto
+{
+    std::string id;
+};
+
 struct VerifyUserPasswordDto
 {
     std::string password;
@@ -45,6 +50,7 @@ public:
 
     UserResult Create(const CreateUserDto& createUserDto);
     UserResult FindByEmail(const FindUserByEmailDto& findUserByEmailDto);
+    UserResult FindById(const FindUserByIdDto& findUserByIdDto);
     UserResult VerifyPassword(const VerifyUserPasswordDto& verifyUserPasswordDto);
 
 private:
