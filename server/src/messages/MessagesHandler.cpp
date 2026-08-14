@@ -20,7 +20,7 @@ SocketServerEventHandler MessagesHandler::GetCreateMessageHandler()
 {
     return [this](const SocketEventContext& context) {
         // Gets create message socket event payload
-        const CreateMessageSocketEventPayload& createMessageSocketEventPayload = m_createMessageSocketEventPayloadDeserializer.Deserialize(context.serializedPayload);
+        const CreateMessageSocketEventPayload createMessageSocketEventPayload = m_createMessageSocketEventPayloadDeserializer.Deserialize(context.serializedPayload);
 
         // Creates message
         CreateMessageDto createMessageDto = {};
@@ -34,9 +34,9 @@ SocketServerEventHandler MessagesHandler::GetCreateMessageHandler()
         }
         
         // Serializes message created socket event
-        const MessageCreatedSocketEventPayload& messageCreatedSocketEventPayload(messageResult.data.value());
-        const MessageCreatedSocketEvent& messageCreatedSocketEvent(messageCreatedSocketEventPayload);
-        const std::string& serializedMessageCreatedSocketEvent = m_messageCreatedSocketEventSerializer.Serialize(messageCreatedSocketEvent);
+        const MessageCreatedSocketEventPayload messageCreatedSocketEventPayload(messageResult.data.value());
+        const MessageCreatedSocketEvent messageCreatedSocketEvent(messageCreatedSocketEventPayload);
+        const std::string serializedMessageCreatedSocketEvent = m_messageCreatedSocketEventSerializer.Serialize(messageCreatedSocketEvent);
 
         // Sends message created socket event
         // TODO: send to all users of conversation
