@@ -56,6 +56,11 @@ void SocketClient::Connect(int serverPort, const std::string &serverIpAddress)
 	}
 }
 
+void SocketClient::Off(SocketEventName socketEventName)
+{
+	m_socketEventHandlersMap.erase(socketEventName);
+}
+
 void SocketClient::On(SocketEventName socketEventName, const SocketClientEventHandler& socketEventHandler)
 {
     m_socketEventHandlersMap.insert(std::pair(socketEventName, socketEventHandler));

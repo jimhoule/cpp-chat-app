@@ -14,6 +14,7 @@ public:
 
     void Close();
     void Connect(int serverPort, const std::string &serverIpAddress);
+    void Off(SocketEventName socketEventName);
     void On(SocketEventName socketEventName, const SocketClientEventHandler& socketEventHandler);
     void Read();
     void Send(const std::string &serializedSocketEvent);
