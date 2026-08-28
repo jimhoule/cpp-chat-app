@@ -1,35 +1,64 @@
 #pragma once
 
+#include "auth/LoggedInEvent.h"
+#include "auth/RegisteredEvent.h"
+#include "auth/UserAuthenticatedEvent.h"
+#include "deserializer/LoggedinSocketEventPayloadDeserializer.h"
+#include "deserializer/RegisteredSocketEventPayloadDeserializer.h"
+#include "deserializer/UserAuthenticatedSocketEventPayloadDeserializer.h"
+#include "observer/IObservable.h"
+#include "observer/Subject.h"
 #include "serializer/LoginSocketEventSerializer.h"
 #include "serializer/RegisterSocketEventSerializer.h"
-#include "socket/SocketClient.h"
+
+// Forward declarations
+class Logger;
+class SocketClient;
 
 struct LoginParams
 {
-    std::string Email;
-    std::string Password;
+    std::string email;
+    std::string password;
 
 };
 
 struct RegisterParams
 {
-    std::string FirstName;
-    std::string LastName;
-    std::string Email;
-    std::string Password;
+    std::string firstName;
+    std::string lastName;
+    std::string email;
+    std::string password;
 
 };
 
 class AuthApi
 {
 public:
-    AuthApi(std::shared_ptr<SocketClient> SocketClient);
+    AuthApi(SocketClient& socketClient, Logger& logger);
+    ~AuthApi();
 
-    void Login(const LoginParams& LoginParams);
-    void Register(const RegisterParams& RegisterParams);
+    // NOTE: Exposes observable view only so callers cannot notify
+    IObservable<LoggedInEvent>& GetLoggedInSubject();
+    IObservable<RegisteredEvent>& GetRegisteredSubject();
+    IObservable<UserAuthenticatedEvent>& GetUserAuthenticatedSubject();
+
+    void Login(const LoginParams& loginParams);
+    void Register(const RegisterParams& registerParams);
 
 private:
-    LoginSocketEventSerializer m_LoginSocketEventSerializer = {};
-    RegisterSocketEventSerializer m_RegisterSocketEventSerializer = {};
-    std::shared_ptr<SocketClient> m_SocketClient = nullptr;
+    SocketClient& m_socketClient;
+
+    Subject<LoggedInEvent> m_loggedInSubject = {};
+    Subject<RegisteredEvent> m_registeredSubject = {};
+    Subject<UserAuthenticatedEvent> m_userAuthenticatedSubject = {};
+
+    LoginSocketEventSerializer m_loginSocketEventSerializer = {};
+    LoggedinSocketEventPayloadDeserializer m_loggedinSocketEventPayloadDeserializer = {};
+
+    RegisterSocketEventSerializer m_registerSocketEventSerializer = {};
+    RegisteredSocketEventPayloadDeserializer m_registeredSocketEventPayloadDeserializer = {};
+
+    UserAuthenticatedSocketEventPayloadDeserializer m_userAuthenticatedSocketEventPayloadDeserializer = {};
+
+    Logger& m_logger;
 };

@@ -7,7 +7,9 @@
 #include "layer/ChatLayer.h"
 #include "layer/LoginLayer.h"
 #include "layer/RegisterLayer.h"
+#include "log/Logger.h"
 #include "messages/MessagesApi.h"
+#include "navigation/Navigation.h"
 #include "socket/SocketClient.h"
 
 #include <GLAD/glad.h>
@@ -31,22 +33,22 @@ int main()
 
     const int WINDOW_WIDTH = 1280;
     const int WINDOW_HEIGHT = 720;
-    const std::string& WindowTitle = "Login";
+    const std::string windowTitle = "Login";
 
-    GLFWwindow* GlfwWindow = glfwCreateWindow(
+    GLFWwindow* glfwWindow = glfwCreateWindow(
         WINDOW_WIDTH,
         WINDOW_HEIGHT,
-        WindowTitle.c_str(),
+        windowTitle.c_str(),
         NULL,
         NULL
     );
 
-    if(GlfwWindow == nullptr)
+    if(glfwWindow == nullptr)
     {
         std::cout << "Failed to open GLFW Window" << std::endl;
         return -1;
     }
-    glfwMakeContextCurrent(GlfwWindow);
+    glfwMakeContextCurrent(glfwWindow);
 
     if(!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
     {
@@ -57,121 +59,74 @@ int main()
     glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
 
     // Socket client
-    std::shared_ptr<SocketClient> socketClient = std::make_shared<SocketClient>();
+    SocketClient socketClient = {};
     const int SERVER_PORT = 5000;
-    socketClient->Connect(SERVER_PORT, "127.0.0.1");
-
-    // Layer stack
-    std::shared_ptr<LayerStack> layerStack = std::make_shared<LayerStack>();
-
-    // Apis
-    AuthApi authApi(socketClient);
-    MessagesApi messagesApi(socketClient);
+    socketClient.Connect(SERVER_PORT, "127.0.0.1");
 
     // Gui
     Gui gui = {};
-    gui.Init(GlfwWindow);
+    gui.Init(glfwWindow);
+
+    // Layer stack
+    LayerStack layerStack = {};
 
     // Debug overlay
-    std::shared_ptr<DebugOverlay> debugOverlay =  std::make_shared<DebugOverlay>(gui, layerStack);
+    DebugOverlay debugOverlay(gui, layerStack);
 
-    // Chat layer
-    std::shared_ptr<DebugLogger> chatLogger = std::make_shared<DebugLogger>("CHAT", "client/src/layer/ChatLayer", debugOverlay);
-    std::shared_ptr<ChatLayer> Chat = std::make_shared<ChatLayer>("Chat", socketClient, gui, chatLogger);
-    Chat->OnLogoutButtonClick = [&layerStack]() {
-        layerStack->Pop();
-        layerStack->Unsuspend("Login");
-    };
-    Chat->OnSendMessageButtonClick = [&messagesApi](const std::string& conversationID, const std::string& messageText) {
-        CreateMessageParams createMessageParams = {};
-        createMessageParams.conversationID = conversationID;
-        createMessageParams.text = messageText;
-        messagesApi.Create(createMessageParams);
-    };
+    // Loggers
+    Logger authServiceLogger("AUTH", "client/src/auth/AuthApi");
+    Logger messagesServiceLogger("MESSAGES", "client/src/auth/AuthApi");
+    Logger navigationLogger("NAVIGATION", "client/src/navigation/Navigation");
+    DebugLogger chatLogger("CHAT", "client/src/layer/ChatLayer", debugOverlay);
+    DebugLogger registerLogger("REGISTER", "client/src/layer/RegisterLayer", debugOverlay);
+    DebugLogger loginLogger("LOGIN", "client/src/layer/LoginLayer", debugOverlay);
 
-    // Register layer
-    std::shared_ptr<DebugLogger> registerLogger = std::make_shared<DebugLogger>("REGISTER", "client/src/layer/RegisterLayer", debugOverlay);
-    std::shared_ptr<RegisterLayer> Register = std::make_shared<RegisterLayer>("Register", gui, registerLogger);
-    Register->OnLoginButtonClick = [&layerStack]() {
-        layerStack->Pop();
-        layerStack->Unsuspend("Login");
-    };
-    Register->OnRegisterButtonClick = [&authApi](const std::string& FirstName, const std::string& LastName, const std::string& Email, const std::string& Password) {
-        RegisterParams RegisterParams = {};
-        RegisterParams.FirstName = FirstName;
-        RegisterParams.LastName = LastName;
-        RegisterParams.Email = Email;
-        RegisterParams.Password = Password;
-        authApi.Register(RegisterParams);
-    };
+    // Apis
+    AuthApi authApi(socketClient, authServiceLogger);
+    MessagesApi messagesApi(socketClient, messagesServiceLogger);
 
-    // Login layer
-    std::shared_ptr<DebugLogger> loginLogger = std::make_shared<DebugLogger>("LOGIN", "client/src/layer/LoginLayer", debugOverlay);
-    std::shared_ptr<LoginLayer> Login = std::make_shared<LoginLayer>("Login", gui, loginLogger);
-    Login->OnLoginButtonClick = [&authApi](const std::string& Email, const std::string& Password) {
-        LoginParams LoginParams = {};
-        LoginParams.Email = Email;
-        LoginParams.Password = Password;
-        authApi.Login(LoginParams);
-    };
-    Login->OnRegisterButtonClick = [&layerStack, &Register]() {
-        layerStack->Push(Register);
-        layerStack->Suspend("Login");
-    };
+    // Navigation
+    Navigation navigation(layerStack, navigationLogger);
 
-    layerStack->Push(Login);
+    Navigation::Screen chatScreen = {};
+    chatScreen.layer = std::make_unique<ChatLayer>("Chat", gui, navigation, authApi, messagesApi, chatLogger);
+    Navigation::Screen loginScreen = {};
+    loginScreen.layer = std::make_unique<LoginLayer>("Login", gui, navigation, authApi, loginLogger);
+    Navigation::Screen registerScreen = {};
+    registerScreen.layer = std::make_unique<RegisterLayer>("Register", gui, navigation, authApi, registerLogger);
 
-    // Socket client logged in event handlers
-    LoggedinSocketEventPayloadDeserializer loggedinSocketEventPayloadDeserializer = {};
-    SocketClientEventHandler HandleLoggedinSocketEvent = [&layerStack, &Chat, &loggedinSocketEventPayloadDeserializer](const std::string& SerializedLoggedinSocketEventPayload) {
-        // Gets logged in socket event payload
-        const LoggedinSocketEventPayload& loggedinSocketEventPayload = loggedinSocketEventPayloadDeserializer.Deserialize(SerializedLoggedinSocketEventPayload);
-        std::cout << "Logged in session id: " << loggedinSocketEventPayload.sessionId << std::endl;
+    navigation.AddScreen(Navigation::ScreenName::CHAT, std::move(chatScreen));
+    navigation.AddScreen(Navigation::ScreenName::LOGIN, std::move(loginScreen));
+    navigation.AddScreen(Navigation::ScreenName::REGISTER, std::move(registerScreen));
 
-        layerStack->Push(Chat);
-        layerStack->Suspend("Login");
-    };
+    navigation.SetInitialScreen(Navigation::ScreenName::LOGIN);
 
-    // Socket client registered event handlers
-    RegisteredSocketEventPayloadDeserializer registeredSocketEventPayloadDeserializer = {};
-    SocketClientEventHandler HandleRegisteredSocketEvent = [&layerStack, &Chat, &registeredSocketEventPayloadDeserializer](const std::string& SerializedRegisteredSocketEventPayload) {
-        // Gets registered socket event payload
-        const RegisteredSocketEventPayload& registeredSocketEventPayload = registeredSocketEventPayloadDeserializer.Deserialize(SerializedRegisteredSocketEventPayload);
-        std::cout << "Registered session id: " << registeredSocketEventPayload.sessionId << std::endl;
-
-        layerStack->Pop();
-        layerStack->Push(Chat);
-    };
-
-    socketClient->On(SocketEventName::LOGGEDIN, HandleLoggedinSocketEvent);
-    socketClient->On(SocketEventName::REGISTERED, HandleRegisteredSocketEvent);
-
-    while(!glfwWindowShouldClose(GlfwWindow))
+    while(!glfwWindowShouldClose(glfwWindow))
     {
-        socketClient->Read();
+        socketClient.Read();
 
         glfwPollEvents();
 
-        layerStack->Update();
+        layerStack.Update();
         gui.Clear();
 
         // Clears screen
         glClearColor(250.0f / 255.0f, 119.0f / 255.0f, 110.0f / 255.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
-        layerStack->Render();
-        debugOverlay->Render();
+        layerStack.Render();
+        debugOverlay.Render();
         gui.Render();
 
-        glfwSwapBuffers(GlfwWindow);
+        glfwSwapBuffers(glfwWindow);
     }
 
-    socketClient->Close();
+    socketClient.Close();
 
-    layerStack->Clear();
+    layerStack.Clear();
     gui.Destroy();
 
-    glfwDestroyWindow(GlfwWindow);
+    glfwDestroyWindow(glfwWindow);
     glfwTerminate();
 
     return 0;

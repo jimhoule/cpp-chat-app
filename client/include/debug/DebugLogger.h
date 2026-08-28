@@ -1,17 +1,19 @@
 #pragma once
 
-#include "debug/DebugOverlay.h"
 #include "log/Logger.h"
+
+// Forward declarations
+class DebugOverlay;
 
 class DebugLogger : public Logger
 {
 public:
-    DebugLogger(const std::string& Name, const std::string& Context, const std::shared_ptr<DebugOverlay>& DebugOverlay);
+    DebugLogger(const std::string& name, const std::string& context, DebugOverlay& debugOverlay);
 
-    void Error(const std::string& Message) override;
-    void Info(const std::string& Message) override;
-    void Warning(const std::string& Message) override;
+    void Error(const std::string& message) override;
+    void Info(const std::string& message) override;
+    void Warning(const std::string& message) override;
 
 private:
-    std::shared_ptr<DebugOverlay> m_DebugOverlay = nullptr;
+    DebugOverlay& m_debugOverlay;
 };

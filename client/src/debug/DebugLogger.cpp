@@ -1,37 +1,41 @@
 #include "debug/DebugLogger.h"
 
+#include "debug/DebugOverlay.h"
+
 // **********
 // * PUBLIC *
 // **********
-DebugLogger::DebugLogger(const std::string& Name, const std::string& Context, const std::shared_ptr<DebugOverlay>& DebugOverlay) : Logger(Name, Context), m_DebugOverlay(DebugOverlay)
+DebugLogger::DebugLogger(const std::string& name, const std::string& context, DebugOverlay& debugOverlay)
+    : Logger(name, context)
+    , m_debugOverlay(debugOverlay)
 {}
 
-void DebugLogger::Error(const std::string& Message)
+void DebugLogger::Error(const std::string& message)
 {
-    ScreenMessage ErrorScreenMessage = {};
-    ErrorScreenMessage.Text = Message;
-    ErrorScreenMessage.Color = Rgba(255, 0, 0, 255);
-    m_DebugOverlay->AddScreenMessage(ErrorScreenMessage);
+    ScreenMessage errorScreenMessage = {};
+    errorScreenMessage.text = message;
+    errorScreenMessage.color = Rgba(255, 0, 0, 255);
+    m_debugOverlay.AddScreenMessage(errorScreenMessage);
 
-    Logger::Error(Message);
+    Logger::Error(message);
 }
 
-void DebugLogger::Info(const std::string& Message)
+void DebugLogger::Info(const std::string& message)
 {
-    ScreenMessage InfoScreenMessage = {};
-    InfoScreenMessage.Text = Message;
-    InfoScreenMessage.Color = Rgba(255, 0, 255, 255);
-    m_DebugOverlay->AddScreenMessage(InfoScreenMessage);
+    ScreenMessage infoScreenMessage = {};
+    infoScreenMessage.text = message;
+    infoScreenMessage.color = Rgba(255, 0, 255, 255);
+    m_debugOverlay.AddScreenMessage(infoScreenMessage);
 
-    Logger::Info(Message);
+    Logger::Info(message);
 }
 
-void DebugLogger::Warning(const std::string& Message)
+void DebugLogger::Warning(const std::string& message)
 {
-    ScreenMessage WarningScreenMessage = {};
-    WarningScreenMessage.Text = Message;
-    WarningScreenMessage.Color = Rgba(255, 255, 0, 255);
-    m_DebugOverlay->AddScreenMessage(WarningScreenMessage);
+    ScreenMessage warningScreenMessage = {};
+    warningScreenMessage.text = message;
+    warningScreenMessage.color = Rgba(255, 255, 0, 255);
+    m_debugOverlay.AddScreenMessage(warningScreenMessage);
 
-    Logger::Warning(Message);
+    Logger::Warning(message);
 }

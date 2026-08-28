@@ -1,22 +1,39 @@
 #pragma once
 
+#include "deserializer/MessageCreatedSocketEventPayloadDeserializer.h"
+#include "messages/MessageCreatedEvent.h"
+#include "observer/IObservable.h"
+#include "observer/Subject.h"
 #include "serializer/CreateMessageSocketEventSerializer.h"
-#include "socket/SocketClient.h"
+
+// Forward declarations
+class Logger;
+class SocketClient;
 
 struct CreateMessageParams
 {
-    std::string conversationID;
+    std::string conversationId;
     std::string text;
 };
 
 class MessagesApi
 {
 public:
-    MessagesApi(std::shared_ptr<SocketClient> socketClient);
+    MessagesApi(SocketClient& socketClient, Logger& logger);
+    ~MessagesApi();
+
+    // NOTE: Exposes observable view only so callers cannot notify
+    IObservable<MessageCreatedEvent>& GetMessageCreatedSubject();
 
     void Create(const CreateMessageParams& createMessageParams);
-
+    
 private:
+    SocketClient& m_socketClient;
+
+    Subject<MessageCreatedEvent> m_messageCreatedSubject = {};
+
     CreateMessageSocketEventSerializer m_createMessageSocketEventSerializer = {};
-    std::shared_ptr<SocketClient> m_socketClient = nullptr;
+    MessageCreatedSocketEventPayloadDeserializer m_messageCreatedSocketEventPayloadDeserializer = {};
+
+    Logger& m_logger;
 };

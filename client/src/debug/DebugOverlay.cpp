@@ -1,87 +1,92 @@
 #include "debug/DebugOverlay.h"
 
+#include "layer/LayerStack.h"
+
 // **********
 // * PUBLIC *
 // **********
-DebugOverlay::DebugOverlay(const Gui& Gui, const std::shared_ptr<LayerStack>& LayerStack) : m_Gui(Gui), m_LayerStack(LayerStack), m_Fps(CalculateFps())
+DebugOverlay::DebugOverlay(const Gui& gui, LayerStack& layerStack)
+ : m_gui(gui)
+ , m_layerStack(layerStack)
+ , m_fps(CalculateFps())
 {}
 
 void DebugOverlay::AddScreenMessage(const ScreenMessage& ScreenMessage)
 {
     // NOTE: Limits screen messages to 10
-    if (m_ScreenMessages.size() == 10) m_ScreenMessages.pop_front();
+    if (m_screenMessages.size() == 10) m_screenMessages.pop_front();
 
-    m_ScreenMessages.push_back(ScreenMessage);
+    m_screenMessages.push_back(ScreenMessage);
 }
 
 void DebugOverlay::Render()
 {
-    if (ImGui::IsKeyPressed(ImGuiKey_Q)) m_IsVisible = !m_IsVisible;
-    if (!m_IsVisible) return;
+    if (ImGui::IsKeyPressed(ImGuiKey_Q)) m_isVisible = !m_isVisible;
+    if (!m_isVisible) return;
 
-    RawWindow DebugOverlayRawWindow = {};
-    DebugOverlayRawWindow.MinCornerPosition = Vector2(0.0f, 0.0f);
-    DebugOverlayRawWindow.MaxCornerPosition = m_Gui.GetViewportSize();
-    DebugOverlayRawWindow.BgColor = Rgba(0, 0, 0, 100);
-    DebugOverlayRawWindow.CornerRounding = 0.0f;
-    DebugOverlayRawWindow.DrawContent = [this]() {
+    RawWindow debugOverlayRawWindow = {};
+    debugOverlayRawWindow.MinCornerPosition = Vector2(0.0f, 0.0f);
+    debugOverlayRawWindow.MaxCornerPosition = m_gui.GetViewportSize();
+    debugOverlayRawWindow.BgColor = Rgba(0, 0, 0, 100);
+    debugOverlayRawWindow.CornerRounding = 0.0f;
+    debugOverlayRawWindow.DrawContent = [this]() {
         // Fps
-        std::chrono::steady_clock::time_point CurrentUpdateTime = std::chrono::steady_clock::now();
-        std::chrono::duration UpdateTimeInterval = std::chrono::duration_cast<std::chrono::seconds>(CurrentUpdateTime - m_PreviousUpdateTime);
+        std::chrono::steady_clock::time_point currentUpdateTime = std::chrono::steady_clock::now();
+        std::chrono::duration updateTimeInterval = std::chrono::duration_cast<std::chrono::seconds>(currentUpdateTime - m_previousUpdateTime);
         // NOTE: Limits fps text update to 4 times per seconds
-        if (UpdateTimeInterval.count() >= 0.25f)
+        if (updateTimeInterval.count() >= 0.25f)
         {
-            m_Fps = CalculateFps();
-            m_PreviousUpdateTime = CurrentUpdateTime;
+            m_fps = CalculateFps();
+            m_previousUpdateTime = currentUpdateTime;
         }
 
-        RawText FpsRawText = {};
-        FpsRawText.Value = "FPS: " + std::to_string(m_Fps);
-        FpsRawText.Position = Vector2(0.0f, 0.0f);
-        FpsRawText.Color = Rgba(255, 255, 255, 255);
+        RawText fpsRawText = {};
+        fpsRawText.Value = "FPS: " + std::to_string(m_fps);
+        fpsRawText.Position = Vector2(0.0f, 0.0f);
+        fpsRawText.Color = Rgba(255, 255, 255, 255);
 
-        m_Gui.DrawRawText(FpsRawText);
+        m_gui.DrawRawText(fpsRawText);
 
         // Layerstack size
-        RawText LayerStackSizeRawText = {};
-        LayerStackSizeRawText.Value = "LayerStack size: " + std::to_string(m_LayerStack->GetSize());
-        LayerStackSizeRawText.Position = Vector2(0.0f, 40.0f);
-        LayerStackSizeRawText.Color = Rgba(255, 255, 255, 255);
+        RawText layerStackSizeRawText = {};
+        layerStackSizeRawText.Value = "LayerStack size: " + std::to_string(m_layerStack.GetSize());
+        layerStackSizeRawText.Position = Vector2(0.0f, 40.0f);
+        layerStackSizeRawText.Color = Rgba(255, 255, 255, 255);
 
-        m_Gui.DrawRawText(LayerStackSizeRawText);
+        m_gui.DrawRawText(layerStackSizeRawText);
 
         // Layers
-        float LayerRawTextPositionY = 60.0f;
-        for (int Index = 0; Index < m_LayerStack->GetLayers().size(); Index++)
+        float layerRawTextPositionY = 60.0f;
+        for (int Index = 0; Index < m_layerStack.GetLayers().size(); Index++)
         {
-            std::shared_ptr<Layer> Layer = m_LayerStack->GetLayers()[Index];
+            Layer* Layer = m_layerStack.GetLayers()[Index];
 
-            RawText LayerRawText = {};
-            LayerRawText.Value = "Index " + std::to_string(Index) + ": " + Layer->GetID();
-            LayerRawText.Position = Vector2(0.0f, LayerRawTextPositionY);
-            LayerRawText.Color = Rgba(255, 255, 255, 255);
+            RawText layerRawText = {};
+            layerRawText.Value = "Index " + std::to_string(Index) + ": " + Layer->GetId();
+            layerRawText.Position = Vector2(0.0f, layerRawTextPositionY);
+            layerRawText.Color = Rgba(255, 255, 255, 255);
 
-            m_Gui.DrawRawText(LayerRawText);
+            m_gui.DrawRawText(layerRawText);
 
-            LayerRawTextPositionY += 20.0f;
+            layerRawTextPositionY += 20.0f;
         }
 
         // Screen messages
-        float ScreenMessageRawTextPositionY = LayerRawTextPositionY + 20.0f;
-        for (const ScreenMessage& ScreenMessage : m_ScreenMessages)
+        float screenMessageRawTextPositionY = layerRawTextPositionY + 20.0f;
+        for (const ScreenMessage& screenMessage : m_screenMessages)
         {
-            RawText ScreenMessageRawText = {};
-            ScreenMessageRawText.Value = ScreenMessage.Text;
-            ScreenMessageRawText.Position = Vector2(0.0f, ScreenMessageRawTextPositionY);
-            ScreenMessageRawText.Color = ScreenMessage.Color;
+            RawText screenMessageRawText = {};
+            screenMessageRawText.Value = screenMessage.text;
+            screenMessageRawText.Position = Vector2(0.0f, screenMessageRawTextPositionY);
+            screenMessageRawText.Color = screenMessage.color;
 
-            m_Gui.DrawRawText(ScreenMessageRawText);
+            m_gui.DrawRawText(screenMessageRawText);
 
-            ScreenMessageRawTextPositionY += 20.0f;
+            screenMessageRawTextPositionY += 20.0f;
         }
     };
 
-    m_Gui.DrawRawWindow(DebugOverlayRawWindow);
+    m_gui.DrawRawWindow(debugOverlayRawWindow);
 }
 
 
@@ -90,5 +95,5 @@ void DebugOverlay::Render()
 // ***********
 float DebugOverlay::CalculateFps() const
 {
-    return 1.0f / m_Gui.GetDeltaTime();
+    return 1.0f / m_gui.GetDeltaTime();
 }
