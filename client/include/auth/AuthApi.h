@@ -15,25 +15,25 @@
 class Logger;
 class SocketClient;
 
-struct LoginParams
-{
-    std::string email;
-    std::string password;
-
-};
-
-struct RegisterParams
-{
-    std::string firstName;
-    std::string lastName;
-    std::string email;
-    std::string password;
-
-};
-
 class AuthApi
 {
 public:
+    struct LoginParams
+    {
+        std::string email;
+        std::string password;
+
+    };
+
+    struct RegisterParams
+    {
+        std::string firstName;
+        std::string lastName;
+        std::string email;
+        std::string password;
+
+    };
+    
     AuthApi(SocketClient& socketClient, Logger& logger);
     ~AuthApi();
 

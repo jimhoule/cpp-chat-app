@@ -10,15 +10,15 @@
 class Logger;
 class SocketClient;
 
-struct CreateMessageParams
-{
-    std::string conversationId;
-    std::string text;
-};
-
 class MessagesApi
 {
 public:
+    struct CreateMessageParams
+    {
+        std::string conversationId;
+        std::string text;
+    };
+
     MessagesApi(SocketClient& socketClient, Logger& logger);
     ~MessagesApi();
 

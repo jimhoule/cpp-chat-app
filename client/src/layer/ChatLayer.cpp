@@ -768,7 +768,7 @@ void ChatLayer::HandleLogoutButtonClicked()
 
 void ChatLayer::HandleSendMessageButtonClicked()
 {
-    CreateMessageParams createMessageParams = {};
+    MessagesApi::CreateMessageParams createMessageParams = {};
     createMessageParams.conversationId = m_selectedConversation->id;
     createMessageParams.text = m_messageValue;
     m_messagesApi.Create(createMessageParams);

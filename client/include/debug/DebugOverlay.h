@@ -9,20 +9,20 @@
 // Forward declarations
 class LayerStack;
 
-struct ScreenMessage {
-    std::string text;
-    Rgba color = Rgba(255, 255, 255, 255);
-};
-
 class DebugOverlay
 {
-  public:
+public:
+    struct ScreenMessage {
+        std::string text;
+        Rgba color = Rgba(255, 255, 255, 255);
+    };
+
 	DebugOverlay(const Gui& gui, LayerStack& layerStack);
 
     void AddScreenMessage(const ScreenMessage& screenMessage);
 	void Render();
 
-  private:
+private:
 	Gui m_gui = {};
 	LayerStack& m_layerStack;
     std::deque<ScreenMessage> m_screenMessages = {};

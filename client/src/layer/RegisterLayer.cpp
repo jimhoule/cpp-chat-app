@@ -241,7 +241,7 @@ void RegisterLayer::HandleLoginButtonClicked()
 
 void RegisterLayer::HandleRegisterButtonClicked()
 {
-    RegisterParams registerParams = {};
+    AuthApi::RegisterParams registerParams = {};
     registerParams.firstName = m_firstName;
     registerParams.lastName = m_lastName;
     registerParams.email = m_email;

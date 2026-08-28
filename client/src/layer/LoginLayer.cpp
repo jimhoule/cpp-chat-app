@@ -203,7 +203,7 @@ void LoginLayer::OnRender()
 // ***********
 void LoginLayer::HandleLoginButtonClicked()
 {
-    LoginParams loginParams = {};
+    AuthApi::LoginParams loginParams = {};
     loginParams.email = m_email;
     loginParams.password = m_password;
     m_authApi.Login(loginParams);

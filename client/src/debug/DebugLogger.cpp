@@ -12,7 +12,7 @@ DebugLogger::DebugLogger(const std::string& name, const std::string& context, De
 
 void DebugLogger::Error(const std::string& message)
 {
-    ScreenMessage errorScreenMessage = {};
+    DebugOverlay::ScreenMessage errorScreenMessage = {};
     errorScreenMessage.text = message;
     errorScreenMessage.color = Rgba(255, 0, 0, 255);
     m_debugOverlay.AddScreenMessage(errorScreenMessage);
@@ -22,7 +22,7 @@ void DebugLogger::Error(const std::string& message)
 
 void DebugLogger::Info(const std::string& message)
 {
-    ScreenMessage infoScreenMessage = {};
+    DebugOverlay::ScreenMessage infoScreenMessage = {};
     infoScreenMessage.text = message;
     infoScreenMessage.color = Rgba(255, 0, 255, 255);
     m_debugOverlay.AddScreenMessage(infoScreenMessage);
@@ -32,7 +32,7 @@ void DebugLogger::Info(const std::string& message)
 
 void DebugLogger::Warning(const std::string& message)
 {
-    ScreenMessage warningScreenMessage = {};
+    DebugOverlay::ScreenMessage warningScreenMessage = {};
     warningScreenMessage.text = message;
     warningScreenMessage.color = Rgba(255, 255, 0, 255);
     m_debugOverlay.AddScreenMessage(warningScreenMessage);
