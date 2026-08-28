@@ -11,15 +11,16 @@ public:
 
     void Clear();
     void Pop();
-    void Push(std::shared_ptr<Layer> Layer);
-    void Suspend(const std::string& LayerID) const;
-    void Unsuspend(const std::string& LayerID) const;
+    void Push(Layer* layer);
+    void Suspend(const std::string& layerId) const;
+    void Unsuspend(const std::string& layerId) const;
     void Update() const;
     void Render() const;
-    std::vector<std::shared_ptr<Layer>> GetLayers() const;
+    const std::vector<Layer*>& GetLayers() const;
     int GetSize() const;
+    Layer* GetTop() const;
     bool IsEmpty() const;
 
 private:
-    std::vector<std::shared_ptr<Layer>> m_Layers = {};
+    std::vector<Layer*> m_layers = {};
 };

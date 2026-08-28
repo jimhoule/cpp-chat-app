@@ -3,7 +3,9 @@
 // **********
 // * PUBLIC *
 // **********
-Layer::Layer(const std::string& ID, const std::shared_ptr<Logger>& Logger) : m_ID(ID), m_Logger(Logger)
+Layer::Layer(const std::string& id, Logger& logger)
+    : m_id(id)
+    , m_logger(logger)
 {}
 
 void Layer::OnAttach()
@@ -21,22 +23,22 @@ void Layer::OnSuspend()
 void Layer::OnUnsuspend()
 {}
 
-std::string& Layer::GetID()
+const std::string& Layer::GetId() const
 {
-    return m_ID;
+    return m_id;
 }
 
 bool Layer::IsSuspended() const
 {
-    return m_IsSuspended;
+    return m_isSuspended;
 }
 
 void Layer::Suspend()
 {
-    m_IsSuspended = true;
+    m_isSuspended = true;
 }
 
 void Layer::Unsuspend()
 {
-    m_IsSuspended = false;
+    m_isSuspended = false;
 }

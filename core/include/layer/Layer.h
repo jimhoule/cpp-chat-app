@@ -1,13 +1,14 @@
 #pragma once
 
-#include "log/Logger.h"
+#include <string>
 
-#include <memory>
+// Forward declarations
+class Logger;
 
 class Layer
 {
 public:
-    Layer(const std::string& ID, const std::shared_ptr<Logger>& Logger);
+    Layer(const std::string& id, Logger& logger);
     virtual ~Layer() = default;
 
     virtual void OnAttach();
@@ -17,15 +18,15 @@ public:
     virtual void OnUnsuspend();
     virtual void OnRender() = 0;
 
-    std::string& GetID();
+    const std::string& GetId() const;
     bool IsSuspended() const;
     void Suspend();
     void Unsuspend();
 
 protected:
-    std::shared_ptr<Logger> m_Logger = nullptr;
+    Logger& m_logger;
 
 private:
-    std::string m_ID = "";
-    bool m_IsSuspended = false;
+    std::string m_id = "";
+    bool m_isSuspended = false;
 };

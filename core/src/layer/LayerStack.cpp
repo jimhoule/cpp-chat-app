@@ -2,87 +2,122 @@
 
 #include <algorithm>
 #include <functional>
+#include <utility>
 
 // **********
 // * PUBLIC *
 // **********
 void LayerStack::Clear()
 {
-    for (std::shared_ptr<Layer> Layer : m_Layers)
+    for (Layer* layer : m_layers)
     {
-        Layer->OnDetach();
+        layer->OnDetach();
     }
 
-    m_Layers.clear();
+    m_layers.clear();
 }
 
-void LayerStack::Push(std::shared_ptr<Layer> Layer)
+void LayerStack::Push(Layer* layer)
 {
-    m_Layers.emplace_back(Layer);
-    m_Layers.back()->OnAttach();
+    if (layer == nullptr)
+    {
+        return;
+    }
+
+    m_layers.emplace_back(layer);
+    m_layers.back()->OnAttach();
 }
 
 void LayerStack::Pop()
 {
-    if (m_Layers.empty()) return;
+    if (m_layers.empty())
+    {
+        return;
+    }
 
-    m_Layers.back()->OnDetach();
-    m_Layers.pop_back();
+    m_layers.back()->OnDetach();
+    m_layers.pop_back();
 }
 
-void LayerStack::Suspend(const std::string& LayerID) const
+void LayerStack::Suspend(const std::string& layerId) const
 {
-    for (const std::shared_ptr<Layer>& Layer : m_Layers)
+    for (Layer* layer : m_layers)
     {
-        if (Layer->GetID() != LayerID) continue;
+        if (layer->GetId() != layerId)
+        {
+            continue;
+        }
 
-        Layer->Suspend();
-        Layer->OnSuspend();
+        layer->Suspend();
+        layer->OnSuspend();
+        
         return;
     }
 }
 
-void LayerStack::Unsuspend(const std::string& LayerID) const
+void LayerStack::Unsuspend(const std::string& layerId) const
 {
-    for (const std::shared_ptr<Layer>& Layer : m_Layers)
+    for (Layer* layer : m_layers)
     {
-        if (Layer->GetID() != LayerID) continue;
+        if (layer->GetId() != layerId)
+        {
+            continue;
+        }
 
-        Layer->Unsuspend();
-        Layer->OnUnsuspend();
+        layer->Unsuspend();
+        layer->OnUnsuspend();
+
         return;
     }
 }
 
 void LayerStack::Update() const
 {
-    for (const std::shared_ptr<Layer>& Layer : m_Layers)
+    for (Layer* layer : m_layers)
     {
-        if (Layer->IsSuspended()) continue;
-        Layer->OnUpdate();
+        if (layer->IsSuspended())
+        {
+            continue;
+        }
+
+        layer->OnUpdate();
     }
 }
 
 void LayerStack::Render() const
 {
-    for (const std::shared_ptr<Layer>& Layer : m_Layers)
+    for (Layer* layer : m_layers)
     {
-        if (Layer->IsSuspended()) continue;
-        Layer->OnRender();
+        if (layer->IsSuspended())
+        {
+            continue;
+        }
+
+        layer->OnRender();
     }
 }
 
-std::vector<std::shared_ptr<Layer>>LayerStack::GetLayers() const
+const std::vector<Layer*>& LayerStack::GetLayers() const
 {
-    return m_Layers;
+    return m_layers;
 }
 
 int LayerStack::GetSize() const
 {
-    return m_Layers.size();
+    return m_layers.size();
+}
+
+Layer* LayerStack::GetTop() const
+{
+    if (m_layers.empty())
+    {
+        return nullptr;
+    }
+
+    return m_layers.back();
 }
 
 bool LayerStack::IsEmpty() const
 {
-    return m_Layers.empty();
+    return m_layers.empty();
 }
