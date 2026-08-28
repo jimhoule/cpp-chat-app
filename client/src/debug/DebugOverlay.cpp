@@ -24,11 +24,11 @@ void DebugOverlay::Render()
     if (ImGui::IsKeyPressed(ImGuiKey_Q)) m_isVisible = !m_isVisible;
     if (!m_isVisible) return;
 
-    RawWindow debugOverlayRawWindow = {};
-    debugOverlayRawWindow.MinCornerPosition = Vector2(0.0f, 0.0f);
-    debugOverlayRawWindow.MaxCornerPosition = m_gui.GetViewportSize();
-    debugOverlayRawWindow.BgColor = Rgba(0, 0, 0, 100);
-    debugOverlayRawWindow.CornerRounding = 0.0f;
+    Gui::RawWindow debugOverlayRawWindow = {};
+    debugOverlayRawWindow.minCornerPosition = Vector2(0.0f, 0.0f);
+    debugOverlayRawWindow.maxCornerPosition = m_gui.GetViewportSize();
+    debugOverlayRawWindow.bgColor = Rgba(0, 0, 0, 100);
+    debugOverlayRawWindow.cornerRounding = 0.0f;
     debugOverlayRawWindow.DrawContent = [this]() {
         // Fps
         std::chrono::steady_clock::time_point currentUpdateTime = std::chrono::steady_clock::now();
@@ -40,18 +40,18 @@ void DebugOverlay::Render()
             m_previousUpdateTime = currentUpdateTime;
         }
 
-        RawText fpsRawText = {};
-        fpsRawText.Value = "FPS: " + std::to_string(m_fps);
-        fpsRawText.Position = Vector2(0.0f, 0.0f);
-        fpsRawText.Color = Rgba(255, 255, 255, 255);
+        Gui::RawText fpsRawText = {};
+        fpsRawText.value = "FPS: " + std::to_string(m_fps);
+        fpsRawText.position = Vector2(0.0f, 0.0f);
+        fpsRawText.color = Rgba(255, 255, 255, 255);
 
         m_gui.DrawRawText(fpsRawText);
 
         // Layerstack size
-        RawText layerStackSizeRawText = {};
-        layerStackSizeRawText.Value = "LayerStack size: " + std::to_string(m_layerStack.GetSize());
-        layerStackSizeRawText.Position = Vector2(0.0f, 40.0f);
-        layerStackSizeRawText.Color = Rgba(255, 255, 255, 255);
+        Gui::RawText layerStackSizeRawText = {};
+        layerStackSizeRawText.value = "LayerStack size: " + std::to_string(m_layerStack.GetSize());
+        layerStackSizeRawText.position = Vector2(0.0f, 40.0f);
+        layerStackSizeRawText.color = Rgba(255, 255, 255, 255);
 
         m_gui.DrawRawText(layerStackSizeRawText);
 
@@ -61,10 +61,10 @@ void DebugOverlay::Render()
         {
             Layer* Layer = m_layerStack.GetLayers()[Index];
 
-            RawText layerRawText = {};
-            layerRawText.Value = "Index " + std::to_string(Index) + ": " + Layer->GetId();
-            layerRawText.Position = Vector2(0.0f, layerRawTextPositionY);
-            layerRawText.Color = Rgba(255, 255, 255, 255);
+            Gui::RawText layerRawText = {};
+            layerRawText.value = "Index " + std::to_string(Index) + ": " + Layer->GetId();
+            layerRawText.position = Vector2(0.0f, layerRawTextPositionY);
+            layerRawText.color = Rgba(255, 255, 255, 255);
 
             m_gui.DrawRawText(layerRawText);
 
@@ -75,10 +75,10 @@ void DebugOverlay::Render()
         float screenMessageRawTextPositionY = layerRawTextPositionY + 20.0f;
         for (const ScreenMessage& screenMessage : m_screenMessages)
         {
-            RawText screenMessageRawText = {};
-            screenMessageRawText.Value = screenMessage.text;
-            screenMessageRawText.Position = Vector2(0.0f, screenMessageRawTextPositionY);
-            screenMessageRawText.Color = screenMessage.color;
+            Gui::RawText screenMessageRawText = {};
+            screenMessageRawText.value = screenMessage.text;
+            screenMessageRawText.position = Vector2(0.0f, screenMessageRawTextPositionY);
+            screenMessageRawText.color = screenMessage.color;
 
             m_gui.DrawRawText(screenMessageRawText);
 

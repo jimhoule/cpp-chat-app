@@ -3,85 +3,85 @@
 struct Vector2
 {
   public:
-	float X;
-	float Y;
+	float x;
+	float y;
 
 	Vector2() = default;
-	Vector2(float X, float Y) : X(X), Y(Y)
+	Vector2(float x, float y) : x(x), y(y)
 	{
 	}
 
-	Vector2 operator+(Vector2 Addend) const
+	Vector2 operator+(Vector2 addend) const
 	{
-		return Vector2(X + Addend.X, Y + Addend.Y);
+		return Vector2(x + addend.x, y + addend.y);
 	}
 
-	Vector2 operator-(Vector2 Subtrahend) const
+	Vector2 operator-(Vector2 subtrahend) const
 	{
-		return Vector2(X - Subtrahend.X, Y - Subtrahend.Y);
+		return Vector2(x - subtrahend.x, y - subtrahend.y);
 	}
 
-	Vector2 operator*(float Multiplier) const
+	Vector2 operator*(float multiplier) const
 	{
-		return Vector2(X * Multiplier, Y * Multiplier);
+		return Vector2(x * multiplier, y * multiplier);
 	}
 
-	Vector2 operator*(Vector2 Multiplier) const
+	Vector2 operator*(Vector2 multiplier) const
 	{
-		return Vector2(X * Multiplier.X, Y * Multiplier.Y);
+		return Vector2(x * multiplier.x, y * multiplier.y);
 	}
 
-	Vector2 operator/(float Divisor) const
+	Vector2 operator/(float divisor) const
 	{
-		return Vector2(X / Divisor, Y / Divisor);
+		return Vector2(x / divisor, y / divisor);
 	}
 
-	Vector2 operator/(Vector2 Divisor) const
+	Vector2 operator/(Vector2 divisor) const
 	{
-		return Vector2(X / Divisor.X, Y / Divisor.Y);
+		return Vector2(x / divisor.x, y / divisor.y);
 	}
 };
 
 struct Vector4
 {
   public:
-	float X;
-	float Y;
-	float Z;
-	float W;
+	float x;
+	float y;
+	float z;
+	float w;
 
 	Vector4() = default;
-	Vector4(float X, float Y, float Z, float W) : X(X), Y(Y), Z(Z), W(W)
+	Vector4(float x, float y, float z, float w) : x(x), y(y), z(z), w(w)
 	{
 	}
 
-	Vector4 operator+(Vector4 Addend) const
+	Vector4 operator+(Vector4 addend) const
 	{
-		return Vector4(X + Addend.X, Y + Addend.Y, Z + Addend.Z, W + Addend.W);
+		return Vector4(x + addend.x, y + addend.y, z + addend.z, w + addend.w);
 	}
 
-	Vector4 operator-(Vector4 Subtrahend) const
+	Vector4 operator-(Vector4 subtrahend) const
 	{
-		return Vector4(X - Subtrahend.X, Y - Subtrahend.Y, Z - Subtrahend.Z, W - Subtrahend.W);
+		return Vector4(x - subtrahend.x, y - subtrahend.y, z - subtrahend.z, w - subtrahend.w);
 	}
 
-	Vector4 operator*(float Multiplier) const
+	Vector4 operator*(float multiplier) const
 	{
-		return Vector4(X * Multiplier, Y * Multiplier, Z * Multiplier, W * Multiplier);
+		return Vector4(x * multiplier, y * multiplier, z * multiplier, w * multiplier);
 	}
 
-	Vector4 operator*(Vector4 Multiplier) const
+	Vector4 operator*(Vector4 multiplier) const
 	{
-		return Vector4(X * Multiplier.X, Y * Multiplier.Y, Z * Multiplier.Z, W * Multiplier.W);
+		return Vector4(x * multiplier.x, y * multiplier.y, z * multiplier.z, w * multiplier.w);
 	}
 
-	Vector4 operator/(float Divisor) const
+	Vector4 operator/(float divisor) const
 	{
-		return Vector4(X / Divisor, Y / Divisor, Z / Divisor, W / Divisor);
+		return Vector4(x / divisor, y / divisor, z / divisor, w / divisor);
 	}
 
-	Vector4 operator/(Vector4 Divisor) const
+	Vector4 operator/(Vector4 divisor) const
 	{
-		return Vector4(X / Divisor.X, Y / Divisor.Y, Z / Divisor.Z, W / Divisor.W);
+		return Vector4(x / divisor.x, y / divisor.y, z / divisor.z, w / divisor.w);
 	}
 };

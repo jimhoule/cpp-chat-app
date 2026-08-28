@@ -32,33 +32,33 @@ void LoginLayer::OnSuspend()
 
 void LoginLayer::OnRender()
 {
-    Window loginWindow = {};
-    loginWindow.Name = "LoginWindow";
-    loginWindow.Size = m_gui.GetViewportSize();
-    loginWindow.BgColor = Rgba(26, 30, 67, 255);
+    Gui::Window loginWindow = {};
+    loginWindow.name = "LoginWindow";
+    loginWindow.size = m_gui.GetViewportSize();
+    loginWindow.bgColor = Rgba(26, 30, 67, 255);
     loginWindow.DrawContent = [this]() {
         const Vector2 loginWindowAvailableSpace = m_gui.GetAvailableSpace();
 
         // LOGIN FORM CONTAINER
-        Container loginFormContainer = {};
-        loginFormContainer.ID = "LoginFormContainer";
-        loginFormContainer.Size = Vector2(loginWindowAvailableSpace.X * 0.30f, loginWindowAvailableSpace.Y * 0.60f);
-        loginFormContainer.CornerRounding = 10.f;
-        loginFormContainer.BgColor = Rgba(50, 56, 102, 255);
-        loginFormContainer.DrawContent = [this](const ContainerState& State) {
+        Gui::Container loginFormContainer = {};
+        loginFormContainer.id = "LoginFormContainer";
+        loginFormContainer.size = Vector2(loginWindowAvailableSpace.x * 0.30f, loginWindowAvailableSpace.y * 0.60f);
+        loginFormContainer.cornerRounding = 10.f;
+        loginFormContainer.bgColor = Rgba(50, 56, 102, 255);
+        loginFormContainer.DrawContent = [this](const Gui::ContainerState& state) {
             const Vector2 loginFormContainerAvailableSpace = m_gui.GetAvailableSpace();
 
             // TITLE CONTAINER
-            Container titleContainer = {};
-            titleContainer.ID = "TitleContainer";
-            titleContainer.Size = Vector2(loginFormContainerAvailableSpace.X, loginFormContainerAvailableSpace.Y * 0.25f);
+            Gui::Container titleContainer = {};
+            titleContainer.id = "TitleContainer";
+            titleContainer.size = Vector2(loginFormContainerAvailableSpace.x, loginFormContainerAvailableSpace.y * 0.25f);
             // NOTE: Transparent background
-            titleContainer.BgColor = Rgba(0, 0, 0, 0);
-            titleContainer.DrawContent = [this](const ContainerState& State) {
+            titleContainer.bgColor = Rgba(0, 0, 0, 0);
+            titleContainer.DrawContent = [this](const Gui::ContainerState& state) {
                 // TITLE TEXT
-                Text titleText = {};
-                titleText.Value = "Login";
-                titleText.Height = 40.0f;
+                Gui::Text titleText = {};
+                titleText.value = "Login";
+                titleText.height = 40.0f;
 
                 Vector2 titleTextSize = m_gui.GetTextSize(titleText);
                 m_gui.AlignCenter(titleTextSize);
@@ -68,75 +68,75 @@ void LoginLayer::OnRender()
             m_gui.DrawContainer(titleContainer);
 
             // INPUTS CONTAINER
-            Container inputsContainer = {};
-            inputsContainer.ID = "InputsContainer";
-            inputsContainer.Size = Vector2(loginFormContainerAvailableSpace.X, loginFormContainerAvailableSpace.Y * 0.50f);
-            inputsContainer.Padding = Vector2(15.0f, 0.0f);
+            Gui::Container inputsContainer = {};
+            inputsContainer.id = "InputsContainer";
+            inputsContainer.size = Vector2(loginFormContainerAvailableSpace.x, loginFormContainerAvailableSpace.y * 0.50f);
+            inputsContainer.padding = Vector2(15.0f, 0.0f);
             // NOTE: Transparent background
-            inputsContainer.BgColor = Rgba(0, 0, 0, 0);
-            inputsContainer.DrawContent = [this](const ContainerState& State) {
+            inputsContainer.bgColor = Rgba(0, 0, 0, 0);
+            inputsContainer.DrawContent = [this](const Gui::ContainerState& state) {
                 const Vector2 inputsContainerAvailableSpace = m_gui.GetAvailableSpace();
 
                 // EMAIL TEXT INPUT SINGLELINE
-                Placeholder emailTextInputPlaceholder = {};
-                emailTextInputPlaceholder.Color = Rgba(120, 125, 172, 255);
-                emailTextInputPlaceholder.Text = "Email";
+                Gui::Placeholder emailTextInputPlaceholder = {};
+                emailTextInputPlaceholder.color = Rgba(120, 125, 172, 255);
+                emailTextInputPlaceholder.text = "Email";
 
-                TextInput emailTextInput = {};
-                emailTextInput.ID = "EmailTextInput";
-                emailTextInput.Padding = Vector2(15.0f, 15.0f);
-                emailTextInput.CornerRounding = 10.f;
-                emailTextInput.BgColor = Rgba(26, 30, 67, 255);
-                emailTextInput.Placeholder = emailTextInputPlaceholder;
+                Gui::TextInput emailTextInput = {};
+                emailTextInput.id = "EmailTextInput";
+                emailTextInput.padding = Vector2(15.0f, 15.0f);
+                emailTextInput.cornerRounding = 10.f;
+                emailTextInput.bgColor = Rgba(26, 30, 67, 255);
+                emailTextInput.placeholder = emailTextInputPlaceholder;
 
-                TextInputSingleline emailTextInputSingleline = {};
-                emailTextInputSingleline.TextInput = emailTextInput;
-                emailTextInputSingleline.Width = inputsContainerAvailableSpace.X;
+                Gui::TextInputSingleline emailTextInputSingleline = {};
+                emailTextInputSingleline.textInput = emailTextInput;
+                emailTextInputSingleline.width = inputsContainerAvailableSpace.x;
 
                 m_gui.DrawTextInputSingleline(m_email, emailTextInputSingleline);
 
                 // PASSWORD TEXT INPUT SINGLELINE
-                Placeholder passwordTextInputPlaceholder = {};
-                passwordTextInputPlaceholder.Color = Rgba(120, 125, 172, 255);
-                passwordTextInputPlaceholder.Text = "Password";
+                Gui::Placeholder passwordTextInputPlaceholder = {};
+                passwordTextInputPlaceholder.color = Rgba(120, 125, 172, 255);
+                passwordTextInputPlaceholder.text = "Password";
 
-                TextInput passwordTextInput = {};
-                passwordTextInput.ID = "PasswordTextInput";
-                passwordTextInput.Padding = Vector2(15.0f, 15.0f);
-                passwordTextInput.CornerRounding = 10.f;
-                passwordTextInput.BgColor = Rgba(26, 30, 67, 255);
-                passwordTextInput.Placeholder = passwordTextInputPlaceholder;
+                Gui::TextInput passwordTextInput = {};
+                passwordTextInput.id = "PasswordTextInput";
+                passwordTextInput.padding = Vector2(15.0f, 15.0f);
+                passwordTextInput.cornerRounding = 10.f;
+                passwordTextInput.bgColor = Rgba(26, 30, 67, 255);
+                passwordTextInput.placeholder = passwordTextInputPlaceholder;
 
-                TextInputSingleline passwordTextInputSingleline = {};
-                passwordTextInputSingleline.TextInput = passwordTextInput;
-                passwordTextInputSingleline.Width = inputsContainerAvailableSpace.X;
+                Gui::TextInputSingleline passwordTextInputSingleline = {};
+                passwordTextInputSingleline.textInput = passwordTextInput;
+                passwordTextInputSingleline.width = inputsContainerAvailableSpace.x;
 
-                m_gui.SetPositionY(inputsContainerAvailableSpace.Y * 0.50f);
+                m_gui.SetPositionY(inputsContainerAvailableSpace.y * 0.50f);
                 m_gui.DrawTextInputSingleline(m_password, passwordTextInputSingleline);
             };
 
-            m_gui.SetPositionY(titleContainer.Size.Y);
+            m_gui.SetPositionY(titleContainer.size.y);
             m_gui.DrawContainer(inputsContainer);
 
             // BUTTONS CONTAINER
-            Container buttonsContainer = {};
-            buttonsContainer.ID = "ButtonsContainer";
-            buttonsContainer.Size = Vector2(loginFormContainerAvailableSpace.X, loginFormContainerAvailableSpace.Y * 0.25f);
-            buttonsContainer.Padding = Vector2(15.0f, 0.0f);
+            Gui::Container buttonsContainer = {};
+            buttonsContainer.id = "ButtonsContainer";
+            buttonsContainer.size = Vector2(loginFormContainerAvailableSpace.x, loginFormContainerAvailableSpace.y * 0.25f);
+            buttonsContainer.padding = Vector2(15.0f, 0.0f);
             // NOTE: Transparent background
-            buttonsContainer.BgColor = Rgba(0, 0, 0, 0);
-            buttonsContainer.DrawContent = [this](const ContainerState& State) {
+            buttonsContainer.bgColor = Rgba(0, 0, 0, 0);
+            buttonsContainer.DrawContent = [this](const Gui::ContainerState& state) {
                 const Vector2 buttonsContainerAvailableSpace = m_gui.GetAvailableSpace();
 
                 // LOGIN BUTTON
-                Button loginButton = {};
-                loginButton.Label = "Login";
-                loginButton.Size = Vector2(buttonsContainerAvailableSpace.X, buttonsContainerAvailableSpace.Y * 0.50f);
-                loginButton.BgColor = Rgba(200, 30, 30, 255); // Red button
-                loginButton.BgColorActive = Rgba(150, 0, 0, 255); // Darker red when active
-                loginButton.BgColorHovered = Rgba(255, 100, 100, 255); // Lighter red on hover
-                loginButton.CornerRounding = 50.0f;
-                loginButton.IsDisabled = m_email.empty() || m_password.empty();
+                Gui::Button loginButton = {};
+                loginButton.label = "Login";
+                loginButton.size = Vector2(buttonsContainerAvailableSpace.x, buttonsContainerAvailableSpace.y * 0.50f);
+                loginButton.bgColor = Rgba(200, 30, 30, 255); // Red button
+                loginButton.bgColorActive = Rgba(150, 0, 0, 255); // Darker red when active
+                loginButton.bgColorHovered = Rgba(255, 100, 100, 255); // Lighter red on hover
+                loginButton.cornerRounding = 50.0f;
+                loginButton.isDisabled = m_email.empty() || m_password.empty();
                 loginButton.OnClick = [this]() {
                     HandleLoginButtonClicked();
                 };
@@ -150,48 +150,48 @@ void LoginLayer::OnRender()
                 const std::string& registerButtonLabel = "Register";
                 Vector2 registerButtonLabelSize = m_gui.GetTextSize(registerButtonLabel);
 
-                Container registerButtonContainer = {};
-                registerButtonContainer.ID = "RegisterButtonContainer";
-                registerButtonContainer.Size = Vector2(registerTextValueSize.X + registerButtonLabelSize.X, registerTextValueSize.Y);
+                Gui::Container registerButtonContainer = {};
+                registerButtonContainer.id = "RegisterButtonContainer";
+                registerButtonContainer.size = Vector2(registerTextValueSize.x + registerButtonLabelSize.x, registerTextValueSize.y);
                 // NOTE: Transparent background
-                registerButtonContainer.BgColor = Rgba(0, 0, 0, 0);
-                registerButtonContainer.DrawContent = [this, &registerButtonLabel, &registerTextValue](const ContainerState& State) {
+                registerButtonContainer.bgColor = Rgba(0, 0, 0, 0);
+                registerButtonContainer.DrawContent = [this, &registerButtonLabel, &registerTextValue](const Gui::ContainerState& state) {
                     // REGISTER TEXT
-                    Text registerText = {};
-                    registerText.Value = registerTextValue;
+                    Gui::Text registerText = {};
+                    registerText.value = registerTextValue;
 
                     m_gui.DrawText(registerText);
 
                     // REGISTER BUTTON
-                    Button registerButton = {};
-                    registerButton.Label = registerButtonLabel;
-                    registerButton.Size = m_gui.GetTextSize(registerButtonLabel);
+                    Gui::Button registerButton = {};
+                    registerButton.label = registerButtonLabel;
+                    registerButton.size = m_gui.GetTextSize(registerButtonLabel);
                     // NOTE: Transparent background
-                    registerButton.BgColor = Rgba(0, 0, 0, 0);
+                    registerButton.bgColor = Rgba(0, 0, 0, 0);
                     // NOTE: Transparent background
-                    registerButton.BgColorActive = Rgba(0, 0, 0, 0);
+                    registerButton.bgColorActive = Rgba(0, 0, 0, 0);
                     // NOTE: Transparent background
-                    registerButton.BgColorHovered = Rgba(0, 0, 0, 0);
-                    registerButton.TextColor = Rgba(255, 255, 0, 255);
+                    registerButton.bgColorHovered = Rgba(0, 0, 0, 0);
+                    registerButton.textColor = Rgba(255, 255, 0, 255);
                     registerButton.OnClick = [this]() {
                         HandleRegisterButtonClicked();
                     };
 
                     m_gui.DisplayInline();
-                    Vector2 RegisterTextSize = m_gui.GetTextSize(registerText.Value);
-                    m_gui.SetPositionX(RegisterTextSize.X + 2.0f);
+                    Vector2 RegisterTextSize = m_gui.GetTextSize(registerText.value);
+                    m_gui.SetPositionX(RegisterTextSize.x + 2.0f);
                     m_gui.DrawButton(registerButton);
                 };
 
-                m_gui.AlignCenter(registerButtonContainer.Size);
+                m_gui.AlignCenter(registerButtonContainer.size);
                 m_gui.DrawContainer(registerButtonContainer);
             };
 
-            m_gui.SetPositionY(titleContainer.Size.Y + inputsContainer.Size.Y);
+            m_gui.SetPositionY(titleContainer.size.y + inputsContainer.size.y);
             m_gui.DrawContainer(buttonsContainer);
         };
 
-        m_gui.AlignCenter(loginFormContainer.Size);
+        m_gui.AlignCenter(loginFormContainer.size);
         m_gui.DrawContainer(loginFormContainer);
     };
 

@@ -8,20 +8,20 @@
 // **********
 // * PUBLIC *
 // **********
-void Gui::Init(GLFWwindow* GlfwWindow) const
+void Gui::Init(GLFWwindow* glfwWindow) const
 {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
-    ImGuiIO& Io = ImGui::GetIO();
-    (void)Io;
-    Io.Fonts->AddFontFromFileTTF("../../assets/Audiowide-Regular.ttf");
+    ImGuiIO& io = ImGui::GetIO();
+    (void)io;
+    io.Fonts->AddFontFromFileTTF("../../assets/Audiowide-Regular.ttf");
 
     // Setup Dear ImGui style
-    ImGuiStyle& Style = ImGui::GetStyle();
+    ImGuiStyle& style = ImGui::GetStyle();
     ImGui::StyleColorsDark();
 
     // Setup Platform/Renderer backends
-    ImGui_ImplGlfw_InitForOpenGL(GlfwWindow, true);
+    ImGui_ImplGlfw_InitForOpenGL(glfwWindow, true);
     ImGui_ImplOpenGL3_Init("#version 150");
 }
 
@@ -46,116 +46,116 @@ void Gui::Clear() const
 }
 
 // Elements
-void Gui::DrawButton(Button& Button) const
+void Gui::DrawButton(Button& button) const
 {
-    ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, Button.Border.Height);
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ToImVec2(Button.Padding));
-    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, Button.CornerRounding);
-    ImGui::PushStyleColor(ImGuiCol_Button, ToImVec4(Button.BgColor.ToVector4()));
-    ImGui::PushStyleColor(ImGuiCol_Text, ToImVec4(Button.TextColor.ToVector4()));
-    ImGui::PushStyleColor(ImGuiCol_Border, ToImVec4(Button.Border.Color.ToVector4()));
-    if (!Button.BgColorActive.IsEmpty()) ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ToImVec4(Button.BgColorActive.ToVector4()));
-    if (!Button.BgColorHovered.IsEmpty()) ImGui::PushStyleColor(ImGuiCol_ButtonActive, ToImVec4(Button.BgColorHovered.ToVector4()));
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, button.border.height);
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ToImVec2(button.padding));
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, button.cornerRounding);
+    ImGui::PushStyleColor(ImGuiCol_Button, ToImVec4(button.bgColor.ToVector4()));
+    ImGui::PushStyleColor(ImGuiCol_Text, ToImVec4(button.textColor.ToVector4()));
+    ImGui::PushStyleColor(ImGuiCol_Border, ToImVec4(button.border.color.ToVector4()));
+    if (!button.bgColorActive.IsEmpty()) ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ToImVec4(button.bgColorActive.ToVector4()));
+    if (!button.bgColorHovered.IsEmpty()) ImGui::PushStyleColor(ImGuiCol_ButtonActive, ToImVec4(button.bgColorHovered.ToVector4()));
 
-    if (Button.IsDisabled)  ImGui::BeginDisabled();
+    if (button.isDisabled)  ImGui::BeginDisabled();
 
-    ImGui::Button(Button.Label.c_str(), ImVec2(Button.Size.X, Button.Size.Y));
-    if (ImGui::IsItemClicked()) Button.OnClick();
+    ImGui::Button(button.label.c_str(), ImVec2(button.size.x, button.size.y));
+    if (ImGui::IsItemClicked()) button.OnClick();
     if (ImGui::IsItemHovered())
     {
         ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-        if (!!Button.OnHover) Button.OnHover();
+        if (!!button.OnHover) button.OnHover();
     }
 
-    if (Button.IsDisabled)  ImGui::EndDisabled();
+    if (button.isDisabled)  ImGui::EndDisabled();
 
     ImGui::PopStyleVar(3);
     ImGui::PopStyleColor(3);
-    if (!Button.BgColorActive.IsEmpty()) ImGui::PopStyleColor(1);
-    if (!Button.BgColorHovered.IsEmpty()) ImGui::PopStyleColor(1);
+    if (!button.bgColorActive.IsEmpty()) ImGui::PopStyleColor(1);
+    if (!button.bgColorHovered.IsEmpty()) ImGui::PopStyleColor(1);
 }
 
-void Gui::DrawContainer(Container& Container) const
+void Gui::DrawContainer(Container& container) const
 {
-    ImGuiChildFlags Flags = ImGuiChildFlags_AlwaysUseWindowPadding;
-    if (Container.IsAutoResizableY) Flags |= ImGuiChildFlags_AutoResizeY;
-    if (Container.IsAutoResizableX) Flags |= ImGuiChildFlags_AutoResizeX;
+    ImGuiChildFlags flags = ImGuiChildFlags_AlwaysUseWindowPadding;
+    if (container.isAutoResizableY) flags |= ImGuiChildFlags_AutoResizeY;
+    if (container.isAutoResizableX) flags |= ImGuiChildFlags_AutoResizeX;
 
-    ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, Container.Border.Height);
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ToImVec2(Container.Padding));
-    ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, Container.CornerRounding);
-    ImGui::PushStyleColor(ImGuiCol_ChildBg, ToImVec4(Container.BgColor.ToVector4()));
-    ImGui::PushStyleColor(ImGuiCol_Border, ToImVec4(Container.Border.Color.ToVector4()));
+    ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, container.border.height);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ToImVec2(container.padding));
+    ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, container.cornerRounding);
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, ToImVec4(container.bgColor.ToVector4()));
+    ImGui::PushStyleColor(ImGuiCol_Border, ToImVec4(container.border.color.ToVector4()));
 
-    if (ImGui::BeginChild(Container.ID.c_str(), ToImVec2(Container.Size), Flags))
+    if (ImGui::BeginChild(container.id.c_str(), ToImVec2(container.size), flags))
     {
-        const bool IS_HOVERED = ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows);
+        const bool isHovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows);
         // Draws rectangle on top of background container when is hovered
-        if (IS_HOVERED && !Container.BgColorHovered.IsEmpty())
+        if (isHovered && !container.bgColorHovered.IsEmpty())
         {
-            ImDrawList* WindowDrawList = ImGui::GetWindowDrawList();
+            ImDrawList* windowDrawList = ImGui::GetWindowDrawList();
 
-            ImVec2 BgPositionMin = ImGui::GetCursorScreenPos();
-            ImVec2 BgPositionMax = ImVec2(BgPositionMin.x + Container.Size.X, BgPositionMin.y + Container.Size.Y);
-            ImU32 BgColorHovered = IM_COL32(
-                Container.BgColorHovered.R,
-                Container.BgColorHovered.G,
-                Container.BgColorHovered.B,
-                Container.BgColorHovered.A
+            ImVec2 bgPositionMin = ImGui::GetCursorScreenPos();
+            ImVec2 bgPositionMax = ImVec2(bgPositionMin.x + container.size.x, bgPositionMin.y + container.size.y);
+            ImU32 bgColorHovered = IM_COL32(
+                container.bgColorHovered.r,
+                container.bgColorHovered.g,
+                container.bgColorHovered.b,
+                container.bgColorHovered.a
             );
 
-            WindowDrawList->AddRectFilled(
-                BgPositionMin,
-                BgPositionMax,
-                BgColorHovered,
-                Container.CornerRounding
+            windowDrawList->AddRectFilled(
+                bgPositionMin,
+                bgPositionMax,
+                bgColorHovered,
+                container.cornerRounding
             );
         }
 
-        if (IS_HOVERED && !!Container.OnHover) Container.OnHover();
+        if (isHovered && !!container.OnHover) container.OnHover();
 
-        ContainerState State = {};
-        State.IsHovered = IS_HOVERED;
-        Container.DrawContent(State);
+        ContainerState state = {};
+        state.isHovered = isHovered;
+        container.DrawContent(state);
     }
     ImGui::EndChild();
 
     // NOTE: IsItemClicked() refers to the item that was most recently defined. For a child window, the "item" representing the whole child rectangle is defined by the BeginChild() and EndChild() calls
-    const bool IS_CLICKED = ImGui::IsItemClicked();
-    if (IS_CLICKED && !!Container.OnClick) Container.OnClick();
+    const bool isClicked = ImGui::IsItemClicked();
+    if (isClicked && !!container.OnClick) container.OnClick();
 
     ImGui::PopStyleVar(3);
     ImGui::PopStyleColor(2);
 }
 
-void Gui::DrawDivider(const Divider& Divider) const
+void Gui::DrawDivider(const Divider& divider) const
 {
-    ImDrawList* WindowDrawList = ImGui::GetWindowDrawList();
-    ImVec2 LineStartPosition = ImGui::GetCursorScreenPos();
-    ImVec2 LineEndPosition = ImVec2(LineStartPosition.x + ImGui::GetWindowWidth(), LineStartPosition.y);
-    ImU32 Color = IM_COL32(
-        Divider.Color.R,
-        Divider.Color.G,
-        Divider.Color.B,
-        Divider.Color.A
+    ImDrawList* windowDrawList = ImGui::GetWindowDrawList();
+    ImVec2 lineStartPosition = ImGui::GetCursorScreenPos();
+    ImVec2 lineEndPosition = ImVec2(lineStartPosition.x + ImGui::GetWindowWidth(), lineStartPosition.y);
+    ImU32 color = IM_COL32(
+        divider.color.r,
+        divider.color.g,
+        divider.color.b,
+        divider.color.a
     );
 
-    WindowDrawList->AddLine(LineStartPosition, LineEndPosition, Color, Divider.Height);
+    windowDrawList->AddLine(lineStartPosition, lineEndPosition, color, divider.height);
 }
 
-void Gui::DrawDropDownMenu(const DropDownMenu& DropDownMenu) const
+void Gui::DrawDropDownMenu(const DropDownMenu& dropDownMenu) const
 {
-    ImVec2 TriggerElementBoundingBoxTopLeftCornerPosition = ImGui::GetItemRectMin();
-    ImVec2 TriggerElementBoundingBoxBottomRightCornerPosition = ImGui::GetItemRectMax();
+    ImVec2 triggerElementBoundingBoxTopLeftCornerPosition = ImGui::GetItemRectMin();
+    ImVec2 triggerElementBoundingBoxBottomRightCornerPosition = ImGui::GetItemRectMax();
 
     // Gets drop down menu inner rect (content rect) corners
-    ImVec2 MinCornerPosition = ImVec2(
-        TriggerElementBoundingBoxTopLeftCornerPosition.x + DropDownMenu.OuterPadding.X + DropDownMenu.OriginOffset.X,
-        TriggerElementBoundingBoxBottomRightCornerPosition.y + DropDownMenu.OuterPadding.Y + DropDownMenu.OriginOffset.Y
+    ImVec2 minCornerPosition = ImVec2(
+        triggerElementBoundingBoxTopLeftCornerPosition.x + dropDownMenu.outerPadding.x + dropDownMenu.originOffset.x,
+        triggerElementBoundingBoxBottomRightCornerPosition.y + dropDownMenu.outerPadding.y + dropDownMenu.originOffset.y
     );
-    ImVec2 MaxCornerPosition = ImVec2(
-        MinCornerPosition.x + DropDownMenu.Size.X,
-        MinCornerPosition.y + DropDownMenu.Size.Y+ (DropDownMenu.LineHeight * DropDownMenu.Items.size())
+    ImVec2 maxCornerPosition = ImVec2(
+        minCornerPosition.x + dropDownMenu.size.x,
+        minCornerPosition.y + dropDownMenu.size.y+ (dropDownMenu.lineHeight * dropDownMenu.items.size())
     );
 
     /**
@@ -163,189 +163,189 @@ void Gui::DrawDropDownMenu(const DropDownMenu& DropDownMenu) const
      *  - Gets drop down menu outer rect (padding rect) corners
      *  - Used to apply padding outside of content rect
      */
-    ImVec2 OuterPaddedMinCornerPosition = ImVec2(
-        MinCornerPosition.x - DropDownMenu.OuterPadding.X,
-        MinCornerPosition.y - DropDownMenu.OuterPadding.Y
+    ImVec2 outerPaddedMinCornerPosition = ImVec2(
+        minCornerPosition.x - dropDownMenu.outerPadding.x,
+        minCornerPosition.y - dropDownMenu.outerPadding.y
     );
-    ImVec2 OuterPaddedMaxCornerPosition = ImVec2(
-        MaxCornerPosition.x + DropDownMenu.OuterPadding.X,
-        MaxCornerPosition.y + DropDownMenu.OuterPadding.Y
+    ImVec2 outerPaddedMaxCornerPosition = ImVec2(
+        maxCornerPosition.x + dropDownMenu.outerPadding.x,
+        maxCornerPosition.y + dropDownMenu.outerPadding.y
     );
 
-    ImDrawList* ForegroundDrawList = ImGui::GetForegroundDrawList();
+    ImDrawList* foregroundDrawList = ImGui::GetForegroundDrawList();
 
-    ImU32 BgColor = IM_COL32(
-        DropDownMenu.BgColor.R,
-        DropDownMenu.BgColor.G,
-        DropDownMenu.BgColor.B,
-        DropDownMenu.BgColor.A
+    ImU32 bgColor = IM_COL32(
+        dropDownMenu.bgColor.r,
+        dropDownMenu.bgColor.g,
+        dropDownMenu.bgColor.b,
+        dropDownMenu.bgColor.a
     );
 
     // Draws drop down menu outer rect (outer padding rect)
-    ForegroundDrawList->AddRectFilled(
-        OuterPaddedMinCornerPosition,
-        OuterPaddedMaxCornerPosition,
-        BgColor,
-        DropDownMenu.CornerRounding,
+    foregroundDrawList->AddRectFilled(
+        outerPaddedMinCornerPosition,
+        outerPaddedMaxCornerPosition,
+        bgColor,
+        dropDownMenu.cornerRounding,
         ImDrawFlags_RoundCornersAll
     );
 
     // Draws drop down menu inner rect (content rect)
-    ForegroundDrawList->AddRectFilled(
-        MinCornerPosition,
-        MaxCornerPosition,
-        BgColor,
-        DropDownMenu.CornerRounding,
+    foregroundDrawList->AddRectFilled(
+        minCornerPosition,
+        maxCornerPosition,
+        bgColor,
+        dropDownMenu.cornerRounding,
         ImDrawFlags_RoundCornersAll
     );
 
     // Draws drop down menu border
-    ImU32 BorderColor = IM_COL32(
-        DropDownMenu.Border.Color.R,
-        DropDownMenu.Border.Color.G,
-        DropDownMenu.Border.Color.B,
-        DropDownMenu.Border.Color.A
+    ImU32 borderColor = IM_COL32(
+        dropDownMenu.border.color.r,
+        dropDownMenu.border.color.g,
+        dropDownMenu.border.color.b,
+        dropDownMenu.border.color.a
     );
-    ForegroundDrawList->AddRect(
-        OuterPaddedMinCornerPosition,
-        OuterPaddedMaxCornerPosition,
-        BorderColor,
-        DropDownMenu.CornerRounding,
+    foregroundDrawList->AddRect(
+        outerPaddedMinCornerPosition,
+        outerPaddedMaxCornerPosition,
+        borderColor,
+        dropDownMenu.cornerRounding,
         ImDrawFlags_RoundCornersAll,
-        DropDownMenu.Border.Height
+        dropDownMenu.border.height
     );
 
     // Draws drop down menu items
     // NOTE: Bounding box is not applied on the border
-    ImVec2 TextClickableBoundingBoxMinCornerPosition = ImVec2(
-        OuterPaddedMinCornerPosition.x + DropDownMenu.Border.Height,
-        MinCornerPosition.y
+    ImVec2 textClickableBoundingBoxMinCornerPosition = ImVec2(
+        outerPaddedMinCornerPosition.x + dropDownMenu.border.height,
+        minCornerPosition.y
     );
-    for (std::shared_ptr<DropDownMenuItem> DropDownMenuItem : DropDownMenu.Items)
+    for (std::shared_ptr<DropDownMenuItem> dropDownMenuItem : dropDownMenu.items)
     {
         // Draws centered text
-        float TextPositionOffsetY = DropDownMenu.LineHeight * 0.5f;
-        ImVec2 CenteredTextPosition = ImVec2(MinCornerPosition.x, TextClickableBoundingBoxMinCornerPosition.y + TextPositionOffsetY);
-        ImU32 TextColor = IM_COL32(
-            DropDownMenuItem->TextColor.R,
-            DropDownMenuItem->TextColor.G,
-            DropDownMenuItem->TextColor.B,
-            DropDownMenuItem->TextColor.A
+        float textPositionOffsetY = dropDownMenu.lineHeight * 0.5f;
+        ImVec2 centeredTextPosition = ImVec2(minCornerPosition.x, textClickableBoundingBoxMinCornerPosition.y + textPositionOffsetY);
+        ImU32 textColor = IM_COL32(
+            dropDownMenuItem->textColor.r,
+            dropDownMenuItem->textColor.g,
+            dropDownMenuItem->textColor.b,
+            dropDownMenuItem->textColor.a
         );
-        ForegroundDrawList->AddText(
-            CenteredTextPosition,
-            TextColor,
-            DropDownMenuItem->Text.c_str()
+        foregroundDrawList->AddText(
+            centeredTextPosition,
+            textColor,
+            dropDownMenuItem->text.c_str()
         );
 
         // Draws rect bounding box for click and hover events
-        ImVec2 TextSize = ImGui::CalcTextSize(DropDownMenuItem->Text.c_str());
-        float TextClickableBoundingBoxHeight = TextSize.y + DropDownMenu.LineHeight;
+        ImVec2 textSize = ImGui::CalcTextSize(dropDownMenuItem->text.c_str());
+        float textClickableBoundingBoxHeight = textSize.y + dropDownMenu.lineHeight;
         // NOTE: Bounding box is not applied on the border
-        ImVec2 TextClickableBoundingBoxMaxCornerPosition = ImVec2(
-            OuterPaddedMaxCornerPosition.x - DropDownMenu.Border.Height,
-            TextClickableBoundingBoxMinCornerPosition.y + TextClickableBoundingBoxHeight
+        ImVec2 textClickableBoundingBoxMaxCornerPosition = ImVec2(
+            outerPaddedMaxCornerPosition.x - dropDownMenu.border.height,
+            textClickableBoundingBoxMinCornerPosition.y + textClickableBoundingBoxHeight
         );
-        ImRect TextClickableBoundingBox(TextClickableBoundingBoxMinCornerPosition, TextClickableBoundingBoxMaxCornerPosition);
+        ImRect textClickableBoundingBox(textClickableBoundingBoxMinCornerPosition, textClickableBoundingBoxMaxCornerPosition);
 
-        const bool IS_HOVERED = TextClickableBoundingBox.Contains(ImGui::GetIO().MousePos);
+        const bool isHovered = textClickableBoundingBox.Contains(ImGui::GetIO().MousePos);
         // NOTE: 0 for left mouse button
-        const bool IS_CLICKED = IS_HOVERED && ImGui::IsMouseClicked(0);
+        const bool isClicked = isHovered && ImGui::IsMouseClicked(0);
 
-        if (IS_CLICKED && !!DropDownMenuItem->OnClick) DropDownMenuItem->OnClick();
-        if (IS_HOVERED)
+        if (isClicked && !!dropDownMenuItem->OnClick) dropDownMenuItem->OnClick();
+        if (isHovered)
         {
-            if (!DropDownMenuItem->BgColorHovered.IsEmpty())
+            if (!dropDownMenuItem->bgColorHovered.IsEmpty())
             {
-                ImU32 BgColorHovered = IM_COL32(
-                    DropDownMenuItem->BgColorHovered.R,
-                    DropDownMenuItem->BgColorHovered.G,
-                    DropDownMenuItem->BgColorHovered.B,
-                    DropDownMenuItem->BgColorHovered.A
+                ImU32 bgColorHovered = IM_COL32(
+                    dropDownMenuItem->bgColorHovered.r,
+                    dropDownMenuItem->bgColorHovered.g,
+                    dropDownMenuItem->bgColorHovered.b,
+                    dropDownMenuItem->bgColorHovered.a
                 );
-                ForegroundDrawList->AddRectFilled(
-                    TextClickableBoundingBoxMinCornerPosition,
-                    TextClickableBoundingBoxMaxCornerPosition,
-                    BgColorHovered,
+                foregroundDrawList->AddRectFilled(
+                    textClickableBoundingBoxMinCornerPosition,
+                    textClickableBoundingBoxMaxCornerPosition,
+                    bgColorHovered,
                     0.0f
                 );
 
-                ForegroundDrawList->AddText(
-                    CenteredTextPosition,
-                    TextColor,
-                    DropDownMenuItem->Text.c_str()
+                foregroundDrawList->AddText(
+                    centeredTextPosition,
+                    textColor,
+                    dropDownMenuItem->text.c_str()
                 );
             }
 
-            if (!DropDownMenuItem->TextColorHovered.IsEmpty())
+            if (!dropDownMenuItem->textColorHovered.IsEmpty())
             {
-                ImU32 TextColorHovered = IM_COL32(
-                    DropDownMenuItem->TextColorHovered.R,
-                    DropDownMenuItem->TextColorHovered.G,
-                    DropDownMenuItem->TextColorHovered.B,
-                    DropDownMenuItem->TextColorHovered.A
+                ImU32 textColorHovered = IM_COL32(
+                    dropDownMenuItem->textColorHovered.r,
+                    dropDownMenuItem->textColorHovered.g,
+                    dropDownMenuItem->textColorHovered.b,
+                    dropDownMenuItem->textColorHovered.a
                 );
-                ForegroundDrawList->AddText(
-                    CenteredTextPosition,
-                    TextColorHovered,
-                    DropDownMenuItem->Text.c_str()
+                foregroundDrawList->AddText(
+                    centeredTextPosition,
+                    textColorHovered,
+                    dropDownMenuItem->text.c_str()
                 );
             }
 
-            if (!!DropDownMenuItem->OnHover) DropDownMenuItem->OnHover();
+            if (!!dropDownMenuItem->OnHover) dropDownMenuItem->OnHover();
         }
 
-        // Sets next drop down menu item Y coordinate
-        TextClickableBoundingBoxMinCornerPosition.y += TextClickableBoundingBoxHeight;
+        // Sets next drop down menu item y coordinate
+        textClickableBoundingBoxMinCornerPosition.y += textClickableBoundingBoxHeight;
     }
 }
 
-void Gui::DrawImage(const Image& Image) const
+void Gui::DrawImage(const Image& image) const
 {
-    ImagePositioned ImagePositioned = {};
-    ImagePositioned.Image = Image;
-    ImagePositioned.Position = ToVector2(ImGui::GetCursorScreenPos());
-    DrawImagePositioned(ImagePositioned);
+    ImagePositioned imagePositioned = {};
+    imagePositioned.image = image;
+    imagePositioned.position = ToVector2(ImGui::GetCursorScreenPos());
+    DrawImagePositioned(imagePositioned);
 }
 
-void Gui::DrawImageButton(ImageButton& ImageButton) const
+void Gui::DrawImageButton(ImageButton& imageButton) const
 {
-    Image ImageButtonImage = ImageButton.Image;
+    Image imageButtonImage = imageButton.image;
 
-    ImGui::InvisibleButton(ImageButton.ID.c_str(), ToImVec2(ImageButton.Image.Size));
-    if (ImGui::IsItemClicked()) ImageButton.OnClick();
+    ImGui::InvisibleButton(imageButton.id.c_str(), ToImVec2(imageButton.image.size));
+    if (ImGui::IsItemClicked()) imageButton.OnClick();
     if (ImGui::IsItemHovered())
     {
         ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-        if (!ImageButton.TintColorHovered.IsEmpty()) ImageButtonImage.TintColor = ImageButton.TintColorHovered;
+        if (!imageButton.tintColorHovered.IsEmpty()) imageButtonImage.tintColor = imageButton.tintColorHovered;
     }
 
-    ImagePositioned ImagePositioned = {};
-    ImagePositioned.Image = ImageButtonImage;
-    // NOTE: Position image to bounding box min position
-    ImagePositioned.Position = ToVector2(ImGui::GetItemRectMin());
-    DrawImagePositioned(ImagePositioned);
+    ImagePositioned imagePositioned = {};
+    imagePositioned.image = imageButtonImage;
+    // NOTE: position image to bounding box min position
+    imagePositioned.position = ToVector2(ImGui::GetItemRectMin());
+    DrawImagePositioned(imagePositioned);
 }
 
-void Gui::DrawModal(Modal& Modal) const
+void Gui::DrawModal(Modal& modal) const
 {
-    ImGuiWindowFlags Flags = ImGuiWindowFlags_None;
-    if (!Modal.CanSaveSettigs) Flags |= ImGuiWindowFlags_NoSavedSettings;
-    if (!Modal.IsTitlebarVisible) Flags |= ImGuiWindowFlags_NoTitleBar;
-    if (!Modal.IsScrollbarVisible) Flags |= ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
-    if (!Modal.IsResizable) Flags |= ImGuiWindowFlags_NoResize;
-    if (!Modal.IsCollapsible) Flags |= ImGuiWindowFlags_NoCollapse;
-    if (!Modal.IsMovable) Flags |= ImGuiWindowFlags_NoMove;
+    ImGuiWindowFlags flags = ImGuiWindowFlags_None;
+    if (!modal.canSaveSettings) flags |= ImGuiWindowFlags_NoSavedSettings;
+    if (!modal.isTitlebarVisible) flags |= ImGuiWindowFlags_NoTitleBar;
+    if (!modal.isScrollbarVisible) flags |= ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
+    if (!modal.isResizable) flags |= ImGuiWindowFlags_NoResize;
+    if (!modal.isCollapsible) flags |= ImGuiWindowFlags_NoCollapse;
+    if (!modal.isMovable) flags |= ImGuiWindowFlags_NoMove;
 
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ToImVec2(Modal.Padding));
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, Modal.CornerRounding);
-    ImGui::PushStyleColor(ImGuiCol_WindowBg, ToImVec4(Modal.BgColor.ToVector4()));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ToImVec2(modal.padding));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, modal.cornerRounding);
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ToImVec4(modal.bgColor.ToVector4()));
 
-    ImGui::SetNextWindowSize(ToImVec2(Modal.Size));
-    if (ImGui::BeginPopupModal(Modal.ID.c_str(), nullptr, Flags))
+    ImGui::SetNextWindowSize(ToImVec2(modal.size));
+    if (ImGui::BeginPopupModal(modal.id.c_str(), nullptr, flags))
     {
-        DrawContainer(Modal.HeaderContainer);
-        DrawContainer(Modal.BodyContainer);
+        DrawContainer(modal.headerContainer);
+        DrawContainer(modal.bodyContainer);
 
         ImGui::EndPopup();
     }
@@ -354,121 +354,121 @@ void Gui::DrawModal(Modal& Modal) const
     ImGui::PopStyleColor(1);
 }
 
-void Gui::DrawNode(const Node& Node) const
+void Gui::DrawNode(const Node& node) const
 {
-    if (ImGui::TreeNode(Node.Name.c_str()))
+    if (ImGui::TreeNode(node.name.c_str()))
     {
-        Node.DrawContent();
+        node.DrawContent();
         ImGui::TreePop();
     }
 }
 
-void Gui::DrawText(Text& Text) const
+void Gui::DrawText(Text& text) const
 {
-    ImGui::PushStyleColor(ImGuiCol_Text, ToImVec4(Text.Color.ToVector4()));
-    if (!!Text.Height)
+    ImGui::PushStyleColor(ImGuiCol_Text, ToImVec4(text.color.ToVector4()));
+    if (!!text.height)
     {
-        ImGuiIO& Io = ImGui::GetIO();
-        ImFont* Font = Io.Fonts->AddFontFromFileTTF("../../assets/Audiowide-Regular.ttf", Text.Height);
-        ImGui::PushFont(Font);
+        ImGuiIO& io = ImGui::GetIO();
+        ImFont* font = io.Fonts->AddFontFromFileTTF("../../assets/Audiowide-Regular.ttf", text.height);
+        ImGui::PushFont(font);
     }
 
-    ImGui::TextUnformatted(Text.Value.c_str());
+    ImGui::TextUnformatted(text.value.c_str());
 
     ImGui::PopStyleColor(1);
-    if (!!Text.Height) ImGui::PopFont();
+    if (!!text.height) ImGui::PopFont();
 }
 
-void Gui::DrawTextWrapped(Text& Text) const
+void Gui::DrawTextWrapped(Text& text) const
 {
-    ImGui::PushStyleColor(ImGuiCol_Text, ToImVec4(Text.Color.ToVector4()));
-    if (!!Text.Height)
+    ImGui::PushStyleColor(ImGuiCol_Text, ToImVec4(text.color.ToVector4()));
+    if (!!text.height)
     {
-        ImGuiIO& Io = ImGui::GetIO();
-        ImFont* Font = Io.Fonts->AddFontFromFileTTF("../../assets/Audiowide-Regular.ttf", Text.Height);
-        ImGui::PushFont(Font);
+        ImGuiIO& io = ImGui::GetIO();
+        ImFont* font = io.Fonts->AddFontFromFileTTF("../../assets/Audiowide-Regular.ttf", text.height);
+        ImGui::PushFont(font);
     }
 
-    ImGui::TextWrapped("%s", Text.Value.c_str());
+    ImGui::TextWrapped("%s", text.value.c_str());
 
     ImGui::PopStyleColor(1);
-    if (!!Text.Height) ImGui::PopFont();
+    if (!!text.height) ImGui::PopFont();
 }
 
-void Gui::DrawTextInputMultiline(std::string& Value, TextInputMultiline& TextInputMultiline) const
+void Gui::DrawTextInputMultiline(std::string& value, TextInputMultiline& textInputMultiline) const
 {
-    ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, TextInputMultiline.TextInput.Border.Height);
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ToImVec2(TextInputMultiline.TextInput.Padding));
-    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, TextInputMultiline.TextInput.CornerRounding);
-    ImGui::PushStyleColor(ImGuiCol_FrameBg, ToImVec4(TextInputMultiline.TextInput.BgColor.ToVector4()));
-    ImGui::PushStyleColor(ImGuiCol_Text, ToImVec4(TextInputMultiline.TextInput.TextColor.ToVector4()));
-    ImGui::PushStyleColor(ImGuiCol_Border, ToImVec4(TextInputMultiline.TextInput.Border.Color.ToVector4()));
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, textInputMultiline.textInput.border.height);
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ToImVec2(textInputMultiline.textInput.padding));
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, textInputMultiline.textInput.cornerRounding);
+    ImGui::PushStyleColor(ImGuiCol_FrameBg, ToImVec4(textInputMultiline.textInput.bgColor.ToVector4()));
+    ImGui::PushStyleColor(ImGuiCol_Text, ToImVec4(textInputMultiline.textInput.textColor.ToVector4()));
+    ImGui::PushStyleColor(ImGuiCol_Border, ToImVec4(textInputMultiline.textInput.border.color.ToVector4()));
 
-    // NOTE: ## prefix tells ImGui to use the string for internal ID generation but not to display it as a visible label
-    const std::string& ID = "##" + TextInputMultiline.TextInput.ID;
-    ImGui::InputTextMultiline(ID.c_str(), &Value, ToImVec2(TextInputMultiline.Size));
-    if (ImGui::IsItemClicked() && !!TextInputMultiline.TextInput.OnClick) TextInputMultiline.TextInput.OnClick();
+    // NOTE: ## prefix tells ImGui to use the string for internal id generation but not to display it as a visible label
+    const std::string& id = "##" + textInputMultiline.textInput.id;
+    ImGui::InputTextMultiline(id.c_str(), &value, ToImVec2(textInputMultiline.size));
+    if (ImGui::IsItemClicked() && !!textInputMultiline.textInput.OnClick) textInputMultiline.textInput.OnClick();
 
     // Draws placeholder on top of Text input multiline
-    if (!TextInputMultiline.TextInput.Placeholder.Text.empty() && Value.size() == 0) DrawPlaceholder(TextInputMultiline.TextInput.Placeholder);
+    if (!textInputMultiline.textInput.placeholder.text.empty() && value.size() == 0) DrawPlaceholder(textInputMultiline.textInput.placeholder);
 
     ImGui::PopStyleVar(3);
     ImGui::PopStyleColor(3);
 }
 
-void Gui::DrawTextInputSingleline(std::string& Value, TextInputSingleline& TextInputSingleline) const
+void Gui::DrawTextInputSingleline(std::string& value, TextInputSingleline& textInputSingleline) const
 {
-    ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, TextInputSingleline.TextInput.Border.Height);
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ToImVec2(TextInputSingleline.TextInput.Padding));
-    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, TextInputSingleline.TextInput.CornerRounding);
-    ImGui::PushStyleColor(ImGuiCol_FrameBg, ToImVec4(TextInputSingleline.TextInput.BgColor.ToVector4()));
-    ImGui::PushStyleColor(ImGuiCol_Text, ToImVec4(TextInputSingleline.TextInput.TextColor.ToVector4()));
-    ImGui::PushStyleColor(ImGuiCol_Border, ToImVec4(TextInputSingleline.TextInput.Border.Color.ToVector4()));
-    ImGui::PushItemWidth(TextInputSingleline.Width);
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, textInputSingleline.textInput.border.height);
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ToImVec2(textInputSingleline.textInput.padding));
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, textInputSingleline.textInput.cornerRounding);
+    ImGui::PushStyleColor(ImGuiCol_FrameBg, ToImVec4(textInputSingleline.textInput.bgColor.ToVector4()));
+    ImGui::PushStyleColor(ImGuiCol_Text, ToImVec4(textInputSingleline.textInput.textColor.ToVector4()));
+    ImGui::PushStyleColor(ImGuiCol_Border, ToImVec4(textInputSingleline.textInput.border.color.ToVector4()));
+    ImGui::PushItemWidth(textInputSingleline.width);
 
-    // NOTE: ## prefix tells ImGui to use the string for internal ID generation but not to display it as a visible label
-    const std::string& ID = "##" + TextInputSingleline.TextInput.ID;
-    ImGui::InputText(ID.c_str(), &Value);
-    if (ImGui::IsItemClicked() && !!TextInputSingleline.TextInput.OnClick) TextInputSingleline.TextInput.OnClick();
+    // NOTE: ## prefix tells ImGui to use the string for internal id generation but not to display it as a visible label
+    const std::string& id = "##" + textInputSingleline.textInput.id;
+    ImGui::InputText(id.c_str(), &value);
+    if (ImGui::IsItemClicked() && !!textInputSingleline.textInput.OnClick) textInputSingleline.textInput.OnClick();
 
     // Draws placeholder on top of Text input singlelie
-    if (!TextInputSingleline.TextInput.Placeholder.Text.empty() && Value.size() == 0) DrawPlaceholder(TextInputSingleline.TextInput.Placeholder);
+    if (!textInputSingleline.textInput.placeholder.text.empty() && value.size() == 0) DrawPlaceholder(textInputSingleline.textInput.placeholder);
 
     ImGui::PopStyleVar(3);
     ImGui::PopStyleColor(3);
     ImGui::PopItemWidth();
 }
 
-void Gui::DrawTreeNode(const TreeNode& RootTreeNode) const
+void Gui::DrawTreeNode(const TreeNode& rootTreeNode) const
 {
-    if (ImGui::TreeNode(RootTreeNode.Name.c_str()))
+    if (ImGui::TreeNode(rootTreeNode.name.c_str()))
     {
-        for (const TreeNode& Child : RootTreeNode.Children)
+        for (const TreeNode& child : rootTreeNode.children)
         {
-            DrawTreeNode(Child);
+            DrawTreeNode(child);
         }
         ImGui::TreePop();
     }
 }
 
-void Gui::DrawWindow(Window& Window) const
+void Gui::DrawWindow(Window& window) const
 {
-    bool IsOpen = true;
+    bool isOpen = true;
 
-    ImGuiWindowFlags Flags = ImGuiWindowFlags_None;
-    if (!Window.CanSaveSettigs) Flags |= ImGuiWindowFlags_NoSavedSettings;
-    if (!Window.IsTitlebarVisible) Flags |= ImGuiWindowFlags_NoTitleBar;
-    if (!Window.IsScrollbarVisible) Flags |= ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
-    if (!Window.IsResizable) Flags |= ImGuiWindowFlags_NoResize;
-    if (!Window.IsCollapsible) Flags |= ImGuiWindowFlags_NoCollapse;
-    if (!Window.IsMovable) Flags |= ImGuiWindowFlags_NoMove;
+    ImGuiWindowFlags flags = ImGuiWindowFlags_None;
+    if (!window.canSaveSettings) flags |= ImGuiWindowFlags_NoSavedSettings;
+    if (!window.isTitlebarVisible) flags |= ImGuiWindowFlags_NoTitleBar;
+    if (!window.isScrollbarVisible) flags |= ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
+    if (!window.isResizable) flags |= ImGuiWindowFlags_NoResize;
+    if (!window.isCollapsible) flags |= ImGuiWindowFlags_NoCollapse;
+    if (!window.isMovable) flags |= ImGuiWindowFlags_NoMove;
 
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ToImVec2(Window.Padding));
-    ImGui::PushStyleColor(ImGuiCol_WindowBg, ToImVec4(Window.BgColor.ToVector4()));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ToImVec2(window.padding));
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ToImVec4(window.bgColor.ToVector4()));
 
-    ImGui::SetNextWindowPos(ToImVec2(Window.Position));
-    ImGui::SetNextWindowSize(ToImVec2(Window.Size));
-    if (ImGui::Begin(Window.Name.c_str(), &IsOpen, Flags)) Window.DrawContent();
+    ImGui::SetNextWindowPos(ToImVec2(window.position));
+    ImGui::SetNextWindowSize(ToImVec2(window.size));
+    if (ImGui::Begin(window.name.c_str(), &isOpen, flags)) window.DrawContent();
     ImGui::End();
 
     ImGui::PopStyleVar(1);
@@ -481,84 +481,84 @@ void Gui::DrawWindow(Window& Window) const
  *  - Those elements are drawn on the foreground without being clipped to any parent elements
  *  - They will always be drawn on top of any other elements
  */
-void Gui::DrawRawText(const RawText& RawText) const
+void Gui::DrawRawText(const RawText& rawText) const
 {
-    ImDrawList* ForegroundDrawList = ImGui::GetForegroundDrawList();
+    ImDrawList* foregroundDrawList = ImGui::GetForegroundDrawList();
 
-    ImU32 Color = IM_COL32(
-        RawText.Color.R,
-        RawText.Color.G,
-        RawText.Color.B,
-        RawText.Color.A
+    ImU32 color = IM_COL32(
+        rawText.color.r,
+        rawText.color.g,
+        rawText.color.b,
+        rawText.color.a
     );
 
-    ForegroundDrawList->AddText(
-        ToImVec2(RawText.Position),
-        Color,
-        RawText.Value.c_str()
+    foregroundDrawList->AddText(
+        ToImVec2(rawText.position),
+        color,
+        rawText.value.c_str()
     );
 }
 
-void Gui::DrawRawWindow(const RawWindow& RawWindow) const
+void Gui::DrawRawWindow(const RawWindow& rawWindow) const
 {
-    ImDrawList* ForegroundDrawList = ImGui::GetForegroundDrawList();
+    ImDrawList* foregroundDrawList = ImGui::GetForegroundDrawList();
 
-    ImU32 BgColor = IM_COL32(
-        RawWindow.BgColor.R,
-        RawWindow.BgColor.G,
-        RawWindow.BgColor.B,
-        RawWindow.BgColor.A
+    ImU32 bgColor = IM_COL32(
+        rawWindow.bgColor.r,
+        rawWindow.bgColor.g,
+        rawWindow.bgColor.b,
+        rawWindow.bgColor.a
     );
 
-    ForegroundDrawList->AddRectFilled(
-        ToImVec2(RawWindow.MinCornerPosition),
-        ToImVec2(RawWindow.MaxCornerPosition),
-        BgColor,
-        RawWindow.CornerRounding,
+    foregroundDrawList->AddRectFilled(
+        ToImVec2(rawWindow.minCornerPosition),
+        ToImVec2(rawWindow.maxCornerPosition),
+        bgColor,
+        rawWindow.cornerRounding,
         ImDrawFlags_RoundCornersAll
     );
 
-    RawWindow.DrawContent();
+    rawWindow.DrawContent();
 }
 
 // Modal helpers
 bool Gui::AreAnyModalsOpen() const
 {
-    return !!OpenModalIds.size();
+    return !!m_openModalIds.size();
 }
 
-void Gui::OpenModal(const std::string& ID)
+void Gui::OpenModal(const std::string& id)
 {
-    ImGui::OpenPopup(ID.c_str());
-    OpenModalIds.insert(std::pair<std::string, bool>(ID, true));
+    ImGui::OpenPopup(id.c_str());
+    m_openModalIds.insert(std::pair<std::string, bool>(id, true));
 }
 
-void Gui::CloseModal(const std::string& ID)
+void Gui::CloseModal(const std::string& id)
 {
     ImGui::CloseCurrentPopup();
-    OpenModalIds.erase(ID);
+    m_openModalIds.erase(id);
 }
 
-// Position helpers
-void Gui::AlignCenter(Vector2 ElementSize) const
+// position helpers
+void Gui::AlignCenter(Vector2 elementSize) const
 {
-    const Vector2 AVAILABLE_SPACE = GetAvailableSpace();
-    const Vector2 OFFSET = (AVAILABLE_SPACE - ElementSize) * 0.5f;
-    SetPosition(GetPosition() + OFFSET);
+    const Vector2 availableSpace = GetAvailableSpace();
+    const Vector2 offset = (availableSpace - elementSize) * 0.5f;
+    SetPosition(GetPosition() + offset);
 }
 
-void Gui::AlignCenterX(float ElementWidth) const
+void Gui::AlignCenterX(float elementWidth) const
 {
-    const Vector2 AVAILABLE_SPACE = GetAvailableSpace();
-    const float OFFSET_X = (AVAILABLE_SPACE.X - ElementWidth) * 0.5f;
-    SetPositionX(GetPositionX() + OFFSET_X);
+    const Vector2 availableSpace = GetAvailableSpace();
+    const float offsetX = (availableSpace.x - elementWidth) * 0.5f;
+    SetPositionX(GetPositionX() + offsetX);
 }
 
-void Gui::AlignCenterY(float ElementHeigth) const
+void Gui::AlignCenterY(float elementHeigth) const
 {
-    const Vector2 AVAILABLE_SPACE = GetAvailableSpace();
-    const float OFFSET_Y = (AVAILABLE_SPACE.Y - ElementHeigth) * 0.5f;
-    SetPositionY(GetPositionY() + OFFSET_Y);
+    const Vector2 availableSpace = GetAvailableSpace();
+    const float offsetY = (availableSpace.y - elementHeigth) * 0.5f;
+    SetPositionY(GetPositionY() + offsetY);
 }
 
 void Gui::DisplayInline() const
@@ -566,14 +566,14 @@ void Gui::DisplayInline() const
     ImGui::SameLine();
 }
 
-void Gui::ScrollToY(float Y) const
+void Gui::ScrollToY(float y) const
 {
-    ImGui::SetScrollHereY(Y);
+    ImGui::SetScrollHereY(y);
 }
 
-void Gui::ScrollToX(float X) const
+void Gui::ScrollToX(float x) const
 {
-    ImGui::SetScrollHereX(X);
+    ImGui::SetScrollHereX(x);
 }
 
 float Gui::GetScrollPositionY() const
@@ -611,19 +611,19 @@ float Gui::GetPositionY() const
     return ImGui::GetCursorPosY();
 }
 
-void Gui::SetPosition(Vector2 Position) const
+void Gui::SetPosition(Vector2 position) const
 {
-    ImGui::SetCursorPos(ToImVec2(Position));
+    ImGui::SetCursorPos(ToImVec2(position));
 }
 
-void Gui::SetPositionX(float X) const
+void Gui::SetPositionX(float x) const
 {
-    ImGui::SetCursorPosX(X);
+    ImGui::SetCursorPosX(x);
 }
 
-void Gui::SetPositionY(float Y) const
+void Gui::SetPositionY(float y) const
 {
-    ImGui::SetCursorPosY(Y);
+    ImGui::SetCursorPosY(y);
 }
 
 // Dimension helpers
@@ -642,25 +642,25 @@ float Gui::GetTextInputSinglelineHeight() const
     return ImGui::GetFontSize() + ImGui::GetFrameHeight();
 }
 
-const Vector2 Gui::GetTextSize(const std::string& Text) const
+const Vector2 Gui::GetTextSize(const std::string& text) const
 {
-    return ToVector2(ImGui::CalcTextSize(Text.c_str()));
+    return ToVector2(ImGui::CalcTextSize(text.c_str()));
 }
 
-const Vector2 Gui::GetTextSize(const Text& Text) const
+const Vector2 Gui::GetTextSize(const Text& text) const
 {
-    if (!!Text.Height)
+    if (!!text.height)
     {
-        ImGuiIO& Io = ImGui::GetIO();
-        ImFont* Font = Io.Fonts->AddFontFromFileTTF("../../assets/Audiowide-Regular.ttf", Text.Height);
-        ImGui::PushFont(Font);
+        ImGuiIO& io = ImGui::GetIO();
+        ImFont* font = io.Fonts->AddFontFromFileTTF("../../assets/Audiowide-Regular.ttf", text.height);
+        ImGui::PushFont(font);
     }
 
-    ImVec2 TextSize = ImGui::CalcTextSize(Text.Value.c_str());
+    ImVec2 textSize = ImGui::CalcTextSize(text.value.c_str());
 
-    if (!!Text.Height) ImGui::PopFont();
+    if (!!text.height) ImGui::PopFont();
 
-    return ToVector2(TextSize);
+    return ToVector2(textSize);
 }
 
 const Vector2 Gui::GetViewportSize() const
@@ -677,71 +677,71 @@ float Gui::GetDeltaTime() const
 // ***********
 // * PRIVATE *
 // ***********
-void Gui::DrawImagePositioned(const ImagePositioned& ImagePositioned) const
+void Gui::DrawImagePositioned(const ImagePositioned& imagePositioned) const
 {
     // NOTE: Uses window drawlist instead of forground drawlist to avoid image being visible when scrolling out of sight
-    ImDrawList* WindowDrawList = ImGui::GetWindowDrawList();
+    ImDrawList* windowDrawList = ImGui::GetWindowDrawList();
 
-    ImVec2 Size = ImVec2(ImagePositioned.Position.X + ImagePositioned.Image.Size.X, ImagePositioned.Position.Y + ImagePositioned.Image.Size.Y);
-    ImVec2 UvPositionStart = ImVec2(0.0f, 0.0f);
-    ImVec2 UvPositionEnd = ImVec2(1.0f, 1.0f);
-    ImU32 TintColor = IM_COL32(
-        ImagePositioned.Image.TintColor.R,
-        ImagePositioned.Image.TintColor.G,
-        ImagePositioned.Image.TintColor.B,
-        ImagePositioned.Image.TintColor.A
+    ImVec2 size = ImVec2(imagePositioned.position.x + imagePositioned.image.size.x, imagePositioned.position.y + imagePositioned.image.size.y);
+    ImVec2 uvPositionStart = ImVec2(0.0f, 0.0f);
+    ImVec2 uvPositionEnd = ImVec2(1.0f, 1.0f);
+    ImU32 tintColor = IM_COL32(
+        imagePositioned.image.tintColor.r,
+        imagePositioned.image.tintColor.g,
+        imagePositioned.image.tintColor.b,
+        imagePositioned.image.tintColor.a
     );
 
-    WindowDrawList->AddImageRounded(
-        ImagePositioned.Image.TextureID,
-        ToImVec2(ImagePositioned.Position),
-        Size,
-        UvPositionStart,
-        UvPositionEnd,
-        TintColor,
-        ImagePositioned.Image.CornerRounding,
+    windowDrawList->AddImageRounded(
+        imagePositioned.image.textureId,
+        ToImVec2(imagePositioned.position),
+        size,
+        uvPositionStart,
+        uvPositionEnd,
+        tintColor,
+        imagePositioned.image.cornerRounding,
         ImDrawFlags_RoundCornersAll
     );
 }
 
-void Gui::DrawPlaceholder(const Placeholder& Placeholder) const
+void Gui::DrawPlaceholder(const Placeholder& placeholder) const
 {
     ImGuiStyle& style = ImGui::GetStyle();
-    ImVec2 FramePadding = style.FramePadding;
+    ImVec2 framePadding = style.FramePadding;
 
-    ImDrawList* ForegroundDrawList = ImGui::GetForegroundDrawList();
-    ImVec2 BoundingBoxMinPosition = ImGui::GetItemRectMin();
+    ImDrawList* foregroundDrawList = ImGui::GetForegroundDrawList();
+    ImVec2 boundingBoxMinPosition = ImGui::GetItemRectMin();
 
-    ImVec2 PlaceholderPosition(
-        BoundingBoxMinPosition.x + FramePadding.x,
-        BoundingBoxMinPosition.y + FramePadding.y
+    ImVec2 placeholderPosition(
+        boundingBoxMinPosition.x + framePadding.x,
+        boundingBoxMinPosition.y + framePadding.y
     );
-    ImU32 PlaceholderColor = IM_COL32(
-        Placeholder.Color.R,
-        Placeholder.Color.G,
-        Placeholder.Color.B,
-        Placeholder.Color.A
+    ImU32 placeholderColor = IM_COL32(
+        placeholder.color.r,
+        placeholder.color.g,
+        placeholder.color.b,
+        placeholder.color.a
     );
 
-    ForegroundDrawList->AddText(PlaceholderPosition, PlaceholderColor, Placeholder.Text.c_str());
+    foregroundDrawList->AddText(placeholderPosition, placeholderColor, placeholder.text.c_str());
 }
 
-const Vector2 Gui::ToVector2(const ImVec2& ImguiVec2) const
+const Vector2 Gui::ToVector2(const ImVec2& imguiVec2) const
 {
-    return Vector2(ImguiVec2.x, ImguiVec2.y);
+    return Vector2(imguiVec2.x, imguiVec2.y);
 }
 
-const Vector4 Gui::ToVector4(const ImVec4& ImguiVec4) const
+const Vector4 Gui::ToVector4(const ImVec4& imguiVec4) const
 {
-    return Vector4(ImguiVec4.x, ImguiVec4.y, ImguiVec4.z, ImguiVec4.w);
+    return Vector4(imguiVec4.x, imguiVec4.y, imguiVec4.z, imguiVec4.w);
 }
 
-const ImVec2 Gui::ToImVec2(const Vector2& Vector2) const
+const ImVec2 Gui::ToImVec2(const Vector2& vector2) const
 {
-    return ImVec2(Vector2.X, Vector2.Y);
+    return ImVec2(vector2.x, vector2.y);
 }
 
-const ImVec4 Gui::ToImVec4(const Vector4& Vector4) const
+const ImVec4 Gui::ToImVec4(const Vector4& vector4) const
 {
-    return ImVec4(Vector4.X, Vector4.Y, Vector4.Z, Vector4.W);
+    return ImVec4(vector4.x, vector4.y, vector4.z, vector4.w);
 }

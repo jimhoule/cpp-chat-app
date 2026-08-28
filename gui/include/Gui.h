@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Color.h"
+#include "color/Rgba.h"
 #include "Vector.h"
 // NOTE: Not inluding header files to avoid conflict with GLAD when imported into client.cpp
 #define GLFW_INCLUDE_NONE
@@ -11,288 +11,288 @@
 #include <memory>
 #include <string>
 
-// Elements
-struct Border
-{
-    Rgba Color;
-    float Height;
-};
-
-struct Button
-{
-    std::string Label;
-    Border Border = { Rgba(255, 255, 255, 255), 0.0f };
-    Vector2 Size;
-    Vector2 Padding = Vector2(0.0f, 0.0f);
-    Rgba BgColor = Rgba(255, 0, 0, 255);
-    Rgba BgColorActive = {};
-    Rgba BgColorHovered = {};
-    Rgba TextColor = Rgba(255, 255, 255, 255);
-    float CornerRounding = 0.0f;
-    bool IsDisabled = false;
-
-    std::function<void()> OnClick;
-    std::function<void()> OnHover = {};
-};
-
-struct ContainerState
-{
-    bool IsHovered = false;
-};
-
-struct Container
-{
-    std::string ID;
-    Border Border = { Rgba(255, 255, 255, 255), 0.0f };
-    Vector2 Size;
-    Vector2 Padding = Vector2(0.0f, 0.0f);
-    Rgba BgColor = Rgba(0, 0, 0, 255);
-    Rgba BgColorHovered = {};
-    float CornerRounding = 0.0f;
-    bool IsAutoResizableY = false;
-    bool IsAutoResizableX = false;
-
-    std::function<void(const ContainerState&)> DrawContent;
-    std::function<void()> OnClick = {};
-    std::function<void()> OnHover = {};
-};
-
-struct Divider
-{
-    Rgba Color;
-    float Height = 1.0f;
-};
-
-struct DropDownMenuItem
-{
-    std::string Text;
-    Rgba TextColor = Rgba(255, 255, 255, 255);
-    Rgba BgColorHovered;
-    Rgba TextColorHovered;
-
-    std::function<void()> OnClick;
-    std::function<void()> OnHover = {};
-};
-
-struct DropDownMenu
-{
-    Border Border = { Rgba(255, 255, 255, 255), 0.0f };
-    Vector2 Size;
-    Vector2 OuterPadding = Vector2(0.0f, 0.0f);
-    Vector2 OriginOffset = Vector2(0.0f, 0.0f);
-    Rgba BgColor = Rgba(0, 0, 0, 255);
-    float CornerRounding = 0.0f;
-    float LineHeight = 0.0f;
-    std::vector<std::shared_ptr<DropDownMenuItem>> Items;
-};
-
-struct Text
-{
-    std::string Value;
-    Rgba Color = Rgba(255, 255, 255, 255);
-    float Height = NULL;
-};
-
-struct Image
-{
-    unsigned int TextureID;
-    Vector2 Size;
-    Rgba TintColor = Rgba(255, 255, 255, 255);
-    float CornerRounding = 0.0f;
-};
-
-struct ImageButton
-{
-    std::string ID;
-    Image Image;
-    Rgba TintColorHovered = {};
-
-    std::function<void()> OnClick;
-};
-
-struct Modal
-{
-    std::string ID;
-    Container HeaderContainer;
-    Container BodyContainer;
-    Vector2 Size;
-    Vector2 Padding = Vector2(0.0f, 0.0f);
-    Rgba BgColor = Rgba(0, 0, 0, 255);
-    float CornerRounding = 0.0f;
-    bool CanSaveSettigs = false;
-    bool IsTitlebarVisible = false;
-    bool IsScrollbarVisible = false;
-    bool IsResizable = false;
-    bool IsCollapsible = false;
-    bool IsMovable = false;
-};
-
-struct Node
-{
-    std::string Name;
-
-    std::function<void()> DrawContent;
-};
-
-struct Placeholder
-{
-    Rgba Color = Rgba(255, 255, 255, 255);
-    std::string Text;
-};
-
-struct TextInput
-{
-    std::string ID;
-    Border Border = { Rgba(255, 255, 255, 255), 0.0f };
-    Placeholder Placeholder;
-    Vector2 Padding = Vector2(0.0f, 0.0f);
-    Rgba BgColor = Rgba(0, 0, 0, 255);
-    Rgba TextColor = Rgba(255, 255, 255, 255);
-    float CornerRounding = 0.0f;
-
-    std::function<void()> OnClick = {};
-};
-
-struct TextInputMultiline
-{
-    TextInput TextInput;
-    Vector2 Size;
-};
-
-struct TextInputSingleline
-{
-    TextInput TextInput;
-    float Width;
-};
-
-template<typename T>
-struct SearchInput
-{
-    TextInputSingleline TextInputSingleline;
-
-    std::function<std::string(std::shared_ptr<T>)> ExtractLabel;
-    std::function<std::vector<std::shared_ptr<T>()>> OnSearch;
-    std::function<void(std::shared_ptr<T>)> OnSelect;
-};
-
-struct TreeNode
-{
-    std::string Name;
-    std::vector<TreeNode> Children;
-};
-
-struct Window
-{
-    std::string Name;
-    Vector2 Size;
-    Vector2 Position = Vector2(0.0f, 0.0f);
-    Vector2 Padding = Vector2(0.0f, 0.0f);
-    Rgba BgColor = Rgba(0, 0, 0, 255);
-    bool CanSaveSettigs = false;
-    bool IsTitlebarVisible = false;
-    bool IsScrollbarVisible = false;
-    bool IsResizable = false;
-    bool IsCollapsible = false;
-    bool IsMovable = false;
-
-    std::function<void()> DrawContent;
-};
-
-/**
- * NOTES:
- *  - Raw elements
- *  - Those elements are drawn on the foreground without being clipped to any parent elements
- *  - They will always be drawn on top of any other elements
- */
-struct RawText
-{
-    std::string Value;
-    Vector2 Position;
-    Rgba Color = Rgba(255, 255, 255, 255);
-};
-
-struct RawWindow
-{
-    Vector2 MinCornerPosition;
-    Vector2 MaxCornerPosition;
-    Rgba BgColor = Rgba(0, 0, 0, 255);
-    float CornerRounding = 0.0f;
-
-    std::function<void()> DrawContent;
-};
-
 class Gui
 {
 public:
+    // Elements
+    struct Border
+    {
+        Rgba color;
+        float height;
+    };
+
+    struct Button
+    {
+        std::string label;
+        Border border = { Rgba(255, 255, 255, 255), 0.0f };
+        Vector2 size;
+        Vector2 padding = Vector2(0.0f, 0.0f);
+        Rgba bgColor = Rgba(255, 0, 0, 255);
+        Rgba bgColorActive = {};
+        Rgba bgColorHovered = {};
+        Rgba textColor = Rgba(255, 255, 255, 255);
+        float cornerRounding = 0.0f;
+        bool isDisabled = false;
+
+        std::function<void()> OnClick;
+        std::function<void()> OnHover = {};
+    };
+
+    struct ContainerState
+    {
+        bool isHovered = false;
+    };
+
+    struct Container
+    {
+        std::string id;
+        Border border = { Rgba(255, 255, 255, 255), 0.0f };
+        Vector2 size;
+        Vector2 padding = Vector2(0.0f, 0.0f);
+        Rgba bgColor = Rgba(0, 0, 0, 255);
+        Rgba bgColorHovered = {};
+        float cornerRounding = 0.0f;
+        bool isAutoResizableY = false;
+        bool isAutoResizableX = false;
+
+        std::function<void(const ContainerState&)> DrawContent;
+        std::function<void()> OnClick = {};
+        std::function<void()> OnHover = {};
+    };
+
+    struct Divider
+    {
+        Rgba color;
+        float height = 1.0f;
+    };
+
+    struct DropDownMenuItem
+    {
+        std::string text;
+        Rgba textColor = Rgba(255, 255, 255, 255);
+        Rgba bgColorHovered;
+        Rgba textColorHovered;
+
+        std::function<void()> OnClick;
+        std::function<void()> OnHover = {};
+    };
+
+    struct DropDownMenu
+    {
+        Border border = { Rgba(255, 255, 255, 255), 0.0f };
+        Vector2 size;
+        Vector2 outerPadding = Vector2(0.0f, 0.0f);
+        Vector2 originOffset = Vector2(0.0f, 0.0f);
+        Rgba bgColor = Rgba(0, 0, 0, 255);
+        float cornerRounding = 0.0f;
+        float lineHeight = 0.0f;
+        std::vector<std::shared_ptr<DropDownMenuItem>> items;
+    };
+
+    struct Text
+    {
+        std::string value;
+        Rgba color = Rgba(255, 255, 255, 255);
+        float height = NULL;
+    };
+
+    struct Image
+    {
+        unsigned int textureId;
+        Vector2 size;
+        Rgba tintColor = Rgba(255, 255, 255, 255);
+        float cornerRounding = 0.0f;
+    };
+
+    struct ImageButton
+    {
+        std::string id;
+        Image image;
+        Rgba tintColorHovered = {};
+
+        std::function<void()> OnClick;
+    };
+
+    struct Modal
+    {
+        std::string id;
+        Container headerContainer;
+        Container bodyContainer;
+        Vector2 size;
+        Vector2 padding = Vector2(0.0f, 0.0f);
+        Rgba bgColor = Rgba(0, 0, 0, 255);
+        float cornerRounding = 0.0f;
+        bool canSaveSettings = false;
+        bool isTitlebarVisible = false;
+        bool isScrollbarVisible = false;
+        bool isResizable = false;
+        bool isCollapsible = false;
+        bool isMovable = false;
+    };
+
+    struct Node
+    {
+        std::string name;
+
+        std::function<void()> DrawContent;
+    };
+
+    struct Placeholder
+    {
+        Rgba color = Rgba(255, 255, 255, 255);
+        std::string text;
+    };
+
+    struct TextInput
+    {
+        std::string id;
+        Border border = { Rgba(255, 255, 255, 255), 0.0f };
+        Placeholder placeholder;
+        Vector2 padding = Vector2(0.0f, 0.0f);
+        Rgba bgColor = Rgba(0, 0, 0, 255);
+        Rgba textColor = Rgba(255, 255, 255, 255);
+        float cornerRounding = 0.0f;
+
+        std::function<void()> OnClick = {};
+    };
+
+    struct TextInputMultiline
+    {
+        TextInput textInput;
+        Vector2 size;
+    };
+
+    struct TextInputSingleline
+    {
+        TextInput textInput;
+        float width;
+    };
+
+    template<typename T>
+    struct SearchInput
+    {
+        TextInputSingleline textInputSingleline;
+
+        std::function<std::string(std::shared_ptr<T>)> ExtractLabel;
+        std::function<std::vector<std::shared_ptr<T>()>> OnSearch;
+        std::function<void(std::shared_ptr<T>)> OnSelect;
+    };
+
+    struct TreeNode
+    {
+        std::string name;
+        std::vector<TreeNode> children;
+    };
+
+    struct Window
+    {
+        std::string name;
+        Vector2 size;
+        Vector2 position = Vector2(0.0f, 0.0f);
+        Vector2 padding = Vector2(0.0f, 0.0f);
+        Rgba bgColor = Rgba(0, 0, 0, 255);
+        bool canSaveSettings = false;
+        bool isTitlebarVisible = false;
+        bool isScrollbarVisible = false;
+        bool isResizable = false;
+        bool isCollapsible = false;
+        bool isMovable = false;
+
+        std::function<void()> DrawContent;
+    };
+
+    /**
+     * NOTES:
+     *  - Raw elements
+     *  - Those elements are drawn on the foreground without being clipped to any parent elements
+     *  - They will always be drawn on top of any other elements
+     */
+    struct RawText
+    {
+        std::string value;
+        Vector2 position;
+        Rgba color = Rgba(255, 255, 255, 255);
+    };
+
+    struct RawWindow
+    {
+        Vector2 minCornerPosition;
+        Vector2 maxCornerPosition;
+        Rgba bgColor = Rgba(0, 0, 0, 255);
+        float cornerRounding = 0.0f;
+
+        std::function<void()> DrawContent;
+    };
+
     Gui() = default;
 
-    void Init(GLFWwindow* GlfwWindow) const;
+    void Init(GLFWwindow* glfwWindow) const;
     void Destroy() const;
     void Render() const;
     void Clear() const;
 
     // Elements
-    void DrawButton(Button& Button) const;
-    void DrawContainer(Container& Container) const;
-    void DrawDivider(const Divider& Divider) const;
-    void DrawDropDownMenu(const DropDownMenu& DropDownMenu) const;
-    void DrawImage(const Image& Image) const;
-    void DrawImageButton(ImageButton& ImageButton) const;
-    void DrawNode(const Node& Node) const;
-    void DrawModal(Modal& Modal) const;
-    void DrawText(Text& Text) const;
+    void DrawButton(Button& button) const;
+    void DrawContainer(Container& container) const;
+    void DrawDivider(const Divider& divider) const;
+    void DrawDropDownMenu(const DropDownMenu& dropDownMenu) const;
+    void DrawImage(const Image& image) const;
+    void DrawImageButton(ImageButton& imageButton) const;
+    void DrawNode(const Node& node) const;
+    void DrawModal(Modal& modal) const;
+    void DrawText(Text& text) const;
     void DrawTextWrapped(Text& Text) const;
-    void DrawTextInputMultiline(std::string& Value, TextInputMultiline& TextInputMultiline) const;
-    void DrawTextInputSingleline(std::string& Value, TextInputSingleline& TextInputSingleline) const;
-    void DrawTreeNode(const TreeNode& RootTreeNode) const;
-    void DrawWindow(Window& Window) const;
+    void DrawTextInputMultiline(std::string& value, TextInputMultiline& textInputMultiline) const;
+    void DrawTextInputSingleline(std::string& value, TextInputSingleline& textInputSingleline) const;
+    void DrawTreeNode(const TreeNode& rootTreeNode) const;
+    void DrawWindow(Window& window) const;
 
     template<typename T>
-    void DrawSearchInput(std::string& Value, SearchInput<T>& SearchInput) const
+    void DrawSearchInput(std::string& value, SearchInput<T>& searchInput) const
     {
-        DrawTextInputSingleline(Value, SearchInput.TextInputSingleline);
-        if (Value.empty()) return;
+        DrawTextInputSingleline(value, searchInput.textInputSingleline);
+        if (value.empty()) return;
 
-        std::vector<std::shared_ptr<T>> Suggestions = SearchInput.OnSearch();
-        if (Suggestions.empty()) return;
+        std::vector<std::shared_ptr<T>> suggestions = searchInput.OnSearch();
+        if (suggestions.empty()) return;
 
-        std::vector<std::shared_ptr<DropDownMenuItem>> DropDownMenuItems = {};
-        for(std::shared_ptr<T> Suggestion: Suggestions)
+        std::vector<std::shared_ptr<DropDownMenuItem>> dropDownMenuItems = {};
+        for(std::shared_ptr<T> suggestion: suggestions)
         {
-            const std::string& Label = SearchInput.ExtractLabel(Suggestion);
+            const std::string& label = searchInput.ExtractLabel(suggestion);
 
-            DropDownMenuItem Item = {};
-            Item.Text = Label;
-            Item.TextColor = SearchInput.TextInputSingleline.TextInput.TextColor;
-            Item.BgColorHovered = Rgba(50, 56, 102, 255);
-            Item.OnClick = [&SearchInput, &Suggestion]() {
-                SearchInput.OnSelect(Suggestion);
+            DropDownMenuItem item = {};
+            item.text = label;
+            item.textColor = searchInput.textInputSingleline.textInput.textColor;
+            item.bgColorHovered = Rgba(50, 56, 102, 255);
+            item.OnClick = [&searchInput, &suggestion]() {
+                searchInput.OnSelect(suggestion);
             };
 
-            DropDownMenuItems.push_back(std::make_shared<DropDownMenuItem>(Item));
+            dropDownMenuItems.push_back(std::make_shared<DropDownMenuItem>(item));
         }
 
         // Calculates drop down menu size
-        Vector2 DropDownMenuSize = Vector2(SearchInput.TextInputSingleline.Width, 0.0f);
-        for (std::shared_ptr<DropDownMenuItem> DropDownMenuItem : DropDownMenuItems)
+        Vector2 dropDownMenuSize = Vector2(searchInput.textInputSingleline.width, 0.0f);
+        for (std::shared_ptr<DropDownMenuItem> dropDownMenuItem : dropDownMenuItems)
         {
-            ImVec2 TextSize = ImGui::CalcTextSize(DropDownMenuItem->Text.c_str());
-            DropDownMenuSize.Y += TextSize.y;
+            ImVec2 textSize = ImGui::CalcTextSize(dropDownMenuItem->text.c_str());
+            dropDownMenuSize.y += textSize.y;
         }
 
-        Border SettingsDropDownMenuBorder = {};
-        SettingsDropDownMenuBorder.Color = SearchInput.TextInputSingleline.TextInput.Border.Color;
-        SettingsDropDownMenuBorder.Height = 2.0f;
+        Border settingsDropDownMenuBorder = {};
+        settingsDropDownMenuBorder.color = searchInput.textInputSingleline.textInput.border.color;
+        settingsDropDownMenuBorder.height = 2.0f;
 
-        DropDownMenu SettingsDropDownMenu = {};
-        SettingsDropDownMenu.Border = SettingsDropDownMenuBorder;
-        SettingsDropDownMenu.Size = DropDownMenuSize;
-        SettingsDropDownMenu.OuterPadding = Vector2(15.0f, 15.0f);
-        SettingsDropDownMenu.BgColor = SearchInput.TextInputSingleline.TextInput.BgColor;
-        SettingsDropDownMenu.LineHeight = 10.0f;
-        SettingsDropDownMenu.Items = DropDownMenuItems;
+        DropDownMenu settingsDropDownMenu = {};
+        settingsDropDownMenu.border = settingsDropDownMenuBorder;
+        settingsDropDownMenu.size = dropDownMenuSize;
+        settingsDropDownMenu.outerPadding = Vector2(15.0f, 15.0f);
+        settingsDropDownMenu.bgColor = searchInput.textInputSingleline.textInput.bgColor;
+        settingsDropDownMenu.lineHeight = 10.0f;
+        settingsDropDownMenu.items = dropDownMenuItems;
 
-        DrawDropDownMenu(SettingsDropDownMenu);
+        DrawDropDownMenu(settingsDropDownMenu);
     }
 
     /**
@@ -301,21 +301,21 @@ public:
      *  - Those elements are drawn on the foreground without being clipped to any parent elements
      *  - They will always be drawn on top of any other elements
      */
-    void DrawRawText(const RawText& RawText) const;
-    void DrawRawWindow(const RawWindow& RawWindow) const;
+    void DrawRawText(const RawText& rawText) const;
+    void DrawRawWindow(const RawWindow& rawWindow) const;
 
     // Modals helpers
     bool AreAnyModalsOpen() const;
-    void OpenModal(const std::string& ID);
-    void CloseModal(const std::string& ID);
+    void OpenModal(const std::string& id);
+    void CloseModal(const std::string& id);
 
-    // Position helpers
-    void AlignCenter(Vector2 ElementSize) const;
-    void AlignCenterX(float ElementWidth) const;
-    void AlignCenterY(float ElementHeigth) const;
+    // position helpers
+    void AlignCenter(Vector2 elementSize) const;
+    void AlignCenterX(float elementWidth) const;
+    void AlignCenterY(float elementHeigth) const;
     void DisplayInline() const;
-    void ScrollToY(float X) const;
-    void ScrollToX(float Y) const;
+    void ScrollToY(float x) const;
+    void ScrollToX(float y) const;
     float GetScrollPositionY() const;
     float GetScrollPositionX() const;
     float GetMaxScrollPositionY() const;
@@ -323,16 +323,16 @@ public:
     const Vector2 GetPosition() const;
     float GetPositionX() const;
     float GetPositionY() const;
-    void SetPosition(Vector2 Position) const;
-    void SetPositionX(float X) const;
-    void SetPositionY(float Y) const;
+    void SetPosition(Vector2 position) const;
+    void SetPositionX(float x) const;
+    void SetPositionY(float y) const;
 
     // Dimension helpers
     const Vector2 GetAvailableSpace() const;
     const Vector2 GetParentContainerPaddingSize() const;
     float GetTextInputSinglelineHeight() const;
-    const Vector2 GetTextSize(const std::string& Text) const;
-    const Vector2 GetTextSize(const Text& Text) const;
+    const Vector2 GetTextSize(const std::string& text) const;
+    const Vector2 GetTextSize(const Text& text) const;
     const Vector2 GetViewportSize() const;
 
     // Config helpers
@@ -340,18 +340,18 @@ public:
 
 private:
     // NOTE: Keeps track of all open modals
-    std::map<std::string, bool> OpenModalIds = {};
+    std::map<std::string, bool> m_openModalIds = {};
 
     struct ImagePositioned
     {
-        Image Image;
-        Vector2 Position;
+        Image image;
+        Vector2 position;
     };
 
-    void DrawImagePositioned(const ImagePositioned& ImagePositioned) const;
-    void DrawPlaceholder(const Placeholder& Placeholder) const;
-    const Vector2 ToVector2(const ImVec2& Vector2) const;
-    const Vector4 ToVector4(const ImVec4& Vector4) const;
-    const ImVec2 ToImVec2(const Vector2& Vector2) const;
-    const ImVec4 ToImVec4(const Vector4& Vector4) const;
+    void DrawImagePositioned(const ImagePositioned& imagePositioned) const;
+    void DrawPlaceholder(const Placeholder& placeholder) const;
+    const Vector2 ToVector2(const ImVec2& vector2) const;
+    const Vector4 ToVector4(const ImVec4& vector4) const;
+    const ImVec2 ToImVec2(const Vector2& vector2) const;
+    const ImVec4 ToImVec4(const Vector4& vector4) const;
 };
