@@ -45,13 +45,13 @@ void Texture::Load(const std::string &filePath, const unsigned int unit)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 	// Determines the format based on the number of channels
-	GLenum Format = 0;
+	GLenum format = 0;
 	if (channelsCount == 1)
-		Format = GL_RED;
+		format = GL_RED;
 	else if (channelsCount == 3)
-		Format = GL_RGB;
+		format = GL_RGB;
 	else if (channelsCount == 4)
-		Format = GL_RGBA;
+		format = GL_RGBA;
 	else
 	{
 		// Handles unsupported format error
@@ -60,7 +60,7 @@ void Texture::Load(const std::string &filePath, const unsigned int unit)
 	}
 
 	// Uploads the image data to the GPU
-	glTexImage2D(GL_TEXTURE_2D, 0, static_cast<GLint>(Format), width, height, 0, static_cast<GLint>(Format),
+	glTexImage2D(GL_TEXTURE_2D, 0, static_cast<GLint>(format), width, height, 0, static_cast<GLint>(format),
 	             GL_UNSIGNED_BYTE, imageRawData);
 	// Generates mipmaps
 	glGenerateMipmap(GL_TEXTURE_2D);
