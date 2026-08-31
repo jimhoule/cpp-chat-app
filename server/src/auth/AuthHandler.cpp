@@ -4,8 +4,6 @@
 #include "log/Logger.h"
 #include "exceptions/ExpectedException.h"
 #include "socket/SocketErrorCode.h"
-#include "socket/SocketServer.h"
-#include "socket/SocketEventContext.h"
 
 // **********
 // * PUBLIC *
@@ -16,9 +14,9 @@ AuthHandler::AuthHandler(SocketServer& socketServer, AuthService& authService, L
     , m_logger(logger)
 {}
 
-SocketServerEventHandler AuthHandler::GetLoginHandler()
+SocketServer::EventHandler AuthHandler::GetLoginHandler()
 {
-    return [this](const SocketEventContext& context) {
+    return [this](const SocketServer::EventContext& context) {
         // Gets login socket event payload
         const LoginSocketEventPayload loginSocketEventPayload = m_loginSocketEventPayloadDeserializer.Deserialize(context.serializedPayload);
 
@@ -45,9 +43,9 @@ SocketServerEventHandler AuthHandler::GetLoginHandler()
     };
 }
 
-SocketServerEventHandler AuthHandler::GetRegisterHandler()
+SocketServer::EventHandler AuthHandler::GetRegisterHandler()
 {
-    return [this](const SocketEventContext& context) {
+    return [this](const SocketServer::EventContext& context) {
         // Gets register socket event payload
         const RegisterSocketEventPayload registerSocketEventPayload = m_registerSocketEventPayloadDeserializer.Deserialize(context.serializedPayload);
 

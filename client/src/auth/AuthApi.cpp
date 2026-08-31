@@ -10,7 +10,7 @@ AuthApi::AuthApi(SocketClient& socketClient, Logger& logger)
     : m_socketClient(socketClient)
     , m_logger(logger)
 {
-    SocketClientEventHandler HandleLoggedIn = [this](const std::string& serializedLoggedinSocketEventPayload) {
+    SocketClient::EventHandler HandleLoggedIn = [this](const std::string& serializedLoggedinSocketEventPayload) {
         // Gets logged in socket event payload
         const LoggedinSocketEventPayload loggedinSocketEventPayload = m_loggedinSocketEventPayloadDeserializer.Deserialize(serializedLoggedinSocketEventPayload);
         m_logger.Info("Logged in session id: " + loggedinSocketEventPayload.sessionId);
@@ -20,7 +20,7 @@ AuthApi::AuthApi(SocketClient& socketClient, Logger& logger)
         m_loggedInSubject.Notify(loggedInEvent);
     };
 
-    SocketClientEventHandler HandleRegistered = [this](const std::string& serializedRegisteredSocketEventPayload) {
+    SocketClient::EventHandler HandleRegistered = [this](const std::string& serializedRegisteredSocketEventPayload) {
         // Gets registered socket event payload
         const RegisteredSocketEventPayload registeredSocketEventPayload = m_registeredSocketEventPayloadDeserializer.Deserialize(serializedRegisteredSocketEventPayload);
         m_logger.Info("Registered session id: " + registeredSocketEventPayload.sessionId);
@@ -30,7 +30,7 @@ AuthApi::AuthApi(SocketClient& socketClient, Logger& logger)
         m_registeredSubject.Notify(registeredEvent);
     };
 
-    SocketClientEventHandler HandleUserAuthenticated = [this](const std::string& serializedUserAuthenticatedSocketEventPayload) {
+    SocketClient::EventHandler HandleUserAuthenticated = [this](const std::string& serializedUserAuthenticatedSocketEventPayload) {
         // Gets user authenticated socket event payload
         const UserAuthenticatedSocketEventPayload& userAuthenticatedSocketEventPayload = m_userAuthenticatedSocketEventPayloadDeserializer.Deserialize(serializedUserAuthenticatedSocketEventPayload);
         m_logger.Info("Authenticated user ID: " + userAuthenticatedSocketEventPayload.user.id);

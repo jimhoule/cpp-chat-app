@@ -2,10 +2,9 @@
 
 #include "deserializer/CreateMessageSocketEventPayloadDeserializer.h"
 #include "serializer/MessageCreatedSocketEventSerializer.h"
-#include "socket/SocketServerEventHandler.h"
+#include "socket/SocketServer.h"
 
 // Forward declarations
-class SocketServer;
 class MessagesService;
 class Logger;
 
@@ -14,7 +13,7 @@ class MessagesHandler
 public:
     MessagesHandler(SocketServer& socketServer, MessagesService& messagesService, Logger& logger);
 
-    SocketServerEventHandler GetCreateMessageHandler();
+    SocketServer::EventHandler GetCreateMessageHandler();
 
 private:
     SocketServer& m_socketServer;

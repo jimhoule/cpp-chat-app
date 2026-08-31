@@ -1,8 +1,5 @@
 #pragma once
 
-#include "socket/SocketServerEventMiddleware.h"
+#include "socket/SocketServer.h"
 
-// Forward declarations
-class SocketServer;
-
-SocketServerEventMiddleware RequireAuthentication(SocketServer& socketServer);
+SocketServer::EventMiddleware RequireAuthentication(SocketServer& socketServer);

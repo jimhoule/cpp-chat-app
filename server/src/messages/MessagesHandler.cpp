@@ -4,8 +4,6 @@
 #include "messages/MessagesService.h"
 #include "exceptions/ExpectedException.h"
 #include "socket/SocketErrorCode.h"
-#include "socket/SocketEventContext.h"
-#include "socket/SocketServer.h"
 
 // **********
 // * PUBLIC *
@@ -16,9 +14,9 @@ MessagesHandler::MessagesHandler(SocketServer& socketServer, MessagesService& me
     , m_logger(logger)
 {}
 
-SocketServerEventHandler MessagesHandler::GetCreateMessageHandler()
+SocketServer::EventHandler MessagesHandler::GetCreateMessageHandler()
 {
-    return [this](const SocketEventContext& context) {
+    return [this](const SocketServer::EventContext& context) {
         // Gets create message socket event payload
         const CreateMessageSocketEventPayload createMessageSocketEventPayload = m_createMessageSocketEventPayloadDeserializer.Deserialize(context.serializedPayload);
 

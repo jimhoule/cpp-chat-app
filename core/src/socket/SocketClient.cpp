@@ -58,12 +58,12 @@ void SocketClient::Connect(int serverPort, const std::string &serverIpAddress)
 
 void SocketClient::Off(SocketEventName socketEventName)
 {
-	m_socketEventHandlersMap.erase(socketEventName);
+	m_handlersMap.erase(socketEventName);
 }
 
-void SocketClient::On(SocketEventName socketEventName, const SocketClientEventHandler& socketEventHandler)
+void SocketClient::On(SocketEventName socketEventName, const EventHandler& handler)
 {
-    m_socketEventHandlersMap.insert(std::pair(socketEventName, socketEventHandler));
+    m_handlersMap.insert(std::pair(socketEventName, handler));
 }
 
 void SocketClient::Read()
@@ -87,14 +87,14 @@ void SocketClient::Read()
         SocketEvent<std::string> socketEvent = socketEventDeserializer.Deserialize(serializedSocketEvent);
 
 		// NOTE: find, not operator[], which would insert an empty handler for an unknown event name and then call it
-        std::map<SocketEventName, SocketClientEventHandler>::iterator socketEventHandlersMapIterator = m_socketEventHandlersMap.find(socketEvent.name);
-        if (socketEventHandlersMapIterator == m_socketEventHandlersMap.end())
+        std::map<SocketEventName, EventHandler>::iterator handlersMapIterator = m_handlersMap.find(socketEvent.name);
+        if (handlersMapIterator == m_handlersMap.end())
         {
             std::cout << "No handler registered for socket event " << socketEvent.name << std::endl;
             return;
         }
 
-        SocketClientEventHandler HandleSocketEvent = socketEventHandlersMapIterator->second;
+        EventHandler HandleSocketEvent = handlersMapIterator->second;
         HandleSocketEvent(socketEvent.payload);
     }
 }

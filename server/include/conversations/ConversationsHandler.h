@@ -9,10 +9,9 @@
 #include "serializer/ConversationFoundByUserIdsSocketEventSerializer.h"
 #include "serializer/ConversationOpenedSocketEventSerializer.h"
 #include "socket/SocketErrorCode.h"
-#include "socket/SocketServerEventHandler.h"
+#include "socket/SocketServer.h"
 
 // Forward declarations
-class SocketServer;
 class Logger;
 
 class ConversationsHandler
@@ -20,10 +19,10 @@ class ConversationsHandler
 public:
     ConversationsHandler(SocketServer& socketServer, ConversationsService& conversationsService, Logger& logger);
 
-    SocketServerEventHandler GetFindAllOpenConversationsByUserIdHandler();
-    SocketServerEventHandler GetFindConversationByUserIdsHandler();
-    SocketServerEventHandler GetCloseConversationHandler();
-    SocketServerEventHandler GetOpenConversationHandler();
+    SocketServer::EventHandler GetFindAllOpenConversationsByUserIdHandler();
+    SocketServer::EventHandler GetFindConversationByUserIdsHandler();
+    SocketServer::EventHandler GetCloseConversationHandler();
+    SocketServer::EventHandler GetOpenConversationHandler();
 
 private:
     SocketServer& m_socketServer;

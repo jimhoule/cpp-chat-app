@@ -1,7 +1,6 @@
 #include "conversations/ConversationsHandler.h"
 
 #include "exceptions/ExpectedException.h"
-#include "socket/SocketServer.h"
 
 // **********
 // * PUBLIC *
@@ -12,9 +11,9 @@ ConversationsHandler::ConversationsHandler(SocketServer& socketServer, Conversat
     , m_logger(logger)
 {}
 
-SocketServerEventHandler ConversationsHandler::GetFindAllOpenConversationsByUserIdHandler()
+SocketServer::EventHandler ConversationsHandler::GetFindAllOpenConversationsByUserIdHandler()
 {
-    return [this](const SocketEventContext& context) {
+    return [this](const SocketServer::EventContext& context) {
         // NOTE: The user id comes from the authenticated context, never from the payload
         ConversationsService::FindAllOpenConversationsByUserIdDto findAllOpenConversationsByUserIdDto = {};
         findAllOpenConversationsByUserIdDto.userId = context.user->id;
@@ -37,9 +36,9 @@ SocketServerEventHandler ConversationsHandler::GetFindAllOpenConversationsByUser
     };
 }
 
-SocketServerEventHandler ConversationsHandler::GetFindConversationByUserIdsHandler()
+SocketServer::EventHandler ConversationsHandler::GetFindConversationByUserIdsHandler()
 {
-    return [this](const SocketEventContext& context) {
+    return [this](const SocketServer::EventContext& context) {
         const FindConversationByUserIdsSocketEventPayload findConversationByUserIdsSocketEventPayload = m_findConversationByUserIdsSocketEventPayloadDeserializer.Deserialize(context.serializedPayload);
 
         ConversationsService::FindConversationByUserIdsDto findConversationByUserIdsDto = {};
@@ -66,9 +65,9 @@ SocketServerEventHandler ConversationsHandler::GetFindConversationByUserIdsHandl
     };
 }
 
-SocketServerEventHandler ConversationsHandler::GetCloseConversationHandler()
+SocketServer::EventHandler ConversationsHandler::GetCloseConversationHandler()
 {
-    return [this](const SocketEventContext& context) {
+    return [this](const SocketServer::EventContext& context) {
         const CloseConversationSocketEventPayload closeConversationSocketEventPayload = m_closeConversationSocketEventPayloadDeserializer.Deserialize(context.serializedPayload);
 
         ConversationsService::CloseConversationDto closeConversationDto = {};
@@ -94,9 +93,9 @@ SocketServerEventHandler ConversationsHandler::GetCloseConversationHandler()
     };
 }
 
-SocketServerEventHandler ConversationsHandler::GetOpenConversationHandler()
+SocketServer::EventHandler ConversationsHandler::GetOpenConversationHandler()
 {
-    return [this](const SocketEventContext& context) {
+    return [this](const SocketServer::EventContext& context) {
         const OpenConversationSocketEventPayload openConversationSocketEventPayload = m_openConversationSocketEventPayloadDeserializer.Deserialize(context.serializedPayload);
 
         ConversationsService::OpenConversationDto openConversationDto = {};

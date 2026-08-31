@@ -1,9 +1,5 @@
 #pragma once
 
-#include "socket/SocketServerEventErrorHandler.h"
+#include "socket/SocketServer.h"
 
-// Forward declarations
-class Logger;
-class SocketServer;
-
-SocketServerEventErrorHandler HandleErrors(SocketServer& socketServer, Logger& logger);
+SocketServer::EventErrorHandler HandleErrors(SocketServer& socketServer, Logger& logger);

@@ -5,10 +5,9 @@
 #include "serializer/LoggedinSocketEventSerializer.h"
 #include "serializer/RegisteredSocketEventSerializer.h"
 #include "serializer/UserAuthenticatedSocketEventSerializer.h"
-#include "socket/SocketServerEventHandler.h"
+#include "socket/SocketServer.h"
 
 // Forward declarations
-class SocketServer;
 class AuthService;
 class Logger;
 
@@ -17,8 +16,8 @@ class AuthHandler
 public:
     AuthHandler(SocketServer& socketServer, AuthService& authService, Logger& logger);
 
-    SocketServerEventHandler GetLoginHandler();
-    SocketServerEventHandler GetRegisterHandler();
+    SocketServer::EventHandler GetLoginHandler();
+    SocketServer::EventHandler GetRegisterHandler();
 
 private:
     SocketServer& m_socketServer;

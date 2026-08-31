@@ -18,13 +18,13 @@ constexpr int BUFFER_SIZE = 1000000;
 // * PUBLIC *
 // **********
 SocketServer::SocketServer(unsigned int Port, Logger& logger)
-	: m_Port(Port)
+	: m_port(Port)
 	, m_logger(logger)
 {}
 
 void SocketServer::BindConnectionUser(int clientSocket, const User& user)
 {
-	std::unordered_map<int, SocketServerConnection>::iterator connectionsMapIterator = m_connectionsMap.find(clientSocket);
+	std::unordered_map<int, Connection>::iterator connectionsMapIterator = m_connectionsMap.find(clientSocket);
 	if (connectionsMapIterator == m_connectionsMap.end())
 	{
 		m_logger.Error("Socket connection not found");
@@ -38,12 +38,12 @@ void SocketServer::BindConnectionUser(int clientSocket, const User& user)
 
 void SocketServer::Close()
 {
-	close(m_Socket);
+	close(m_socket);
 }
 
 const User* SocketServer::GetConnectionUser(int clientSocket)
 {
-	std::unordered_map<int, SocketServerConnection>::iterator connectionsMapIterator = m_connectionsMap.find(clientSocket);
+	std::unordered_map<int, Connection>::iterator connectionsMapIterator = m_connectionsMap.find(clientSocket);
 	if (connectionsMapIterator == m_connectionsMap.end())
 	{
 		m_logger.Error("Socket connection user not found");
@@ -62,20 +62,20 @@ const User* SocketServer::GetConnectionUser(int clientSocket)
 void SocketServer::Init()
 {
 	// Creates socket file descriptor
-	m_Socket = socket(AF_INET, SOCK_STREAM, 0);
-	if (m_Socket < 0)
+	m_socket = socket(AF_INET, SOCK_STREAM, 0);
+	if (m_socket < 0)
 	{
 		m_logger.Error("Failed to create socket");
 		exit(EXIT_FAILURE);
 	}
 
 	// Sets server address parameters
-	m_Address.sin_family = AF_INET;
-	m_Address.sin_addr.s_addr = INADDR_ANY;
-	m_Address.sin_port = htons(m_Port);
+	m_address.sin_family = AF_INET;
+	m_address.sin_addr.s_addr = INADDR_ANY;
+	m_address.sin_port = htons(m_port);
 
 	// Binds the socket to the specified port
-	int bind_result = bind(m_Socket, reinterpret_cast<sockaddr *>(&m_Address), sizeof(m_Address));
+	int bind_result = bind(m_socket, reinterpret_cast<sockaddr *>(&m_address), sizeof(m_address));
 	if (bind_result < 0)
 	{
 		m_logger.Error("Failed to bind socket");
@@ -84,13 +84,13 @@ void SocketServer::Init()
 	}
 
 	// Sets the server socket to non-blocking mode
-	SetNonBlockingSocket(m_Socket);
+	SetNonBlockingSocket(m_socket);
 }
 
 void SocketServer::Listen()
 {
 	// Listens for incoming connections
-	int listenResult = listen(m_Socket, MAX_PENDING_CONNECTIONS);
+	int listenResult = listen(m_socket, MAX_PENDING_CONNECTIONS);
 	if (listenResult < 0)
 	{
 		m_logger.Error("Failed to listen");
@@ -108,19 +108,19 @@ void SocketServer::Listen()
     // Adds listening socket to epoll
 	struct epoll_event event;
 	event.events = EPOLLIN; // We are interested in read events
-	event.data.fd = m_Socket;
+	event.data.fd = m_socket;
 
-    int EpollCtlResult = epoll_ctl(epoll, EPOLL_CTL_ADD, m_Socket, &event);
+    int EpollCtlResult = epoll_ctl(epoll, EPOLL_CTL_ADD, m_socket, &event);
 	if (EpollCtlResult == -1)
 	{
 		m_logger.Error("Failed to add listening socket to epoll");
 		exit(EXIT_FAILURE);
 	}
 
-	m_logger.Info("Server listening on port " + std::to_string(m_Port));
+	m_logger.Info("Server listening on port " + std::to_string(m_port));
 
 	struct epoll_event events[MAX_EPOLL_EVENTS];
-	socklen_t address_length = sizeof(m_Address);
+	socklen_t address_length = sizeof(m_address);
 	while (true)
 	{
 		int eventsCount = epoll_wait(epoll, events, MAX_EPOLL_EVENTS, -1);
@@ -133,55 +133,54 @@ void SocketServer::Listen()
 		// Loops through all the events that have occurred
 		for (int i = 0; i < eventsCount; i++) {
 			// Existing connection
-			if (events[i].data.fd != m_Socket)
+			if (events[i].data.fd != m_socket)
 			{
-				int ClientSocket = events[i].data.fd;
-				ReadClientSocket(ClientSocket);
+				int clientSocket = events[i].data.fd;
+				ReadClientSocket(clientSocket);
 
 				continue;
 			}
 
 			// New connection
 			// Accepts new connections
-			int ClientSocket = accept(m_Socket, reinterpret_cast<sockaddr *>(&m_Address), &address_length);
+			int clientSocket = accept(m_socket, reinterpret_cast<sockaddr *>(&m_address), &address_length);
 			// Handles non-blocking accept errors
-			if (ClientSocket < 0 && (errno == EAGAIN || errno == EWOULDBLOCK))
+			if (clientSocket < 0 && (errno == EAGAIN || errno == EWOULDBLOCK))
 			{
 				continue;
 			}
 
-			if (ClientSocket == -1)
+			if (clientSocket == -1)
 			{
 				m_logger.Error("Failed to accept client socket connection");
 				continue;
 			}
 
-			m_logger.Info("Accepted client socket " + std::to_string(ClientSocket) + " new connection");
+			m_logger.Info("Accepted client socket " + std::to_string(clientSocket) + " new connection");
 
-			//m_ClientSockets.push_back(ClientSocket);
-			SocketServerConnection socketConnection = {};
-			socketConnection.clientSocket = ClientSocket;
-			m_connectionsMap.insert(std::pair(ClientSocket, socketConnection));
-			SetNonBlockingSocket(ClientSocket);
+			Connection connection = {};
+			connection.clientSocket = clientSocket;
+			m_connectionsMap.insert(std::pair(clientSocket, connection));
+			SetNonBlockingSocket(clientSocket);
 
 			// Adds the new client socket to the epoll interest list
 			event.events = EPOLLIN | EPOLLET; // Monitor for read events, edge-triggered
-			event.data.fd = ClientSocket;
-			if (epoll_ctl(epoll, EPOLL_CTL_ADD, ClientSocket, &event) == -1)
+			event.data.fd = clientSocket;
+			if (epoll_ctl(epoll, EPOLL_CTL_ADD, clientSocket, &event) == -1)
 			{
 				m_logger.Error("Failed to add client socket to epoll");
-				CloseClientSocket(ClientSocket);
+				CloseClientSocket(clientSocket);
 			}
 		}
 	}
 }
 
-void SocketServer::On(SocketEventName socketEventName, const SocketServerEventHandler& handler)
+void SocketServer::On(SocketEventName socketEventName, const EventHandler& handler)
 {
     On(socketEventName, {}, handler);
 }
 
-void SocketServer::On(SocketEventName socketEventName, const std::vector<SocketServerEventMiddleware>& middlewares, const SocketServerEventHandler& handler)
+void SocketServer::On(SocketEventName socketEventName, const std::vector<EventMiddleware>& middlewares, const EventHandler& handler)
 {
 	if (!handler)
 	{
@@ -189,13 +188,13 @@ void SocketServer::On(SocketEventName socketEventName, const std::vector<SocketS
 		return;
 	}
 
-	std::unordered_map<SocketEventName, SocketServerEventRoute>::iterator routesMapIterator = m_routesMap.find(socketEventName);
+	std::unordered_map<SocketEventName, EventRoute>::iterator routesMapIterator = m_routesMap.find(socketEventName);
 	if (routesMapIterator != m_routesMap.end())
 	{
 		m_logger.Warning("A route is already registered for this socket event. It will be replaced");
 	}
 
-	SocketServerEventRoute route = {};
+	EventRoute route = {};
 	// NOTE: Global middlewares are put first so they run before the ones registered on the route
 	route.middlewares = m_middlewares;
 	route.middlewares.insert(route.middlewares.end(), middlewares.begin(), middlewares.end());
@@ -204,14 +203,14 @@ void SocketServer::On(SocketEventName socketEventName, const std::vector<SocketS
 	m_routesMap.insert(std::pair(socketEventName, route));
 }
 
-void SocketServer::OnError(const SocketServerEventErrorHandler& errorHandler)
+void SocketServer::OnError(const EventErrorHandler& errorHandler)
 {
 	m_errorHandler = errorHandler;
 }
 
 void SocketServer::SendAll(const std::string& serializedSocketEvent)
 {
-	for (const std::pair<int, SocketServerConnection>& pair : m_connectionsMap)
+	for (const std::pair<int, Connection>& pair : m_connectionsMap)
 	{
 		SendTo(pair.first, serializedSocketEvent);
 	}
@@ -219,7 +218,7 @@ void SocketServer::SendAll(const std::string& serializedSocketEvent)
 
 void SocketServer::SendAllExcept(int exceptionClientSocket, const std::string& serializedSocketEvent)
 {
-	for (const std::pair<int, SocketServerConnection>& pair : m_connectionsMap)
+	for (const std::pair<int, Connection>& pair : m_connectionsMap)
     {
 		// If connection has no user, it means the client is not authenticated yet
 		if (!pair.second.user.has_value()) continue;
@@ -232,7 +231,7 @@ void SocketServer::SendAllExcept(int exceptionClientSocket, const std::string& s
 
 void SocketServer::SendAllExcept(std::unordered_map<int, bool> exceptionClientSocketsMap, const std::string& serializedSocketEvent)
 {
-	for (const std::pair<int, SocketServerConnection>& pair : m_connectionsMap)
+	for (const std::pair<int, Connection>& pair : m_connectionsMap)
     {
 		// If connection has no user, it means the client is not authenticated yet
 		if (!pair.second.user.has_value()) continue;
@@ -269,7 +268,7 @@ void SocketServer::SendToMany(std::vector<int> clientSockets, const std::string&
     }
 }
 
-void SocketServer::Use(const SocketServerEventMiddleware& middleware)
+void SocketServer::Use(const EventMiddleware& middleware)
 {
 	if (!m_routesMap.empty())
 	{
@@ -288,7 +287,7 @@ void SocketServer::Use(const SocketServerEventMiddleware& middleware)
 	close(clientSocket);
 
 
-	std::unordered_map<int, SocketServerConnection>::iterator connectionsMapIterator = m_connectionsMap.find(clientSocket);
+	std::unordered_map<int, Connection>::iterator connectionsMapIterator = m_connectionsMap.find(clientSocket);
 	if (connectionsMapIterator == m_connectionsMap.end())
 	{
 		m_logger.Warning("No socket connections found");
@@ -327,7 +326,7 @@ void SocketServer::ReadClientSocket(int clientSocket) {
         const std::string& serializedSocketEvent(SerializedSocketEventBuffer.data());
 
 		// NOTE: Declared before the try so the error handler can still use it if anything below throws
-		SocketEventContext context = {};
+		EventContext context = {};
 		context.clientSocket = clientSocket;
 
 		try
@@ -336,7 +335,7 @@ void SocketServer::ReadClientSocket(int clientSocket) {
 			SocketEvent<std::string> socketEvent = socketEventDeserializer.Deserialize(serializedSocketEvent);
 
 			// NOTE: find, not operator[], which would insert an empty route for an unknown event name
-			std::unordered_map<SocketEventName, SocketServerEventRoute>::iterator routesMapIterator = m_routesMap.find(socketEvent.name);
+			std::unordered_map<SocketEventName, EventRoute>::iterator routesMapIterator = m_routesMap.find(socketEvent.name);
 			if (routesMapIterator == m_routesMap.end())
 			{
 				m_logger.Warning("No route registered for socket event from client socket " + std::to_string(clientSocket));
@@ -389,10 +388,10 @@ void SocketServer::SetNonBlockingSocket(int socket)
     fcntl(socket, F_SETFL, Flags | O_NONBLOCK);
 }
 
-void SocketServer::ExecuteRoute(const SocketServerEventRoute& route, SocketEventContext& context)
+void SocketServer::ExecuteRoute(const EventRoute& route, EventContext& context)
 {
 	// NOTE: A middleware stops the route by throwing, which exits this loop before the handler runs
-	for (const SocketServerEventMiddleware& middleware : route.middlewares)
+	for (const EventMiddleware& middleware : route.middlewares)
 	{
 		middleware(context);
 	}

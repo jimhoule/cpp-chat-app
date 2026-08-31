@@ -5,11 +5,10 @@
 #include "log/Logger.h"
 #include "serializer/ErrorSocketEventSerializer.h"
 #include "socket/SocketErrorCode.h"
-#include "socket/SocketServer.h"
 
-SocketServerEventErrorHandler HandleErrors(SocketServer& socketServer, Logger& logger)
+SocketServer::EventErrorHandler HandleErrors(SocketServer& socketServer, Logger& logger)
 {
-    return [&socketServer, &logger](const std::exception& exception, SocketEventContext& context) {
+    return [&socketServer, &logger](const std::exception& exception, SocketServer::EventContext& context) {
         SocketErrorCode socketErrorCode = SocketErrorCode::INTERNAL;
 
         const ExpectedException* expectedException = dynamic_cast<const ExpectedException*>(&exception);
