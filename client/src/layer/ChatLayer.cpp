@@ -176,7 +176,7 @@ void ChatLayer::OnRender()
                         searchModalCloseImageButtonContainer.bgColor = Rgba(0, 0, 0, 0);
                         searchModalCloseImageButtonContainer.DrawContent = [this, &searchModal](const Gui::ContainerState& state) {
                             Gui::Image SearchModalCloseImageButtonImage = {};
-                            SearchModalCloseImageButtonImage.textureId = m_whiteLeftArrowImageTexture.GetID();
+                            SearchModalCloseImageButtonImage.textureId = m_whiteLeftArrowImageTexture.GetId();
                             SearchModalCloseImageButtonImage.size = m_gui.GetAvailableSpace();
                             SearchModalCloseImageButtonImage.tintColor = Rgba(255, 255, 255, 255);
 
@@ -289,7 +289,7 @@ void ChatLayer::OnRender()
 
                                 // USER IMAGE
                                 Gui::Image userImage = {};
-                                userImage.textureId = m_blankImageTexture.GetID();
+                                userImage.textureId = m_blankImageTexture.GetId();
                                 userImage.size = Vector2(userContainerAvailableSpace.y, userContainerAvailableSpace.y);
                                 userImage.cornerRounding = 10.0f;
 
@@ -364,7 +364,7 @@ void ChatLayer::OnRender()
                     currentUserImageContainer.DrawContent = [this](const Gui::ContainerState& state) {
                         // CURRENT USER IMAGE BUTTON
                         Gui::Image currentUserImage = {};
-                        currentUserImage.textureId = m_blankImageTexture.GetID();
+                        currentUserImage.textureId = m_blankImageTexture.GetId();
                         currentUserImage.size = m_gui.GetAvailableSpace();
                         currentUserImage.tintColor = Rgba(255, 255, 255, 255);
                         currentUserImage.cornerRounding = 10.0f;
@@ -505,7 +505,7 @@ void ChatLayer::OnRender()
 
                             // CONVERSATION IMAGE
                             Gui::Image conversationImage = {};
-                            conversationImage.textureId = m_blankImageTexture.GetID();
+                            conversationImage.textureId = m_blankImageTexture.GetId();
                             conversationImage.size = Vector2(conversationContainerAvailableSpace.y, conversationContainerAvailableSpace.y);
                             conversationImage.cornerRounding = 10.0f;
                             m_gui.DrawImage(conversationImage);
@@ -529,7 +529,7 @@ void ChatLayer::OnRender()
                             closeConversationImageButtonContainer.DrawContent = [this, &conversation, index](const Gui::ContainerState& state) {
                                 // CLOSE CONVERSATION IMAGE BUTTON
                                 Gui::Image closeConversationImageButtonImage = {};
-                                closeConversationImageButtonImage.textureId = m_closableImageTexture.GetID();
+                                closeConversationImageButtonImage.textureId = m_closableImageTexture.GetId();
                                 closeConversationImageButtonImage.size = m_gui.GetAvailableSpace();
                                 closeConversationImageButtonImage.tintColor = Rgba(255, 255, 255, 255);
                                 closeConversationImageButtonImage.cornerRounding = 0.0f;
@@ -608,7 +608,7 @@ void ChatLayer::OnRender()
                         // MESSAGE SENDER IMAGE
                         // NOTE: Images are drawn directly over elements so anything that needs to go beside will have to be postioned manually
                         Gui::Image messageSenderImage = {};
-                        messageSenderImage.textureId = m_blankImageTexture.GetID();
+                        messageSenderImage.textureId = m_blankImageTexture.GetId();
                         messageSenderImage.size = Vector2(messageContainerAvailableSpace.x * 0.05f, messageContainerAvailableSpace.x * 0.05f);
                         messageSenderImage.cornerRounding = 10.0f;
                         m_gui.DrawImage(messageSenderImage);
