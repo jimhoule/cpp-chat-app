@@ -14,64 +14,62 @@ class Logger;
 class UsersService;
 class UuidService;
 
-enum class ConversationsResultCode
-{
-    OK,
-    USERS_EMPTY,
-    TOO_MANY_USERS,
-    UNKNOWN_USER,
-    UNKNOWN_CONVERSATION
-};
-
-std::string ConvertConversationsResultCodeToString(ConversationsResultCode conversationsResultCode);
-
-using ConversationResult = ServiceResult<ConversationsResultCode, std::optional<Conversation>>;
-using ConversationsResult = ServiceResult<ConversationsResultCode, std::vector<Conversation>>;
-
-struct CloseConversationDto
-{
-    std::string conversationId;
-    std::string userId;
-};
-
-struct OpenConversationDto
-{
-    std::string initiatorUserId;
-    // NOTE: The other users, the initiator is added and does not have to be in it
-    std::vector<std::string> userIds;
-};
-
-struct OpenConversationForAllUsersDto
-{
-    std::string conversationId;
-};
-
-struct FindConversationByIdDto
-{
-    std::string id;
-};
-
-struct FindConversationByUserIdsDto
-{
-    // NOTE: Always added to userIds, a user can only look up conversations they belong to
-    std::string initiatorUserId;
-    std::vector<std::string> userIds;
-};
-
-struct FindAllOpenConversationsByUserIdDto
-{
-    std::string userId;
-};
-
-struct IsConversationUserDto
-{
-    std::string conversationId;
-    std::string userId;
-};
-
 class ConversationsService
 {
 public:
+    enum class ConversationsResultCode
+    {
+        OK,
+        USERS_EMPTY,
+        TOO_MANY_USERS,
+        UNKNOWN_USER,
+        UNKNOWN_CONVERSATION
+    };
+
+    using ConversationResult = ServiceResult<ConversationsResultCode, std::optional<Conversation>>;
+    using ConversationsResult = ServiceResult<ConversationsResultCode, std::vector<Conversation>>;
+
+    struct CloseConversationDto
+    {
+        std::string conversationId;
+        std::string userId;
+    };
+
+    struct OpenConversationDto
+    {
+        std::string initiatorUserId;
+        // NOTE: The other users, the initiator is added and does not have to be in it
+        std::vector<std::string> userIds;
+    };
+
+    struct OpenConversationForAllUsersDto
+    {
+        std::string conversationId;
+    };
+
+    struct FindConversationByIdDto
+    {
+        std::string id;
+    };
+
+    struct FindConversationByUserIdsDto
+    {
+        // NOTE: Always added to userIds, a user can only look up conversations they belong to
+        std::string initiatorUserId;
+        std::vector<std::string> userIds;
+    };
+
+    struct FindAllOpenConversationsByUserIdDto
+    {
+        std::string userId;
+    };
+
+    struct IsConversationUserDto
+    {
+        std::string conversationId;
+        std::string userId;
+    };
+
     ConversationsService(std::unique_ptr<IConversationsRepository> conversationsRepository, UsersService& usersService, UuidService& uuidService, Logger& logger);
 
     ConversationResult Close(const CloseConversationDto& closeConversationDto);
@@ -93,6 +91,7 @@ public:
     ConversationResult FindByUserIds(const FindConversationByUserIdsDto& findConversationByUserIdsDto);
     ConversationsResult FindAllOpenByUserId(const FindAllOpenConversationsByUserIdDto& findAllOpenConversationsByUserIdDto);
     bool IsConversationUser(const IsConversationUserDto& isConversationUserDto);
+    std::string ConvertConversationsResultCodeToString(ConversationsResultCode conversationsResultCode);
 
 private:
     std::unique_ptr<IConversationsRepository> m_conversationsRepository = nullptr;

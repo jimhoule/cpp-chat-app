@@ -8,21 +8,21 @@
 // Forward declarations
 class Logger;
 
-struct EncryptStringDto
-{
-    std::string string;
-};
-
-struct VerifyStringDto
-{
-    std::string string;
-    std::string hashedString;
-
-};
-
 class EncryptionService
 {
 public:
+    struct EncryptStringDto
+    {
+        std::string string;
+    };
+
+    struct VerifyStringDto
+    {
+        std::string string;
+        std::string hashedString;
+
+    };
+
     EncryptionService(std::unique_ptr<IEncryptionProvider> encryptionProvider, Logger& logger);
 
     std::string Encrypt(const EncryptStringDto& encryptStringDto) const;

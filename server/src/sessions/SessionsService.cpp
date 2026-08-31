@@ -2,21 +2,6 @@
 
 #include "uuid/UuidService.h"
 
-std::string ConvertSessionsResultCodeToString(SessionsResultCode sessionsResultCode)
-{
-    switch (sessionsResultCode)
-    {
-        case SessionsResultCode::OK:
-            return "OK";
-
-        case SessionsResultCode::SESSION_EXPIRED:
-            return "SESSION EXPIRED";
-
-        default:
-            return "Unknown sessions result code";
-    }
-}
-
 // **********
 // * PUBLIC *
 // **********
@@ -26,7 +11,7 @@ SessionsService::SessionsService(std::unique_ptr<ISessionsRepository> sessionsRe
     , m_logger(logger)
 {}
 
-SessionResult SessionsService::Create(const CreateSessionDto& createSessionDto)
+SessionsService::SessionResult SessionsService::Create(const CreateSessionDto& createSessionDto)
 {
     // 7 days in seconds
     const std::time_t sessionTtlSeconds = 7 * 24 * 60 * 60;
@@ -43,7 +28,7 @@ SessionResult SessionsService::Create(const CreateSessionDto& createSessionDto)
     return sessionResult;
 }
 
-SessionResult SessionsService::FindById(const FindSessionByIdDto& findSessionByIdDto)
+SessionsService::SessionResult SessionsService::FindById(const FindSessionByIdDto& findSessionByIdDto)
 {
     SessionResult sessionResult = {};
 
@@ -57,4 +42,19 @@ SessionResult SessionsService::FindById(const FindSessionByIdDto& findSessionByI
     sessionResult.data = session;
 
     return sessionResult;
+}
+
+std::string SessionsService::ConvertSessionsResultCodeToString(SessionsResultCode sessionsResultCode)
+{
+    switch (sessionsResultCode)
+    {
+        case SessionsResultCode::OK:
+            return "OK";
+
+        case SessionsResultCode::SESSION_EXPIRED:
+            return "SESSION EXPIRED";
+
+        default:
+            return "Unknown sessions result code";
+    }
 }

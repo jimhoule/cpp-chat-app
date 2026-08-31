@@ -15,8 +15,6 @@
 class SocketServer;
 class Logger;
 
-SocketErrorCode ConvertConversationsResultCodeToSocketErrorCode(ConversationsResultCode conversationsResultCode);
-
 class ConversationsHandler
 {
 public:
@@ -44,4 +42,6 @@ private:
 
     ConversationOpenedSocketEventSerializer m_conversationOpenedSocketEventSerializer = {};
     OpenConversationSocketEventPayloadDeserializer m_openConversationSocketEventPayloadDeserializer = {};
+
+    SocketErrorCode ConvertConversationsResultCodeToSocketErrorCode(ConversationsService::ConversationsResultCode conversationsResultCode);
 };

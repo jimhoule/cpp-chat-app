@@ -5,25 +5,6 @@
 
 constexpr size_t MAX_MESSAGE_TEXT_LENGTH = 4000;
 
-std::string ConvertMessagesResultCodeToString(MessagesResultCode messagesResultCode)
-{
-    switch (messagesResultCode)
-    {
-        case MessagesResultCode::OK:
-            return "OK";
-
-        case MessagesResultCode::TEXT_EMPTY:
-            return "TEXT EMPTY";
-
-        case MessagesResultCode::TEXT_TOO_LONG:
-            return "TEXT TOO LONG";
-
-        // NOTE: Handles cases where the enum value might be out of range
-        default:
-            return "Unknown messages result code";
-    }
-}
-
 // **********
 // * PUBLIC *
 // **********
@@ -33,7 +14,7 @@ MessagesService::MessagesService(std::unique_ptr<IMessagesRepository> messagesRe
     , m_logger(logger)
 {}
 
-MessageResult MessagesService::Create(const CreateMessageDto& createMessageDto)
+MessagesService::MessageResult MessagesService::Create(const CreateMessageDto& createMessageDto)
 {
     MessageResult messageResult = {};
 
@@ -64,4 +45,23 @@ MessageResult MessagesService::Create(const CreateMessageDto& createMessageDto)
     m_logger.Info("Created message " + message.id + " in conversation " + message.conversationId + " from user " + message.senderId + " (" + std::to_string(message.text.size()) + " chars)");
 
     return messageResult;
+}
+
+std::string MessagesService::ConvertMessagesResultCodeToString(MessagesResultCode messagesResultCode)
+{
+    switch (messagesResultCode)
+    {
+        case MessagesResultCode::OK:
+            return "OK";
+
+        case MessagesResultCode::TEXT_EMPTY:
+            return "TEXT EMPTY";
+
+        case MessagesResultCode::TEXT_TOO_LONG:
+            return "TEXT TOO LONG";
+
+        // NOTE: Handles cases where the enum value might be out of range
+        default:
+            return "Unknown messages result code";
+    }
 }

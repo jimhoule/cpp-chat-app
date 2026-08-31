@@ -23,11 +23,11 @@ SocketServerEventHandler AuthHandler::GetLoginHandler()
         const LoginSocketEventPayload loginSocketEventPayload = m_loginSocketEventPayloadDeserializer.Deserialize(context.serializedPayload);
 
         // Logs in 
-        LoginDto loginDto = {};
+        AuthService::LoginDto loginDto = {};
         loginDto.email = loginSocketEventPayload.email;
         loginDto.password = loginSocketEventPayload.password;
-        const AuthResult authResult = m_authService.Login(loginDto);
-        if (authResult.code != AuthResultCode::OK)
+        const AuthService::AuthResult authResult = m_authService.Login(loginDto);
+        if (authResult.code != AuthService::AuthResultCode::OK)
         {
             throw ExpectedException(SocketErrorCode::INVALID_CREDENTIALS, "Invalid email or password");
         }
@@ -53,15 +53,16 @@ SocketServerEventHandler AuthHandler::GetRegisterHandler()
 
         // Generates access token
         // TODO: Create auth service and integrate jwt library
-        RegisterDto registerDto = {};
+        AuthService::RegisterDto registerDto = {};
         registerDto.email = registerSocketEventPayload.email;
         registerDto.firstName = registerSocketEventPayload.firstName;
         registerDto.lastName = registerSocketEventPayload.lastName;
         registerDto.password = registerSocketEventPayload.password;
-        const AuthResult authResult = m_authService.Register(registerDto);
-        if (authResult.code != AuthResultCode::OK)
+        const AuthService::AuthResult authResult = m_authService.Register(registerDto);
+        if (authResult.code != AuthService::AuthResultCode::OK)
         {
-            throw ExpectedException(SocketErrorCode::ALREADY_EXISTS, "Registration failed for email " + registerDto.email + ", " + ConvertAuthResultCodeToString(authResult.code));
+            const std::string authResultCodeString = m_authService.ConvertAuthResultCodeToString(authResult.code);
+            throw ExpectedException(SocketErrorCode::ALREADY_EXISTS, "Registration failed for email " + registerDto.email + ", " + authResultCodeString);
         }
 
         // Serializes registered socket event

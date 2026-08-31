@@ -23,14 +23,15 @@ SocketServerEventHandler MessagesHandler::GetCreateMessageHandler()
         const CreateMessageSocketEventPayload createMessageSocketEventPayload = m_createMessageSocketEventPayloadDeserializer.Deserialize(context.serializedPayload);
 
         // Creates message
-        CreateMessageDto createMessageDto = {};
+        MessagesService::CreateMessageDto createMessageDto = {};
         createMessageDto.conversationId = createMessageSocketEventPayload.conversationId;
         createMessageDto.senderId = context.user->id;
         createMessageDto.text = createMessageSocketEventPayload.text;
-        const MessageResult messageResult = m_messagesService.Create(createMessageDto);
-        if (messageResult.code != MessagesResultCode::OK)
+        const MessagesService::MessageResult messageResult = m_messagesService.Create(createMessageDto);
+        if (messageResult.code != MessagesService::MessagesResultCode::OK)
         {
-            throw ExpectedException(SocketErrorCode::INVALID_PAYLOAD, "Create message failed for user " + context.user->id + ", " + ConvertMessagesResultCodeToString(messageResult.code));
+            const std::string messagesResultCodeString = m_messagesService.ConvertMessagesResultCodeToString(messageResult.code);
+            throw ExpectedException(SocketErrorCode::INVALID_PAYLOAD, "Create message failed for user " + context.user->id + ", " + messagesResultCodeString);
         }
         
         // Serializes message created socket event

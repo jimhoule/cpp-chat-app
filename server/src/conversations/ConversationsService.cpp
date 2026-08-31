@@ -6,31 +6,6 @@
 // NOTE: A conversation is identified by its exact set of users, so users can never be added to an existing one. Past this size that model breaks down and a named channel is needed
 constexpr size_t MAX_CONVERSATION_USERS = 9;
 
-std::string ConvertConversationsResultCodeToString(ConversationsResultCode conversationsResultCode)
-{
-    switch (conversationsResultCode)
-    {
-        case ConversationsResultCode::OK:
-            return "OK";
-
-        case ConversationsResultCode::USERS_EMPTY:
-            return "USERS EMPTY";
-
-        case ConversationsResultCode::TOO_MANY_USERS:
-            return "TOO MANY USERS";
-
-        case ConversationsResultCode::UNKNOWN_USER:
-            return "UNKNOWN USER";
-
-        case ConversationsResultCode::UNKNOWN_CONVERSATION:
-            return "UNKNOWN CONVERSATION";
-
-        // NOTE: Handles cases where the enum value might be out of range
-        default:
-            return "Unknown conversations result code";
-    }
-}
-
 // **********
 // * PUBLIC *
 // **********
@@ -41,7 +16,7 @@ ConversationsService::ConversationsService(std::unique_ptr<IConversationsReposit
     , m_logger(logger)
 {}
 
-ConversationResult ConversationsService::Close(const CloseConversationDto& closeConversationDto)
+ConversationsService::ConversationResult ConversationsService::Close(const CloseConversationDto& closeConversationDto)
 {
     ConversationResult conversationResult = {};
 
@@ -58,7 +33,7 @@ ConversationResult ConversationsService::Close(const CloseConversationDto& close
     return conversationResult;
 }
 
-ConversationResult ConversationsService::Open(const OpenConversationDto& openConversationDto)
+ConversationsService::ConversationResult ConversationsService::Open(const OpenConversationDto& openConversationDto)
 {
     ConversationResult conversationResult = {};
 
@@ -88,9 +63,9 @@ ConversationResult ConversationsService::Open(const OpenConversationDto& openCon
         }
 
         // Checks if user exists
-        FindUserByIdDto findUserByIdDto = {};
+        UsersService::FindUserByIdDto findUserByIdDto = {};
         findUserByIdDto.id = normalizedUserId;
-        UserResult userResult = m_usersService.FindById(findUserByIdDto);
+        UsersService::UserResult userResult = m_usersService.FindById(findUserByIdDto);
         if (!userResult.data.has_value())
         {
             conversationResult.code = ConversationsResultCode::UNKNOWN_USER;
@@ -126,7 +101,7 @@ ConversationResult ConversationsService::Open(const OpenConversationDto& openCon
     return conversationResult;
 }
 
-ConversationResult ConversationsService::OpenForAllUsers(const OpenConversationForAllUsersDto& openConversationForAllUsersDto)
+ConversationsService::ConversationResult ConversationsService::OpenForAllUsers(const OpenConversationForAllUsersDto& openConversationForAllUsersDto)
 {
     ConversationResult conversationResult = {};
 
@@ -156,7 +131,7 @@ ConversationResult ConversationsService::OpenForAllUsers(const OpenConversationF
     return conversationResult;
 }
 
-ConversationResult ConversationsService::FindById(const FindConversationByIdDto& findConversationByIdDto)
+ConversationsService::ConversationResult ConversationsService::FindById(const FindConversationByIdDto& findConversationByIdDto)
 {
     ConversationResult conversationResult = {};
     conversationResult.data = m_conversationsRepository->FindById(findConversationByIdDto.id);
@@ -164,7 +139,7 @@ ConversationResult ConversationsService::FindById(const FindConversationByIdDto&
     return conversationResult;
 }
 
-ConversationResult ConversationsService::FindByUserIds(const FindConversationByUserIdsDto& findConversationByUserIdsDto)
+ConversationsService::ConversationResult ConversationsService::FindByUserIds(const FindConversationByUserIdsDto& findConversationByUserIdsDto)
 {
     const std::vector<std::string> normalizedUserIds = NormalizeUserIds(findConversationByUserIdsDto.initiatorUserId, findConversationByUserIdsDto.userIds);
 
@@ -174,7 +149,7 @@ ConversationResult ConversationsService::FindByUserIds(const FindConversationByU
     return conversationResult;
 }
 
-ConversationsResult ConversationsService::FindAllOpenByUserId(const FindAllOpenConversationsByUserIdDto& findAllOpenConversationsByUserIdDto)
+ConversationsService::ConversationsResult ConversationsService::FindAllOpenByUserId(const FindAllOpenConversationsByUserIdDto& findAllOpenConversationsByUserIdDto)
 {
     ConversationsResult conversationsResult = {};
     conversationsResult.data = m_conversationsRepository->FindAllOpenByUserId(findAllOpenConversationsByUserIdDto.userId);
@@ -185,6 +160,31 @@ ConversationsResult ConversationsService::FindAllOpenByUserId(const FindAllOpenC
 bool ConversationsService::IsConversationUser(const IsConversationUserDto& isConversationUserDto)
 {
     return m_conversationsRepository->IsConversationUser(isConversationUserDto.conversationId, isConversationUserDto.userId);
+}
+
+std::string ConversationsService::ConvertConversationsResultCodeToString(ConversationsResultCode conversationsResultCode)
+{
+    switch (conversationsResultCode)
+    {
+        case ConversationsResultCode::OK:
+            return "OK";
+
+        case ConversationsResultCode::USERS_EMPTY:
+            return "USERS EMPTY";
+
+        case ConversationsResultCode::TOO_MANY_USERS:
+            return "TOO MANY USERS";
+
+        case ConversationsResultCode::UNKNOWN_USER:
+            return "UNKNOWN USER";
+
+        case ConversationsResultCode::UNKNOWN_CONVERSATION:
+            return "UNKNOWN CONVERSATION";
+
+        // NOTE: Handles cases where the enum value might be out of range
+        default:
+            return "Unknown conversations result code";
+    }
 }
 
 // ***********

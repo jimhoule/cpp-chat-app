@@ -7,33 +7,32 @@
 class Logger;
 class UuidService;
 
-enum class SessionsResultCode
-{
-    OK,
-    SESSION_EXPIRED
-};
-
-std::string ConvertSessionsResultCodeToString(SessionsResultCode sessionsResultCode);
-
-using SessionResult = ServiceResult<SessionsResultCode, std::optional<Session>>;
-
-struct CreateSessionDto
-{
-    std::string userId;
-};
-
-struct FindSessionByIdDto
-{
-    std::string id;
-};
-
 class SessionsService
 {
 public:
+    enum class SessionsResultCode
+    {
+        OK,
+        SESSION_EXPIRED
+    };
+
+    using SessionResult = ServiceResult<SessionsResultCode, std::optional<Session>>;
+
+    struct CreateSessionDto
+    {
+        std::string userId;
+    };
+
+    struct FindSessionByIdDto
+    {
+        std::string id;
+    };
+
     SessionsService(std::unique_ptr<ISessionsRepository> usersRepository, UuidService& uuidService, Logger& logger);
 
     SessionResult Create(const CreateSessionDto& createSessionDto);
     SessionResult FindById(const FindSessionByIdDto& findSessionByIdDto);
+    std::string ConvertSessionsResultCodeToString(SessionsResultCode sessionsResultCode);
 
 private:
     std::unique_ptr<ISessionsRepository> m_sessionsRepository = nullptr;
