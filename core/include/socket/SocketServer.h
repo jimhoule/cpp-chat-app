@@ -57,6 +57,7 @@ public:
     void SendTo(int clientSocket, const std::string& serializedSocketEvent);
     void SendTo(const std::string& userId, const std::string& serializedSocketEvent);
     void SendToMany(std::vector<int> clientSockets, const std::string& serializedSocketEvent);
+    void UnbindConnectionUser(int clientSocket);
     void Use(const EventMiddleware& middleware);
 
 private:

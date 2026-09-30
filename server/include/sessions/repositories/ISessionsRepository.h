@@ -19,5 +19,7 @@ public:
     ISessionsRepository& operator=(const ISessionsRepository&) = delete;
 
     virtual Session Create(const Session& session) = 0;
+    virtual std::optional<Session> Delete(const std::string& id) = 0;
     virtual std::optional<Session> FindById(const std::string& id) const = 0;
+    virtual std::optional<Session> Refresh(const std::string& id, std::time_t expiredAt) = 0;
 };

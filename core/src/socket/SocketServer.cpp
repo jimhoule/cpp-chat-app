@@ -2,6 +2,7 @@
 #include "log/Logger.h"
 #include "socket/SocketServer.h"
 
+#include <algorithm>
 #include <cerrno>
 #include <cstdlib>
 #include <cstring>
@@ -30,6 +31,13 @@ void SocketServer::BindConnectionUser(int clientSocket, const User& user)
 		m_logger.Error("Socket connection not found");
 		return;
 	}
+
+	/**
+	 * NOTES:
+	 * 	- Detaches connection from userit was bound to, if any, so it is neverlisted under two users
+	 * 	- For the case for re authentication
+	 */
+	UnbindConnectionUser(clientSocket);
 
 	connectionsMapIterator->second.user = user;
 	// NOTE: If key does not exist, this line creates it inside the map with an empty vector
@@ -268,6 +276,44 @@ void SocketServer::SendToMany(std::vector<int> clientSockets, const std::string&
     }
 }
 
+void SocketServer::UnbindConnectionUser(int clientSocket)
+{
+	// Finds connection
+	std::unordered_map<int, Connection>::iterator connectionsMapIterator = m_connectionsMap.find(clientSocket);
+	if (connectionsMapIterator == m_connectionsMap.end())
+	{
+		m_logger.Warning("No socket connections found");
+		return;
+	}
+
+	Connection& connection = connectionsMapIterator->second;
+
+	// NOTE: A connection with no user is not bound so there is nothing to unbind
+	if (!connection.user.has_value())
+	{
+		return;
+	}
+
+	// Finds user's sockets
+	std::unordered_map<std::string, std::vector<int>>::iterator userClientSocketsMapIterator = m_userClientSocketsMap.find(connection.user.value().id);
+	if (userClientSocketsMapIterator != m_userClientSocketsMap.end())
+	{
+		// Removes socket from user's sockets
+		std::vector<int>& userClientSockets = userClientSocketsMapIterator->second;
+		userClientSockets.erase(std::remove(userClientSockets.begin(), userClientSockets.end(), clientSocket), userClientSockets.end());
+
+		// If after removing socket user does not have sockets anymore
+		if (userClientSockets.empty())
+		{
+			// Removes sockets vector from map
+			m_userClientSocketsMap.erase(userClientSocketsMapIterator);
+		}
+	}
+
+	// Removes user from connection
+	connection.user = std::nullopt;
+}
+
 void SocketServer::Use(const EventMiddleware& middleware)
 {
 	if (!m_routesMap.empty())
@@ -286,29 +332,8 @@ void SocketServer::Use(const EventMiddleware& middleware)
  {
 	close(clientSocket);
 
-
-	std::unordered_map<int, Connection>::iterator connectionsMapIterator = m_connectionsMap.find(clientSocket);
-	if (connectionsMapIterator == m_connectionsMap.end())
-	{
-		m_logger.Warning("No socket connections found");
-		return;
-	}
-
-	// If connection has a user
-	const std::optional<User>& socketConnectionUser = connectionsMapIterator->second.user;
-	if (socketConnectionUser.has_value())
-	{
-		// Removes socket from user's sockets
-		std::unordered_map<std::string, std::vector<int>>::iterator userClientSocketsMapIterator = m_userClientSocketsMap.find(socketConnectionUser.value().id);
-		userClientSocketsMapIterator->second.erase(std::remove(userClientSocketsMapIterator->second.begin(), userClientSocketsMapIterator->second.end(), clientSocket));
-
-		// If after removing socket user does not have sockets anymore
-		if (!userClientSocketsMapIterator->second.size())
-		{
-			// Removes sockets vector from map
-			m_userClientSocketsMap.erase(socketConnectionUser.value().id);
-		}
-	}
+	// Removes user connection and connection from user's socket
+	UnbindConnectionUser(clientSocket);
 
 	// Removes socket connection from map
 	m_connectionsMap.erase(clientSocket);

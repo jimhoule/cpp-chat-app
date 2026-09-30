@@ -3,10 +3,10 @@
 #include "models/User.h"
 
 // NOTE: Sent when another user comes online
-struct UserAuthenticatedEvent
+struct UserOnlineEvent
 {
-    UserAuthenticatedEvent() = default;
-    UserAuthenticatedEvent(const User& user)
+    UserOnlineEvent() = default;
+    UserOnlineEvent(const User& user)
         : user(user)
     {}
 

@@ -9,11 +9,23 @@ std::string ConvertSocketEventNameToString(SocketEventName socketEventName)
 
 
         // Auth
+        case SocketEventName::AUTHENTICATE:
+            return "AUTHENTICATE";
+
+        case SocketEventName::AUTHENTICATED:
+            return "AUTHENTICATED";
+
         case SocketEventName::LOGIN:
             return "LOGIN";
 
         case SocketEventName::LOGGEDIN:
             return "LOGGEDIN";
+
+        case SocketEventName::LOGOUT:
+            return "LOGOUT";
+
+        case SocketEventName::LOGGEDOUT:
+            return "LOGGEDOUT";
 
         case SocketEventName::REGISTER:
             return "REGISTER";
@@ -21,8 +33,11 @@ std::string ConvertSocketEventNameToString(SocketEventName socketEventName)
         case SocketEventName::REGISTERED:
             return "REGISTERED";
 
-        case SocketEventName::USER_AUTHENTICATED:
-            return "USER AUTHENTICATED";
+        case SocketEventName::USER_OFFLINE:
+            return "USER OFFLINE";
+
+        case SocketEventName::USER_ONLINE:
+            return "USER ONLINE";
 
 
         // Conversations

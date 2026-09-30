@@ -11,6 +11,8 @@ enum class SocketErrorCode
     INVALID_CREDENTIALS,
     ALREADY_EXISTS,
     NOT_FOUND,
+    UNKNOWN_SESSION,
+    EXPIRED_SESSION
 };
 
 /**
@@ -25,6 +27,8 @@ NLOHMANN_JSON_SERIALIZE_ENUM(SocketErrorCode, {
     { SocketErrorCode::INVALID_CREDENTIALS, "INVALID_CREDENTIALS" },
     { SocketErrorCode::ALREADY_EXISTS, "ALREADY_EXISTS" },
     { SocketErrorCode::NOT_FOUND, "NOT_FOUND" },
+    { SocketErrorCode::UNKNOWN_SESSION, "UNKNOWN_SESSION" },
+    { SocketErrorCode::EXPIRED_SESSION, "EXPIRED_SESSION" },
 });
 
 std::string ConvertSocketErrorCodeToString(SocketErrorCode socketErrorCode);

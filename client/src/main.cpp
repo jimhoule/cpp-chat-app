@@ -7,9 +7,11 @@
 #include "layer/ChatLayer.h"
 #include "layer/LoginLayer.h"
 #include "layer/RegisterLayer.h"
+#include "layer/SplashLayer.h"
 #include "log/Logger.h"
 #include "messages/MessagesApi.h"
 #include "navigation/Navigation.h"
+#include "sessions/SessionStore.h"
 #include "socket/SocketClient.h"
 
 #include <GLAD/glad.h>
@@ -74,16 +76,21 @@ int main()
     DebugOverlay debugOverlay(gui, layerStack);
 
     // Loggers
-    Logger authServiceLogger("AUTH", "client/src/auth/AuthApi");
-    Logger messagesServiceLogger("MESSAGES", "client/src/auth/AuthApi");
+    Logger authApiLogger("AUTH", "client/src/auth/AuthApi");
+    Logger messagesApiLogger("MESSAGES", "client/src/auth/AuthApi");
     Logger navigationLogger("NAVIGATION", "client/src/navigation/Navigation");
+    Logger sessionStoreLogger("SESSION", "client/src/sessions/SessionStore");
     DebugLogger chatLogger("CHAT", "client/src/layer/ChatLayer", debugOverlay);
-    DebugLogger registerLogger("REGISTER", "client/src/layer/RegisterLayer", debugOverlay);
     DebugLogger loginLogger("LOGIN", "client/src/layer/LoginLayer", debugOverlay);
+    DebugLogger registerLogger("REGISTER", "client/src/layer/RegisterLayer", debugOverlay);
+    DebugLogger splashLogger("SPLASH", "client/src/layer/SplashLayer", debugOverlay);
+
+    // Stores
+    SessionStore sessionStore(sessionStoreLogger);
 
     // Apis
-    AuthApi authApi(socketClient, authServiceLogger);
-    MessagesApi messagesApi(socketClient, messagesServiceLogger);
+    AuthApi authApi(socketClient, sessionStore, authApiLogger);
+    MessagesApi messagesApi(socketClient, messagesApiLogger);
 
     // Navigation
     Navigation navigation(layerStack, navigationLogger);
@@ -94,12 +101,15 @@ int main()
     loginScreen.layer = std::make_unique<LoginLayer>("Login", gui, navigation, authApi, loginLogger);
     Navigation::Screen registerScreen = {};
     registerScreen.layer = std::make_unique<RegisterLayer>("Register", gui, navigation, authApi, registerLogger);
+    Navigation::Screen splashScreen = {};
+    splashScreen.layer = std::make_unique<SplashLayer>("Splash", gui, navigation, authApi, splashLogger);
 
     navigation.AddScreen(Navigation::ScreenName::CHAT, std::move(chatScreen));
     navigation.AddScreen(Navigation::ScreenName::LOGIN, std::move(loginScreen));
     navigation.AddScreen(Navigation::ScreenName::REGISTER, std::move(registerScreen));
+    navigation.AddScreen(Navigation::ScreenName::SPLASH, std::move(splashScreen));
 
-    navigation.SetInitialScreen(Navigation::ScreenName::LOGIN);
+    navigation.SetInitialScreen(Navigation::ScreenName::SPLASH);
 
     while(!glfwWindowShouldClose(glfwWindow))
     {

@@ -2,7 +2,8 @@
 
 #include "Gui.h"
 
-#include "auth/UserAuthenticatedEvent.h"
+#include "auth/LoggedOutEvent.h"
+#include "auth/UserOnlineEvent.h"
 #include "layer/Layer.h"
 #include "messages/MessageCreatedEvent.h"
 #include "models/Conversation.h"
@@ -37,7 +38,8 @@ private:
     Navigation& m_navigation;
 
     AuthApi& m_authApi;
-    Observer<UserAuthenticatedEvent, ChatLayer> m_userAuthenticatedObserver;
+    Observer<LoggedOutEvent, ChatLayer> m_loggedOutObserver;
+    Observer<UserOnlineEvent, ChatLayer> m_userOnlineObserver;
 
     MessagesApi& m_messagesApi;
     Observer<MessageCreatedEvent, ChatLayer> m_messageCreatedObserver; 
@@ -68,7 +70,8 @@ private:
     Texture m_whiteLeftArrowImageTexture = {};
 
     void HandleMessageCreated(const MessageCreatedEvent& messageCreatedEvent);
-    void HandleUserAuthenticated(const UserAuthenticatedEvent& userAuthenticatedEvent);
+    void HandleLoggedOut(const LoggedOutEvent& loggedOutEvent);
+    void HandleUserOnline(const UserOnlineEvent& userOnlineEvent);
     void HandleLogoutButtonClicked();
     void HandleSendMessageButtonClicked();
     void Reset();

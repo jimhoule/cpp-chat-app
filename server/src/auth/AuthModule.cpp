@@ -1,6 +1,7 @@
 #include "auth/AuthModule.h"
 
 #include "socket/SocketServer.h"
+#include "middlewares/RequireAuthentication.h"
 
 // **********
 // * PUBLIC *
@@ -11,8 +12,23 @@ AuthModule::AuthModule(SocketServer& socketServer,  SessionsService& sessionsSer
     , m_authService(sessionsService, usersService, m_authServiceLogger)
     , m_authHandler(socketServer, m_authService, m_authHandlerLogger)
 {
-    socketServer.On(SocketEventName::LOGIN, m_authHandler.GetLoginHandler());
-	socketServer.On(SocketEventName::REGISTER, m_authHandler.GetRegisterHandler());
+    socketServer.On(
+        SocketEventName::AUTHENTICATE,
+        m_authHandler.GetAuthenticateHandler()
+    );   
+    socketServer.On(
+        SocketEventName::LOGIN,
+        m_authHandler.GetLoginHandler()
+    );
+    socketServer.On(
+        SocketEventName::LOGOUT,
+        { RequireAuthentication(socketServer) }, 
+        m_authHandler.GetLogoutHandler()
+    );
+	socketServer.On(
+        SocketEventName::REGISTER,
+        m_authHandler.GetRegisterHandler()
+    );
 }
 
 AuthService& AuthModule::GetService()

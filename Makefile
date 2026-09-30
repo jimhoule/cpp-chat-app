@@ -9,11 +9,16 @@ SRCS = \
 	$(wildcard test/src/*.cpp)
 
 # Forces command to run every time (even if target already exits)
-.PHONY: build test start_client start_server start_all
+.PHONY: build_debug test start_client start_client_local start_server start_all_local
 
 start_client:
 	@echo "Starting client"
 	cd build/client && ./Client
+	@echo "Starting complete"
+
+start_client_local:
+	@echo "Starting client"
+	cd build/client && LOCAL_DATA_DIRECTORY=${CURDIR}/tmp/${CLIENT_NAME} ./Client
 	@echo "Starting complete"
 
 start_server:
@@ -21,16 +26,18 @@ start_server:
 	cd build/server && ./Server
 	@echo "Starting complete"
 
-start_all:
+start_all_local:
+	@echo "Starting all local"
 	tmux new-session -d -s chat 'make start_server' \; \
-	split-window -h 'sleep 1 && make start_client' \; \
-	split-window -v 'sleep 1 && make start_client' \; \
+	split-window -h 'sleep 1 && make start_client_local CLIENT_NAME=client1' \; \
+	split-window -v 'sleep 1 && make start_client_local CLIENT_NAME=client2' \; \
 	select-layout tiled \; \
 	attach
+	@echo "Starting complete"
 
-build:
-	@echo "Building project"
-	cmake -S . -B build -D CMAKE_EXPORT_COMPILE_COMMANDS=1 && cmake --build build
+build_debug:
+	@echo "Building debug project"
+	cmake -S . -B build -D CMAKE_BUILD_TYPE=Debug -D CMAKE_EXPORT_COMPILE_COMMANDS=1 && cmake --build build
 	@echo "Building complete"
 
 test:

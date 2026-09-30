@@ -2,7 +2,7 @@
 
 #include "auth/AuthApi.h"
 #include "deserializer/MessageCreatedSocketEventPayloadDeserializer.h"
-#include "deserializer/UserAuthenticatedSocketEventPayloadDeserializer.h"
+#include "deserializer/UserOnlineSocketEventPayloadDeserializer.h"
 #include "log/Logger.h"
 #include "navigation/Navigation.h"
 #include "messages/MessagesApi.h"
@@ -19,13 +19,15 @@ ChatLayer::ChatLayer(const std::string& id, const Gui& gui, Navigation& navigati
     , m_navigation(navigation)
     , m_authApi(authApi)
     , m_messagesApi(messagesApi)
-    , m_userAuthenticatedObserver(*this, &ChatLayer::HandleUserAuthenticated)
+    , m_loggedOutObserver(*this, &ChatLayer::HandleLoggedOut)
+    , m_userOnlineObserver(*this, &ChatLayer::HandleUserOnline)
     , m_messageCreatedObserver(*this, &ChatLayer::HandleMessageCreated)
 {}
 
 void ChatLayer::OnAttach()
 {
-    m_authApi.GetUserAuthenticatedSubject().Subscribe(&m_userAuthenticatedObserver);
+    m_authApi.GetLoggedOutSubject().Subscribe(&m_loggedOutObserver);
+    m_authApi.GetUserOnlineSubject().Subscribe(&m_userOnlineObserver);
     m_messagesApi.GetMessageCreatedSubject().Subscribe(&m_messageCreatedObserver);
 
     // Users
@@ -106,7 +108,8 @@ void ChatLayer::OnAttach()
 
 void ChatLayer::OnDetach()
 {
-    m_authApi.GetUserAuthenticatedSubject().Unsubscribe(&m_userAuthenticatedObserver);
+    m_authApi.GetLoggedOutSubject().Unsubscribe(&m_loggedOutObserver);
+    m_authApi.GetUserOnlineSubject().Unsubscribe(&m_userOnlineObserver);
     m_messagesApi.GetMessageCreatedSubject().Unsubscribe(&m_messageCreatedObserver);
     Reset();
 }
@@ -755,15 +758,20 @@ void ChatLayer::HandleMessageCreated(const MessageCreatedEvent& messageCreatedEv
     m_logger.Info("Message created text: " + messageCreatedEvent.message.text);
 }
 
-void ChatLayer::HandleUserAuthenticated(const UserAuthenticatedEvent& userAuthenticatedEvent)
+void ChatLayer::HandleLoggedOut(const LoggedOutEvent& loggedOutEvent)
+{
+    m_navigation.GoToLoginScreen();
+}
+
+void ChatLayer::HandleUserOnline(const UserOnlineEvent& userOnlineEvent)
 {
     // TODO: This function will be used to change the online status of a conversation user in an open conversation
-    m_logger.Info("Authenticated user id: " + userAuthenticatedEvent.user.id);
+    m_logger.Info("Online user id: " + userOnlineEvent.user.id);
 }
 
 void ChatLayer::HandleLogoutButtonClicked()
 {
-    m_navigation.GoToLoginScreen();
+    m_authApi.Logout();
 }
 
 void ChatLayer::HandleSendMessageButtonClicked()

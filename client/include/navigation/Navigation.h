@@ -17,7 +17,8 @@ public:
     {
         CHAT,
         LOGIN,
-        REGISTER
+        REGISTER,
+        SPLASH
     };
 
     struct Screen

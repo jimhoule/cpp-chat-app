@@ -13,7 +13,10 @@ public:
     enum class AuthResultCode
     {
         OK,
-        USER_NOT_FOUND,
+        UNKNOWN_USER,
+        UNKNOWN_SESSION,
+        EXPIRED_SESSION,
+        ORPHANED_SESSION,
         INVALID_PASSWORD,
         EMAIL_ALREADY_USED
     };
@@ -25,10 +28,21 @@ public:
     };
     using AuthResult = ServiceResult<AuthResultCode, Auth>;
 
+     struct AuthenticateDto
+    {
+        std::string sessionId;
+    };
+
     struct LoginDto
     {
         std::string email;
         std::string password;
+    };
+
+    struct LogoutDto
+    {
+        std::string sessionId;
+        std::string userId;
     };
 
     struct RegisterDto
@@ -41,7 +55,9 @@ public:
 
     AuthService(SessionsService& sessionsService, UsersService& usersService, Logger& logger);
 
+    AuthResult Authenticate(const AuthenticateDto& authenticateDto);
     AuthResult Login(const LoginDto& loginDto);
+    AuthResult Logout(const LogoutDto& logoutDto);
     AuthResult Register(const RegisterDto& registerDto);
     std::string ConvertAuthResultCodeToString(AuthResultCode authResultCode);
 

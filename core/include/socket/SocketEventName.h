@@ -9,11 +9,16 @@ enum class SocketEventName
     ERROR,
 
     // Auth
+    AUTHENTICATE,
+    AUTHENTICATED,
     LOGIN,
     LOGGEDIN,
+    LOGOUT,
+    LOGGEDOUT,
     REGISTER,
     REGISTERED,
-    USER_AUTHENTICATED,
+    USER_OFFLINE,
+    USER_ONLINE,
 
     // Conversations
     CLOSE_CONVERSATION,
@@ -27,7 +32,7 @@ enum class SocketEventName
 
     // Messages
     CREATE_MESSAGE,
-    MESSAGE_CREATED,
+    MESSAGE_CREATED
 };
 
 /**
@@ -40,11 +45,16 @@ NLOHMANN_JSON_SERIALIZE_ENUM(SocketEventName, {
     { SocketEventName::ERROR, "ERROR" },
     
     // Auth
+    { SocketEventName::AUTHENTICATE, "AUTHENTICATE" },
+    { SocketEventName::AUTHENTICATED, "AUTHENTICATED" },
     { SocketEventName::LOGIN, "LOGIN" },
     { SocketEventName::LOGGEDIN, "LOGGEDIN" },
+    { SocketEventName::LOGOUT, "LOGOUT" },
+    { SocketEventName::LOGGEDOUT, "LOGGEDOUT" },
     { SocketEventName::REGISTER, "REGISTER" },
     { SocketEventName::REGISTERED, "REGISTERED" },
-    { SocketEventName::USER_AUTHENTICATED, "USER_AUTHENTICATED" },
+    { SocketEventName::USER_OFFLINE, "USER_OFFLINE" },
+    { SocketEventName::USER_ONLINE, "USER_ONLINE" },
 
     // Conversations
     { SocketEventName::CLOSE_CONVERSATION, "CLOSE_CONVERSATION" },
@@ -58,7 +68,7 @@ NLOHMANN_JSON_SERIALIZE_ENUM(SocketEventName, {
 
     // Messages
     { SocketEventName::CREATE_MESSAGE, "CREATE_MESSAGE" },
-    { SocketEventName::MESSAGE_CREATED, "MESSAGE_CREATED" },
+    { SocketEventName::MESSAGE_CREATED, "MESSAGE_CREATED" }
 });
 
 std::string ConvertSocketEventNameToString(SocketEventName socketEventName);
