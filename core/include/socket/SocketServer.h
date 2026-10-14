@@ -1,13 +1,15 @@
 #pragma once
 
+#include "deserializer/SocketEventDeserializer.h"
 #include "models/User.h"
 #include "socket/SocketEventName.h"
 
 #include <arpa/inet.h>
 #include <exception>
 #include <functional>
-#include <unordered_map>
+#include <optional>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 // Forward declarations
@@ -31,7 +33,13 @@ public:
         const User* user = nullptr;
     };
 
-    using EventErrorHandler = std::function<void(const std::exception&, EventContext&)>;
+    struct EventErrorContext
+    {
+        int clientSocket = -1;
+        SocketEventName eventName = SocketEventName::ERROR;
+    };
+
+    using EventErrorHandler = std::function<void(const std::exception&, EventErrorContext&)>;
     using EventHandler = std::function<void(const EventContext&)>;
     using EventMiddleware = std::function<void(EventContext&)>;
 
@@ -73,8 +81,10 @@ private:
     std::vector<EventMiddleware> m_middlewares = {};
     std::unordered_map<SocketEventName, EventRoute> m_routesMap = {};
     EventErrorHandler m_errorHandler = nullptr;
+    SocketEventDeserializer m_socketEventDeserializer = {};
 
     void CloseClientSocket(int clientSocket);
+    std::optional<SocketEvent<std::string>> DeserializeSocketEvent(int clientSocket, const std::string& serializedSocketEvent);
     void ReadClientSocket(int clientSocket);
     void SetNonBlockingSocket(int socket);
 

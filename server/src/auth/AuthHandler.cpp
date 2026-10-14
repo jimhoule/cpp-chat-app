@@ -188,7 +188,7 @@ SocketErrorCode AuthHandler::ConvertAuthResultCodeToSocketErrorCode(AuthService:
             return SocketErrorCode::EXPIRED_SESSION;
 
         case AuthService::AuthResultCode::ORPHANED_SESSION:
-            return SocketErrorCode::INTERNAL;
+            return SocketErrorCode::UNKNOWN_SESSION;
 
         case AuthService::AuthResultCode::EMAIL_ALREADY_USED:
             return SocketErrorCode::ALREADY_EXISTS;

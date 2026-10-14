@@ -17,12 +17,12 @@ MessagesApi::MessagesApi(SocketClient& socketClient, Logger& logger)
         m_messageCreatedSubject.Notify(messageCreatedEvent);
     };
 
-    m_socketClient.On(SocketEventName::MESSAGE_CREATED, HandleMessageCreated);
+    m_socketClient.On(SocketEventName::MESSAGE_CREATED, this, HandleMessageCreated);
 }
 
 MessagesApi::~MessagesApi()
 {
-    m_socketClient.Off(SocketEventName::MESSAGE_CREATED);
+    m_socketClient.Off(SocketEventName::MESSAGE_CREATED, this);
 }
 
 IObservable<MessageCreatedEvent>& MessagesApi::GetMessageCreatedSubject()

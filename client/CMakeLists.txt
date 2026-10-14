@@ -11,11 +11,11 @@ if(APPLE)
     set(APP_DATA_DIRECTORY "Library/Application Support")
 elseif(WIN32)
     # NOTE: APPDATA is already the full path so there is no sub directory to append
-    set(APP_DATA_HOME_VARIABLE_NAME "APPDATA")
+    set(APP_DATA_HOME_VARIABLE "APPDATA")
     set(APP_DATA_DIRECTORY "")
 elseif(UNIX)
     # NOTE: APPDATA is already the full path so there is no sub directory to append
-    set(APP_DATA_HOME_VARIABLE_NAME "HOME")
+    set(APP_DATA_HOME_VARIABLE "HOME")
     set(APP_DATA_DIRECTORY ".config")
 endif()
 

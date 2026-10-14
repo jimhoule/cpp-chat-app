@@ -3,6 +3,7 @@
 #include "Gui.h"
 
 #include "auth/AuthenticatedEvent.h"
+#include "auth/AuthenticateFailedEvent.h"
 #include "layer/Layer.h"
 #include "observer/Observer.h"
 
@@ -28,8 +29,10 @@ private:
 
     AuthApi& m_authApi;
     Observer<AuthenticatedEvent, SplashLayer> m_authenticatedObserver;
+    Observer<AuthenticateFailedEvent, SplashLayer> m_authenticateFailedObserver;
 
     bool m_mustNavigateToLoginScreen = false;
 
     void HandleAuthenticated(const AuthenticatedEvent& authenticatedEvent);
+    void HandleAuthenticateFailed(const AuthenticateFailedEvent& authenticateFailedEvent);
 };

@@ -9,6 +9,7 @@ std::string ErrorSocketEventSerializer::Serialize(const ErrorSocketEvent& errorS
 {
     Json payloadJson = {};
     payloadJson.SetEnum<SocketErrorCode>("code", errorSocketEvent.payload.code);
+    payloadJson.SetEnum<SocketEventName>("failedEventName", errorSocketEvent.payload.failedEventName);
 
     Json json = {};
     json.SetEnum<SocketEventName>("name", errorSocketEvent.name);

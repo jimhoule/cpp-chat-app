@@ -8,7 +8,7 @@
 
 SocketServer::EventErrorHandler HandleErrors(SocketServer& socketServer, Logger& logger)
 {
-    return [&socketServer, &logger](const std::exception& exception, SocketServer::EventContext& context) {
+    return [&socketServer, &logger](const std::exception& exception, SocketServer::EventErrorContext& context) {
         SocketErrorCode socketErrorCode = SocketErrorCode::INTERNAL;
 
         const ExpectedException* expectedException = dynamic_cast<const ExpectedException*>(&exception);
@@ -33,7 +33,7 @@ SocketServer::EventErrorHandler HandleErrors(SocketServer& socketServer, Logger&
 
         // Sends error socket event
         ErrorSocketEventSerializer errorSocketEventSerializer = {};
-        const ErrorSocketEventPayload errorSocketEventPayload(socketErrorCode);
+        const ErrorSocketEventPayload errorSocketEventPayload(socketErrorCode, context.eventName);
         const ErrorSocketEvent errorSocketEvent(errorSocketEventPayload);
         socketServer.SendTo(context.clientSocket, errorSocketEventSerializer.Serialize(errorSocketEvent));
     };

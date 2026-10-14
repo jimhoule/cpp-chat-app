@@ -12,11 +12,13 @@ SplashLayer::SplashLayer(const std::string& id, const Gui& gui, Navigation& navi
     , m_navigation(navigation)
     , m_authApi(authApi)
     , m_authenticatedObserver(*this, &SplashLayer::HandleAuthenticated)
+    , m_authenticateFailedObserver(*this, &SplashLayer::HandleAuthenticateFailed)
 {}
 
 void SplashLayer::OnAttach()
 {
     m_authApi.GetAuthenticatedSubject().Subscribe(&m_authenticatedObserver);
+    m_authApi.GetAuthenticateFailedSubject().Subscribe(&m_authenticateFailedObserver);
 
     if (!m_authApi.HasStoredSession())
     {
@@ -32,6 +34,7 @@ void SplashLayer::OnAttach()
 void SplashLayer::OnDetach()
 {
     m_authApi.GetAuthenticatedSubject().Unsubscribe(&m_authenticatedObserver);
+    m_authApi.GetAuthenticateFailedSubject().Unsubscribe(&m_authenticateFailedObserver);
 }
 
 void SplashLayer::OnRender()
@@ -72,4 +75,9 @@ void SplashLayer::OnUpdate()
 void SplashLayer::HandleAuthenticated(const AuthenticatedEvent& authenticatedEvent)
 {
     m_navigation.GoToChatScreen();
+}
+
+void SplashLayer::HandleAuthenticateFailed(const AuthenticateFailedEvent& authenticateFailedEvent)
+{
+    m_mustNavigateToLoginScreen = true;
 }

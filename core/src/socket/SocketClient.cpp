@@ -56,14 +56,48 @@ void SocketClient::Connect(int serverPort, const std::string &serverIpAddress)
 	}
 }
 
-void SocketClient::Off(SocketEventName socketEventName)
+void SocketClient::Off(SocketEventName socketEventName, EventHandlerOwner owner)
 {
-	m_handlersMap.erase(socketEventName);
+	EventHandlersMap::iterator handlersMapIterator = m_handlersMap.find(socketEventName);
+	if (handlersMapIterator == m_handlersMap.end())
+	{
+		std::cout << "No handler registered for socket event " << socketEventName << std::endl;
+		return;
+	}
+
+	EventHandlerEntries& handlerEntries = handlersMapIterator->second;
+	for (std::size_t index = 0; index < handlerEntries.size(); index++)
+	{
+		const EventHandlerEntry& handlerEntry = handlerEntries[index];
+		if (handlerEntry.owner == owner)
+		{
+			handlerEntries.erase(handlerEntries.begin() + index);
+			return;
+		}
+	}
 }
 
-void SocketClient::On(SocketEventName socketEventName, const EventHandler& handler)
+void SocketClient::On(SocketEventName socketEventName, EventHandlerOwner owner, const EventHandler& handler)
 {
-    m_handlersMap.insert(std::pair(socketEventName, handler));
+    EventHandlerEntries& handlerEntries = m_handlersMap[socketEventName];
+	/**
+	 * NOTES:
+	 * 	- Checks if owner already registered the event
+	 * 	- A owner cannot register the same event twice
+	 */
+	for (std::size_t index = 0; index < handlerEntries.size(); index++)
+	{
+		const EventHandlerEntry& handlerEntry = handlerEntries[index];
+		if (handlerEntry.owner == owner)
+		{
+			return;
+		}
+	}
+
+	EventHandlerEntry handlerEntry = {};
+	handlerEntry.handler = handler;
+	handlerEntry.owner = owner;
+	handlerEntries.push_back(handlerEntry);
 }
 
 void SocketClient::Read()
@@ -86,16 +120,20 @@ void SocketClient::Read()
         SocketEventDeserializer socketEventDeserializer = {};
         SocketEvent<std::string> socketEvent = socketEventDeserializer.Deserialize(serializedSocketEvent);
 
-		// NOTE: find, not operator[], which would insert an empty handler for an unknown event name and then call it
-        std::map<SocketEventName, EventHandler>::iterator handlersMapIterator = m_handlersMap.find(socketEvent.name);
+		// NOTE: find, not operator[], which would insert an empty handler entries vector for an unknown event
+        EventHandlersMap::iterator handlersMapIterator = m_handlersMap.find(socketEvent.name);
         if (handlersMapIterator == m_handlersMap.end())
         {
             std::cout << "No handler registered for socket event " << socketEvent.name << std::endl;
             return;
         }
 
-        EventHandler HandleSocketEvent = handlersMapIterator->second;
-        HandleSocketEvent(socketEvent.payload);
+		EventHandlerEntries& handlerEntries = handlersMapIterator->second;
+		for (const EventHandlerEntry& handlerEntry : handlerEntries)
+		{
+			const EventHandler& HandleSocketEvent = handlerEntry.handler;
+        	HandleSocketEvent(socketEvent.payload);
+		}
     }
 }
 

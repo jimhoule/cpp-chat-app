@@ -1,5 +1,6 @@
 #include "deserializer/ErrorSocketEventPayloadDeserializer.h"
 #include "socket/SocketErrorCode.h"
+#include "socket/SocketEventName.h"
 
 #include "json/Json.h"
 
@@ -12,6 +13,7 @@ ErrorSocketEventPayload ErrorSocketEventPayloadDeserializer::Deserialize(const s
 
     ErrorSocketEventPayload errorSocketEventPayload = {};
     errorSocketEventPayload.code = json.GetEnum<SocketErrorCode>("code");
+    errorSocketEventPayload.failedEventName = json.GetEnum<SocketEventName>("failedEventName");
 
     return errorSocketEventPayload;
 }

@@ -1,6 +1,6 @@
-#include "deserializer/SocketEventDeserializer.h"
-#include "log/Logger.h"
 #include "socket/SocketServer.h"
+
+#include "log/Logger.h"
 
 #include <algorithm>
 #include <cerrno>
@@ -329,7 +329,7 @@ void SocketServer::Use(const EventMiddleware& middleware)
 // * PRIVATE *
 // ***********
  void SocketServer::CloseClientSocket(int clientSocket)
- {
+{
 	close(clientSocket);
 
 	// Removes user connection and connection from user's socket
@@ -337,57 +337,37 @@ void SocketServer::Use(const EventMiddleware& middleware)
 
 	// Removes socket connection from map
 	m_connectionsMap.erase(clientSocket);
- }
+}
+
+std::optional<SocketEvent<std::string>> SocketServer::DeserializeSocketEvent(int clientSocket, const std::string& serializedSocketEvent)
+{
+	try
+	{
+		return m_socketEventDeserializer.Deserialize(serializedSocketEvent);
+	}
+	catch(const std::exception& exception)
+	{
+		// NOTE: Without an event name the client cannot tell which request failed
+		m_logger.Warning("Dropped unreadable socket event from client socket " + std::to_string(clientSocket) + ", " + exception.what());
+		return std::nullopt;
+	}
+	
+}
 
 void SocketServer::ReadClientSocket(int clientSocket) {
     // Reads response from client socket
     std::array<char, BUFFER_SIZE> SerializedSocketEventBuffer = {0};
     ssize_t ReadResult = read(clientSocket, SerializedSocketEventBuffer.data(), BUFFER_SIZE);
+	// Client socket response reading threw an error
+	// NOTE: If errno is EAGAIN, that means we have read all data so we can continue to the next event.
+	if (ReadResult == -1 && errno != EAGAIN)
+	{
+		m_logger.Error("Failed to read client socket");
+		CloseClientSocket(clientSocket);
 
-	// Client socket response was read successfully
-	if (ReadResult > 0)
-    {
-
-        const std::string& serializedSocketEvent(SerializedSocketEventBuffer.data());
-
-		// NOTE: Declared before the try so the error handler can still use it if anything below throws
-		EventContext context = {};
-		context.clientSocket = clientSocket;
-
-		try
-		{
-			SocketEventDeserializer socketEventDeserializer = {};
-			SocketEvent<std::string> socketEvent = socketEventDeserializer.Deserialize(serializedSocketEvent);
-
-			// NOTE: find, not operator[], which would insert an empty route for an unknown event name
-			std::unordered_map<SocketEventName, EventRoute>::iterator routesMapIterator = m_routesMap.find(socketEvent.name);
-			if (routesMapIterator == m_routesMap.end())
-			{
-				m_logger.Warning("No route registered for socket event from client socket " + std::to_string(clientSocket));
-				return;
-			}
-
-			context.serializedPayload = socketEvent.payload;
-
-			ExecuteRoute(routesMapIterator->second, context);
-
-			m_logger.Info("Received socket event: " + socketEvent.name);
-		}
-		catch(const std::exception& exception)
-		{
-			if (m_errorHandler != nullptr)
-			{
-				m_errorHandler(exception, context);
-				return;
-			}
-
-			m_logger.Error("Unhandled exception for client socket " + std::to_string(clientSocket) + ", " + exception.what());
-		}
-		
-		
 		return;
     }
-
+	
 	// Client socket closed connection
 	if (ReadResult == 0)
 	{
@@ -397,14 +377,45 @@ void SocketServer::ReadClientSocket(int clientSocket) {
 
 		return;
     }
-	
-	// Client socket response reading threw an error
-	// NOTE: If errno is EAGAIN, that means we have read all data so we can continue to the next event.
-	if (ReadResult == -1 && errno != EAGAIN)
+
+	// Client socket response was read successfully
+	const std::string& serializedSocketEvent(SerializedSocketEventBuffer.data());
+	std::optional<SocketEvent<std::string>> socketEvent = DeserializeSocketEvent(clientSocket, serializedSocketEvent);
+	if (!socketEvent.has_value())
 	{
-		m_logger.Error("Failed to read client socket");
-		CloseClientSocket(clientSocket);
-    }
+		return;
+	}
+
+	try
+	{
+		// NOTE: find, not operator[], which would insert an empty route for an unknown event name
+		std::unordered_map<SocketEventName, EventRoute>::iterator routesMapIterator = m_routesMap.find(socketEvent.value().name);
+		if (routesMapIterator == m_routesMap.end())
+		{
+			m_logger.Warning("No route registered for socket event from client socket " + std::to_string(clientSocket));
+			return;
+		}
+
+		EventContext context = {};
+		context.clientSocket = clientSocket;
+		context.serializedPayload = socketEvent.value().payload;
+		ExecuteRoute(routesMapIterator->second, context);
+
+		m_logger.Info("Received socket event: " + socketEvent.value().name);
+	}
+	catch(const std::exception& exception)
+	{
+		if (m_errorHandler != nullptr)
+		{
+			EventErrorContext context = {};
+			context.clientSocket = clientSocket;
+			context.eventName = socketEvent.value().name;
+			m_errorHandler(exception, context);
+			return;
+		}
+
+		m_logger.Error("Unhandled exception for client socket " + std::to_string(clientSocket) + ", " + exception.what());
+	}
 }
 
 void SocketServer::SetNonBlockingSocket(int socket)

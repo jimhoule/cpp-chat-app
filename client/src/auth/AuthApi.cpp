@@ -62,25 +62,50 @@ AuthApi::AuthApi(SocketClient& socketClient, SessionStore& sessionStore, Logger&
         const UserOnlineSocketEventPayload& userOnlineSocketEventPayload = m_userOnlineSocketEventPayloadDeserializer.Deserialize(serializedUserOnlineSocketEventPayload);
         m_logger.Info("Online user email: " + userOnlineSocketEventPayload.user.email);
 
-        // Sends user online event to subcriptions
+        // Sends user online event to subscriptions
         const UserOnlineEvent userOnlineEvent(userOnlineSocketEventPayload.user);
         m_userOnlineSubject.Notify(userOnlineEvent);
     };
 
-    m_socketClient.On(SocketEventName::AUTHENTICATED, HandleAuthenticated);
-    m_socketClient.On(SocketEventName::LOGGEDIN, HandleLoggedIn);
-    m_socketClient.On(SocketEventName::LOGGEDOUT, HandleLoggedOut);
-    m_socketClient.On(SocketEventName::REGISTERED, HandleRegistered);
-    m_socketClient.On(SocketEventName::USER_ONLINE, HandleUserOnline);
+    SocketClient::EventHandler HandleError = [this](const std::string& serializedErrorSocketEventPayload) {
+        // Gets error socket event payload
+        const ErrorSocketEventPayload& errorSocketEventPayload = m_errorSocketEventPayloadDeserializer.Deserialize(serializedErrorSocketEventPayload);
+
+        if (errorSocketEventPayload.failedEventName != SocketEventName::AUTHENTICATE)
+        {
+            return;
+        }
+
+        const std::string socketErrorCodeString = ConvertSocketErrorCodeToString(errorSocketEventPayload.code);
+        m_logger.Warning("Authenticate failed: " + socketErrorCodeString);
+
+        if (errorSocketEventPayload.code == SocketErrorCode::EXPIRED_SESSION || errorSocketEventPayload.code == SocketErrorCode::UNKNOWN_SESSION)
+        {
+            // Removes session id from dedicated store
+            m_sessionStore.Clear();
+        }
+
+        // Sends authenticate failed event to subscriptions
+        const AuthenticateFailedEvent authenticateFailedEvent;
+        m_authenticateFailedSubject.Notify(authenticateFailedEvent);
+    };
+
+    m_socketClient.On(SocketEventName::AUTHENTICATED, this, HandleAuthenticated);
+    m_socketClient.On(SocketEventName::LOGGEDIN, this, HandleLoggedIn);
+    m_socketClient.On(SocketEventName::LOGGEDOUT, this, HandleLoggedOut);
+    m_socketClient.On(SocketEventName::REGISTERED, this, HandleRegistered);
+    m_socketClient.On(SocketEventName::USER_ONLINE, this, HandleUserOnline);
+    m_socketClient.On(SocketEventName::ERROR, this, HandleError);
 }
 
 AuthApi::~AuthApi()
 {
-    m_socketClient.Off(SocketEventName::AUTHENTICATED);
-    m_socketClient.Off(SocketEventName::LOGGEDIN);
-    m_socketClient.Off(SocketEventName::LOGGEDOUT);
-    m_socketClient.Off(SocketEventName::REGISTERED);
-    m_socketClient.Off(SocketEventName::USER_ONLINE);
+    m_socketClient.Off(SocketEventName::AUTHENTICATED, this);
+    m_socketClient.Off(SocketEventName::LOGGEDIN, this);
+    m_socketClient.Off(SocketEventName::LOGGEDOUT, this);
+    m_socketClient.Off(SocketEventName::REGISTERED, this);
+    m_socketClient.Off(SocketEventName::USER_ONLINE, this);
+    m_socketClient.Off(SocketEventName::ERROR, this);
 }
 
 IObservable<AuthenticatedEvent>& AuthApi::GetAuthenticatedSubject()
@@ -96,6 +121,11 @@ IObservable<LoggedInEvent>& AuthApi::GetLoggedInSubject()
 IObservable<LoggedOutEvent>& AuthApi::GetLoggedOutSubject()
 {
     return m_loggedOutSubject;
+}
+
+IObservable<AuthenticateFailedEvent>& AuthApi::GetAuthenticateFailedSubject()
+{
+    return m_authenticateFailedSubject;
 }
 
 IObservable<RegisteredEvent>& AuthApi::GetRegisteredSubject()

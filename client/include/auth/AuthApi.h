@@ -1,11 +1,13 @@
 #pragma once
 
 #include "auth/AuthenticatedEvent.h"
+#include "auth/AuthenticateFailedEvent.h"
 #include "auth/LoggedInEvent.h"
 #include "auth/LoggedOutEvent.h"
 #include "auth/RegisteredEvent.h"
 #include "auth/UserOnlineEvent.h"
 #include "deserializer/AuthenticatedSocketEventPayloadDeserializer.h"
+#include "deserializer/ErrorSocketEventPayloadDeserializer.h"
 #include "deserializer/LoggedinSocketEventPayloadDeserializer.h"
 #include "deserializer/RegisteredSocketEventPayloadDeserializer.h"
 #include "deserializer/UserOnlineSocketEventPayloadDeserializer.h"
@@ -47,6 +49,7 @@ public:
     IObservable<AuthenticatedEvent>& GetAuthenticatedSubject();
     IObservable<LoggedInEvent>& GetLoggedInSubject();
     IObservable<LoggedOutEvent>& GetLoggedOutSubject();
+    IObservable<AuthenticateFailedEvent>& GetAuthenticateFailedSubject();
     IObservable<RegisteredEvent>& GetRegisteredSubject();
     IObservable<UserOnlineEvent>& GetUserOnlineSubject();
 
@@ -62,6 +65,7 @@ private:
     Subject<AuthenticatedEvent> m_authenticatedSubject = {};
     Subject<LoggedInEvent> m_loggedInSubject = {};
     Subject<LoggedOutEvent> m_loggedOutSubject = {};
+    Subject<AuthenticateFailedEvent> m_authenticateFailedSubject = {};
     Subject<RegisteredEvent> m_registeredSubject = {};
     Subject<UserOnlineEvent> m_userOnlineSubject = {};
 
@@ -77,6 +81,8 @@ private:
     RegisteredSocketEventPayloadDeserializer m_registeredSocketEventPayloadDeserializer = {};
 
     UserOnlineSocketEventPayloadDeserializer m_userOnlineSocketEventPayloadDeserializer = {};
+
+    ErrorSocketEventPayloadDeserializer m_errorSocketEventPayloadDeserializer = {};
 
     SessionStore& m_sessionStore;
 
