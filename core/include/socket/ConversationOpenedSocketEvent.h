@@ -1,19 +1,16 @@
 #pragma once
 
-#include "models/Conversation.h"
 #include "socket/SocketEvent.h"
-
-#include <optional>
-#include <vector>
+#include "views/ConversationView.h"
 
 struct ConversationOpenedSocketEventPayload
 {
     ConversationOpenedSocketEventPayload() = default;
-    ConversationOpenedSocketEventPayload(const Conversation& conversation)
+    ConversationOpenedSocketEventPayload(const ConversationView& conversation)
         : conversation(conversation)
     {}
 
-    Conversation conversation;
+    ConversationView conversation;
 };
 
 struct ConversationOpenedSocketEvent : public SocketEvent<ConversationOpenedSocketEventPayload>

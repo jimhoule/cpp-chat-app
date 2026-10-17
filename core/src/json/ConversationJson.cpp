@@ -1,57 +1,75 @@
 #include "json/ConversationJson.h"
 
+#include "views/UserView.h"
+
 #include <nlohmann/json.hpp>
+#include <vector>
 
-Json ConvertConversationToJson(const Conversation& conversation)
+Json ConvertConversationViewToJson(const ConversationView& conversationView)
 {
-    std::vector<Json> conversationUserJsons = {};
+    std::vector<Json> conversationUserViewJsons = {};
     // NOTE: The final size is known, so the vector allocates once instead of reallocating as it grows
-    conversationUserJsons.reserve(conversation.users.size());
-    for (const ConversationUser& conversationUser : conversation.users)
+    conversationUserViewJsons.reserve(conversationView.users.size());
+    for (const ConversationUserView& conversationUserView : conversationView.users)
     {
-        Json conversationUserJson = ConvertConversationUserToJson(conversationUser);
-        conversationUserJsons.push_back(conversationUserJson);
+        Json conversationUserViewJson = ConvertConversationUserViewToJson(conversationUserView);
+        conversationUserViewJsons.push_back(conversationUserViewJson);
     }
 
-    Json conversationJson = {};
-    conversationJson.Set("id", conversation.id);
-    conversationJson.Set("users", conversationUserJsons);
-    conversationJson.Set("createdAt", conversation.createdAt);
+    Json conversationViewJson = {};
+    conversationViewJson.Set("id", conversationView.id);
+    conversationViewJson.Set("users", conversationUserViewJsons);
+    conversationViewJson.Set("createdAt", conversationView.createdAt);
 
-    return conversationJson;
+    return conversationViewJson;
 }
 
-Conversation ConvertJsonToConversation(const Json& json)
+ConversationView ConvertJsonToConversationView(const Json& json)
 {
-    Conversation conversation = {};
-    conversation.id = json.GetString("id");
-    conversation.createdAt = json.GetTime("createdAt");
+    ConversationView conversationView = {};
+    conversationView.id = json.GetString("id");
+    conversationView.createdAt = json.GetTime("createdAt");
 
-    const std::vector<Json> conversationUserJsons = json.GetObjectArray("users");
+    const std::vector<Json> conversationUserViewJsons = json.GetObjectArray("users");
     // NOTE: The final size is known, so the vector allocates once instead of reallocating as it grows
-    conversation.users.reserve(conversationUserJsons.size());
-    for (const Json& conversationUserJson : conversationUserJsons)
+    conversationView.users.reserve(conversationUserViewJsons.size());
+    for (const Json& conversationUserViewJson : conversationUserViewJsons)
     {
-        conversation.users.push_back(ConvertJsonToConversationUser(conversationUserJson));
+        ConversationUserView conversationUserView = ConvertJsonToConversationUserView(conversationUserViewJson);
+        conversationView.users.push_back(conversationUserView);
     }
 
-    return conversation;
+    return conversationView;
 }
 
-Json ConvertConversationUserToJson(const ConversationUser& conversationUser)
+Json ConvertConversationUserViewToJson(const ConversationUserView& conversationUserView)
 {
-    Json conversationUserJson = {};
-    conversationUserJson.Set("userId", conversationUser.userId);
-    conversationUserJson.Set("isOpen", conversationUser.isOpen);
+    Json userViewJson = {};
+    userViewJson.Set("id", conversationUserView.user.id);
+    userViewJson.Set("email", conversationUserView.user.email);
+    userViewJson.Set("firstName", conversationUserView.user.firstName);
+    userViewJson.Set("lastName", conversationUserView.user.lastName);
 
-    return conversationUserJson;
+    Json conversationUserViewJson = {};
+    conversationUserViewJson.Set("user", userViewJson);
+    conversationUserViewJson.Set("isOpen", conversationUserView.isOpen);
+
+    return conversationUserViewJson;
 }
 
-ConversationUser ConvertJsonToConversationUser(const Json& json)
+ConversationUserView ConvertJsonToConversationUserView(const Json& json)
 {
-    ConversationUser conversationUser = {};
-    conversationUser.userId = json.GetString("userId");
-    conversationUser.isOpen = json.GetBool("isOpen");
+    Json userViewJson = json.GetObject("user");
 
-    return conversationUser;
+    UserView userView = {};
+    userView.id = userViewJson.GetString("id");
+    userView.email = userViewJson.GetString("email");
+    userView.firstName = userViewJson.GetString("firstName");
+    userView.lastName = userViewJson.GetString("lastName");
+
+    ConversationUserView conversationUserView = {};
+    conversationUserView.user = userView;
+    conversationUserView.isOpen = json.GetBool("isOpen");
+
+    return conversationUserView;
 }

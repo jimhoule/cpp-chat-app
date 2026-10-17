@@ -15,7 +15,6 @@ UserOnlineSocketEventPayload UserOnlineSocketEventPayloadDeserializer::Deseriali
     userOnlineSocketEventPayload.user.email = userJson.GetString("email");
     userOnlineSocketEventPayload.user.firstName = userJson.GetString("firstName");
     userOnlineSocketEventPayload.user.lastName = userJson.GetString("lastName");
-    userOnlineSocketEventPayload.user.password = userJson.GetString("password");
 
     return userOnlineSocketEventPayload;
 }

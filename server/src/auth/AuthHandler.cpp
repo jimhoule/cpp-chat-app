@@ -159,7 +159,7 @@ void AuthHandler::SendUserOfflineSocketEvent(int clientSocket, const std::string
     m_socketServer.SendAllExcept(clientSocket, serializedUserOfflineSocketEvent);
 }
 
-void AuthHandler::SendUserOnlineSocketEvent(int clientSocket, const User& user)
+void AuthHandler::SendUserOnlineSocketEvent(int clientSocket, const UserView& user)
 {
     // Binds user to server
     m_socketServer.BindConnectionUser(clientSocket, user);

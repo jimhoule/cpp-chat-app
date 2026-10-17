@@ -23,7 +23,7 @@ SocketServer::SocketServer(unsigned int Port, Logger& logger)
 	, m_logger(logger)
 {}
 
-void SocketServer::BindConnectionUser(int clientSocket, const User& user)
+void SocketServer::BindConnectionUser(int clientSocket, const UserView& user)
 {
 	std::unordered_map<int, Connection>::iterator connectionsMapIterator = m_connectionsMap.find(clientSocket);
 	if (connectionsMapIterator == m_connectionsMap.end())
@@ -49,7 +49,7 @@ void SocketServer::Close()
 	close(m_socket);
 }
 
-const User* SocketServer::GetConnectionUser(int clientSocket)
+const UserView* SocketServer::GetConnectionUser(int clientSocket)
 {
 	std::unordered_map<int, Connection>::iterator connectionsMapIterator = m_connectionsMap.find(clientSocket);
 	if (connectionsMapIterator == m_connectionsMap.end())

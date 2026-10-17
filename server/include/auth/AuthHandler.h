@@ -51,6 +51,6 @@ private:
     UserOnlineSocketEventSerializer m_userOnlineSocketEventSerializer = {};
 
     void SendUserOfflineSocketEvent(int clientSocket, const std::string& userId);
-    void SendUserOnlineSocketEvent(int clientSocket, const User& user);
+    void SendUserOnlineSocketEvent(int clientSocket, const UserView& user);
     SocketErrorCode ConvertAuthResultCodeToSocketErrorCode(AuthService::AuthResultCode authResultCode);
 };

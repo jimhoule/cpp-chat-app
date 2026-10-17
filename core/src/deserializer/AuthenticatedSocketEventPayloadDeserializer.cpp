@@ -15,7 +15,6 @@ AuthenticatedSocketEventPayload AuthenticatedSocketEventPayloadDeserializer::Des
     authenticatedSocketEventPayload.user.email = userJson.GetString("email");
     authenticatedSocketEventPayload.user.firstName = userJson.GetString("firstName");
     authenticatedSocketEventPayload.user.lastName = userJson.GetString("lastName");
-    authenticatedSocketEventPayload.user.password = userJson.GetString("password");
 
     return authenticatedSocketEventPayload;
 }

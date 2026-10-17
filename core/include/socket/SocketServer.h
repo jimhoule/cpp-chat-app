@@ -1,8 +1,8 @@
 #pragma once
 
 #include "deserializer/SocketEventDeserializer.h"
-#include "models/User.h"
 #include "socket/SocketEventName.h"
+#include "views/UserView.h"
 
 #include <arpa/inet.h>
 #include <exception>
@@ -21,7 +21,7 @@ public:
     struct Connection
     {
         int clientSocket = -1;
-        std::optional<User> user = std::nullopt;
+        std::optional<UserView> user = std::nullopt;
         std::string readBuffer = "";
     };
 
@@ -30,7 +30,7 @@ public:
         int clientSocket = -1;
         std::string serializedPayload = "";
         // NOTE: Set by the authentication middleware, stays null on routes that do not require it
-        const User* user = nullptr;
+        const UserView* user = nullptr;
     };
 
     struct EventErrorContext
@@ -51,9 +51,9 @@ public:
 
     SocketServer(unsigned int port, Logger& logger);
 
-    void BindConnectionUser(int clientSocket, const User& user);
+    void BindConnectionUser(int clientSocket, const UserView& user);
     void Close();
-    const User* GetConnectionUser(int clientSocket);
+    const UserView* GetConnectionUser(int clientSocket);
     void Init();
     void Listen();
     void On(SocketEventName socketEventName, const EventHandler& handler);

@@ -20,7 +20,7 @@ public:
     std::optional<Conversation> FindByUserIds(const std::vector<std::string>& userIds) override;
     std::vector<Conversation> FindAllOpenByUserId(const std::string& userId) override;
     bool IsConversationUser(const std::string& conversationId, const std::string& userId) override;
-    std::optional<Conversation> SetIsOpen(const std::string& conversationId, const std::string& userId, bool isOpen) override;
+    std::optional<Conversation> UpdateIsOpen(const std::string& conversationId, const std::string& userId, bool isOpen) override;
 
 private:
     std::vector<Conversation> m_conversations = {};

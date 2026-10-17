@@ -2,6 +2,12 @@
 
 #include "results/ServiceResult.h"
 #include "users/repositories/IUsersRepository.h"
+#include "views/UserView.h"
+
+#include <optional>
+#include <string>
+#include <unordered_set>
+#include <vector>
 
 // Forward declarations
 class EncryptionService;
@@ -15,10 +21,12 @@ public:
     {
         OK,
         EMAIL_ALREADY_USED,
-        INVALID_PASSWORD
+        INVALID_PASSWORD,
+        UNKNOWN_USER
     };
 
-    using UserResult = ServiceResult<UsersResultCode, std::optional<User>>;
+    using UserResult = ServiceResult<UsersResultCode, std::optional<UserView>>;
+    using UsersResult = ServiceResult<UsersResultCode, std::vector<UserView>>;
 
     struct CreateUserDto
     {
@@ -28,28 +36,28 @@ public:
         std::string password;
     };
 
-    struct FindUserByEmailDto
-    {
-        std::string email;
-    };
-
     struct FindUserByIdDto
     {
         std::string id;
     };
 
-    struct VerifyUserPasswordDto
+    struct FindUsersByIdsDto
     {
+        std::unordered_set<std::string> ids;
+    };
+
+    struct VerifyUserCredentialsDto
+    {
+        std::string email;
         std::string password;
-        std::string hashedPassword;
     };
 
     UsersService(std::unique_ptr<IUsersRepository> usersRepository, EncryptionService& encryptionService, UuidService& uuidService, Logger& logger);
 
     UserResult Create(const CreateUserDto& createUserDto);
-    UserResult FindByEmail(const FindUserByEmailDto& findUserByEmailDto);
     UserResult FindById(const FindUserByIdDto& findUserByIdDto);
-    UserResult VerifyPassword(const VerifyUserPasswordDto& verifyUserPasswordDto);
+    UsersResult FindByIds(const FindUsersByIdsDto& findUsersByIdsDto);
+    UserResult VerifyCredentials(const VerifyUserCredentialsDto& verifyUserCredentialsDto);
     std::string ConvertUsersResultCodeToString(UsersResultCode usersResultCode);
 
 private:
@@ -60,4 +68,6 @@ private:
 
     // NOTE: Borrowed from the module, which owns it and outlives this service
     Logger& m_logger;
+
+    UserView ConvertUserToUserView(const User& user) const;
 };

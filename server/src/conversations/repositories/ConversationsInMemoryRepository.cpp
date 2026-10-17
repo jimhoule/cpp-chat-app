@@ -97,7 +97,7 @@ bool ConversationsInMemoryRepository::IsConversationUser(const std::string& conv
     return conversationUser != nullptr;
 }
 
-std::optional<Conversation> ConversationsInMemoryRepository::SetIsOpen(const std::string& conversationId, const std::string& userId, bool isOpen)
+std::optional<Conversation> ConversationsInMemoryRepository::UpdateIsOpen(const std::string& conversationId, const std::string& userId, bool isOpen)
 {
     Conversation* conversation = FindConversationPointer(conversationId);
     if (conversation == nullptr)

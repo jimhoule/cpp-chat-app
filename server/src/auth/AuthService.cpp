@@ -63,28 +63,24 @@ AuthService::AuthResult AuthService::Login(const LoginDto& loginDto)
 {
     AuthResult authResult = {};
 
-    // Checks if user with this email exists
-    UsersService::FindUserByEmailDto findUserByEmailDto = {};
-    findUserByEmailDto.email = loginDto.email;
-    const UsersService::UserResult findUserByEmailResult = m_usersService.FindByEmail(findUserByEmailDto);
-    if (!findUserByEmailResult.data.has_value())
+    // Validates credentials
+    UsersService::VerifyUserCredentialsDto verifyUserCredentialsDto = {};
+    verifyUserCredentialsDto.email = loginDto.email;
+    verifyUserCredentialsDto.password = loginDto.password;
+    const UsersService::UserResult userResult = m_usersService.VerifyCredentials(verifyUserCredentialsDto);
+    if (userResult.code == UsersService::UsersResultCode::UNKNOWN_USER)
     {
         authResult.code = AuthResultCode::UNKNOWN_USER;
         return authResult;
     }
 
-    const User& user = findUserByEmailResult.data.value();
-
-    // Validates password
-    UsersService::VerifyUserPasswordDto verifyUserPasswordDto = {};
-    verifyUserPasswordDto.password = loginDto.password;
-    verifyUserPasswordDto.hashedPassword = user.password;
-    const UsersService::UserResult verifyPasswordResult = m_usersService.VerifyPassword(verifyUserPasswordDto);
-    if (verifyPasswordResult.code != UsersService::UsersResultCode::OK)
+    if (userResult.code == UsersService::UsersResultCode::INVALID_PASSWORD)
     {
         authResult.code = AuthResultCode::INVALID_PASSWORD;
         return authResult;
     }
+
+    const UserView& user = userResult.data.value();
 
     // Creates session
     const Session session = CreateSession(user.id);
@@ -137,13 +133,13 @@ AuthService::AuthResult AuthService::Register(const RegisterDto& registerDto)
     createUserDto.lastName = registerDto.lastName;
     createUserDto.password = registerDto.password;
     const UsersService::UserResult userResult = m_usersService.Create(createUserDto);
-    if (userResult.code != UsersService::UsersResultCode::OK)
+    if (userResult.code == UsersService::UsersResultCode::EMAIL_ALREADY_USED)
     {
         authResult.code = AuthResultCode::EMAIL_ALREADY_USED;
         return authResult;
     }
 
-    const User& user = userResult.data.value();
+    const UserView& user = userResult.data.value();
     
     // Creates session
     const Session session = CreateSession(user.id);

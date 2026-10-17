@@ -2,8 +2,10 @@
 
 #include "models/User.h"
 
-#include "optional"
+#include <optional>
 #include <string>
+#include <unordered_set>
+#include <vector>
 
 class IUsersRepository
 {
@@ -21,4 +23,5 @@ public:
     virtual User Create(const User& user) = 0;
     virtual std::optional<User> FindByEmail(const std::string& email) const = 0;
     virtual std::optional<User> FindById(const std::string& id) const = 0;
+    virtual std::vector<User> FindByIds(const std::unordered_set<std::string>& ids) const = 0;
 };

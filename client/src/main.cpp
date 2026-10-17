@@ -1,4 +1,5 @@
 #include "auth/AuthApi.h"
+#include "conversations/ConversationsApi.h"
 #include "debug/DebugLogger.h"
 #include "debug/DebugOverlay.h"
 #include "deserializer/LoggedinSocketEventPayloadDeserializer.h"
@@ -77,6 +78,7 @@ int main()
 
     // Loggers
     Logger authApiLogger("AUTH", "client/src/auth/AuthApi");
+    Logger conversationsApiLogger("CONVERSATIONS", "client/src/conversations/ConversationsApi");
     Logger messagesApiLogger("MESSAGES", "client/src/auth/AuthApi");
     Logger navigationLogger("NAVIGATION", "client/src/navigation/Navigation");
     Logger sessionStoreLogger("SESSION", "client/src/sessions/SessionStore");
@@ -90,13 +92,14 @@ int main()
 
     // Apis
     AuthApi authApi(socketClient, sessionStore, authApiLogger);
+    ConversationsApi conversationsApi(socketClient, conversationsApiLogger);
     MessagesApi messagesApi(socketClient, messagesApiLogger);
 
     // Navigation
     Navigation navigation(layerStack, navigationLogger);
 
     Navigation::Screen chatScreen = {};
-    chatScreen.layer = std::make_unique<ChatLayer>("Chat", gui, navigation, authApi, messagesApi, chatLogger);
+    chatScreen.layer = std::make_unique<ChatLayer>("Chat", gui, navigation, authApi, conversationsApi, messagesApi, chatLogger);
     Navigation::Screen loginScreen = {};
     loginScreen.layer = std::make_unique<LoginLayer>("Login", gui, navigation, authApi, loginLogger);
     Navigation::Screen registerScreen = {};

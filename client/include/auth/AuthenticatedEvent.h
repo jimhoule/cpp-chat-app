@@ -1,13 +1,13 @@
 #pragma once
 
-#include "models/User.h"
+#include "views/UserView.h"
 
 struct AuthenticatedEvent
 {
     AuthenticatedEvent() = default;
-    AuthenticatedEvent(const User& user)
+    AuthenticatedEvent(const UserView& user)
         : user(user)
     {}
 
-    User user = {};
+    UserView user = {};
 };

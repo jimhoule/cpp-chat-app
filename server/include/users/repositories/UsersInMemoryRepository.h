@@ -1,7 +1,11 @@
 #pragma once
 
-#include "IUsersRepository.h"
+#include "models/User.h"
+#include "users/repositories/IUsersRepository.h"
 
+#include <optional>
+#include <string>
+#include <unordered_set>
 #include <vector>
 
 // Forward declarations
@@ -15,6 +19,7 @@ public:
     User Create(const User& user) override;
     std::optional<User> FindByEmail(const std::string& email) const override;
     std::optional<User> FindById(const std::string& id) const override;
+    std::vector<User> FindByIds(const std::unordered_set<std::string>& ids) const override;
 
 private:
     std::vector<User> m_users = {};

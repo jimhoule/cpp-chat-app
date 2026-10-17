@@ -3,6 +3,7 @@
 #include "results/ServiceResult.h"
 #include "sessions/SessionsService.h"
 #include "users/UsersService.h"
+#include "views/UserView.h"
 
 // Forward declarations
 class Logger;
@@ -24,7 +25,7 @@ public:
     struct Auth
     {
         std::string sessionId = "";
-        User user = {};
+        UserView user = {};
     };
     using AuthResult = ServiceResult<AuthResultCode, Auth>;
 

@@ -11,8 +11,8 @@ std::string ConversationFoundByUserIdsSocketEventSerializer::Serialize(const Con
     Json payloadJson = {};
     if (conversationFoundByUserIdsSocketEvent.payload.conversation.has_value())
     {
-        Json conversationJson = ConvertConversationToJson(conversationFoundByUserIdsSocketEvent.payload.conversation.value());
-        payloadJson.Set("conversation", conversationJson);
+        Json conversationViewJson = ConvertConversationViewToJson(conversationFoundByUserIdsSocketEvent.payload.conversation.value());
+        payloadJson.Set("conversation", conversationViewJson);
     }
     else
     {

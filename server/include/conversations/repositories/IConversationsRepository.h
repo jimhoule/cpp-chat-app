@@ -24,5 +24,5 @@ public:
     virtual std::optional<Conversation> FindByUserIds(const std::vector<std::string>& userIds) = 0;
     virtual std::vector<Conversation> FindAllOpenByUserId(const std::string& userId) = 0;
     virtual bool IsConversationUser(const std::string& conversationId, const std::string& userId) = 0;
-    virtual std::optional<Conversation> SetIsOpen(const std::string& conversationId, const std::string& userId, bool isOpen) = 0;
+    virtual std::optional<Conversation> UpdateIsOpen(const std::string& conversationId, const std::string& userId, bool isOpen) = 0;
 };

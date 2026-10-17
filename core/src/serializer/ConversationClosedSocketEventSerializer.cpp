@@ -8,10 +8,10 @@
 // **********
 std::string ConversationClosedSocketEventSerializer::Serialize(const ConversationClosedSocketEvent& conversationClosedSocketEvent)
 {
-    Json conversationJson = ConvertConversationToJson(conversationClosedSocketEvent.payload.conversation);
+    Json conversationViewJson = ConvertConversationViewToJson(conversationClosedSocketEvent.payload.conversation);
 
     Json payloadJson = {};
-    payloadJson.Set("conversation", conversationJson);
+    payloadJson.Set("conversation", conversationViewJson);
 
     Json json = {};
     json.SetEnum<SocketEventName>("name", conversationClosedSocketEvent.name);

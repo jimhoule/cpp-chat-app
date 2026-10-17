@@ -17,6 +17,9 @@ AuthApi::AuthApi(SocketClient& socketClient, SessionStore& sessionStore, Logger&
         const AuthenticatedSocketEventPayload authenticatedSocketEventPayload = m_authenticatedSocketEventPayloadDeserializer.Deserialize(serializedAuthenticatedSocketEventPayload);
         m_logger.Info("Authenticated user email: " + authenticatedSocketEventPayload.user.email);
 
+        // Sets current user
+        m_currentUser = authenticatedSocketEventPayload.user;
+
         // Sends authenticated event to subsciptions
         const AuthenticatedEvent authenticatedEvent(authenticatedSocketEventPayload.user);
         m_authenticatedSubject.Notify(authenticatedEvent);
@@ -30,6 +33,9 @@ AuthApi::AuthApi(SocketClient& socketClient, SessionStore& sessionStore, Logger&
         // Saves session id in dedicated store
         m_sessionStore.Save(loggedinSocketEventPayload.sessionId);
 
+        // Sets current user
+        m_currentUser = loggedinSocketEventPayload.user;
+
         // Sends logged in event to subsciptions
         const LoggedInEvent loggedInEvent(loggedinSocketEventPayload.sessionId);
         m_loggedInSubject.Notify(loggedInEvent);
@@ -38,6 +44,9 @@ AuthApi::AuthApi(SocketClient& socketClient, SessionStore& sessionStore, Logger&
     SocketClient::EventHandler HandleLoggedOut = [this](const std::string&) {
         // Removes session id from dedicated store
         m_sessionStore.Clear();
+
+        // Removes current user
+        m_currentUser.reset();
 
         // Sends logged out event to subsciptions
         const LoggedOutEvent loggedOutEvent;
@@ -51,6 +60,9 @@ AuthApi::AuthApi(SocketClient& socketClient, SessionStore& sessionStore, Logger&
 
         // Saves session id in dedicated store
         m_sessionStore.Save(registeredSocketEventPayload.sessionId);
+
+        // Sets current user
+        m_currentUser = registeredSocketEventPayload.user;
 
         // Sends registered event to subscriptions
         const RegisteredEvent registeredEvent(registeredSocketEventPayload.sessionId);
@@ -200,6 +212,16 @@ void AuthApi::Register(const RegisterParams& registerParams)
 
     // Sends register socket event
     m_socketClient.Send(serializedRegisterSocketEvent);
+}
+
+const UserView* AuthApi::GetCurrentUser() const
+{
+    if (!m_currentUser.has_value())
+    {
+        return nullptr;
+    }
+
+    return &m_currentUser.value();
 }
 
 bool AuthApi::HasStoredSession() const

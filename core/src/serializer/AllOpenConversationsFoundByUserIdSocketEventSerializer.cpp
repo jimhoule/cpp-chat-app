@@ -2,6 +2,7 @@
 
 #include "json/ConversationJson.h"
 #include "json/Json.h"
+#include "views/ConversationView.h"
 
 // **********
 // * PUBLIC *
@@ -9,19 +10,19 @@
 std::string AllOpenConversationsFoundByUserIdSocketEventSerializer::Serialize(const AllOpenConversationsFoundByUserIdSocketEvent& allOpenConversationsFoundByUserIdSocketEvent)
 {
     // NOTE: Borrowed from the event, which outlives this call
-    const std::vector<Conversation>& conversations = allOpenConversationsFoundByUserIdSocketEvent.payload.conversations;
+    const std::vector<ConversationView>& conversationViews = allOpenConversationsFoundByUserIdSocketEvent.payload.conversations;
 
-    std::vector<Json> conversationJsons = {};
+    std::vector<Json> conversationViewJsons = {};
     // NOTE: The final size is known, so the vector allocates once instead of reallocating as it grows
-    conversationJsons.reserve(conversations.size());
-    for (const Conversation& conversation : conversations)
+    conversationViewJsons.reserve(conversationViews.size());
+    for (const ConversationView& conversationView : conversationViews)
     {
-        Json conversationJson = ConvertConversationToJson(conversation);
-        conversationJsons.push_back(conversationJson);
+        Json conversationViewJson = ConvertConversationViewToJson(conversationView);
+        conversationViewJsons.push_back(conversationViewJson);
     }
 
     Json payloadJson = {};
-    payloadJson.Set("conversations", conversationJsons);
+    payloadJson.Set("conversations", conversationViewJsons);
 
     Json json = {};
     json.SetEnum<SocketEventName>("name", allOpenConversationsFoundByUserIdSocketEvent.name);

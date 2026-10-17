@@ -3,11 +3,15 @@
 #include "conversations/repositories/IConversationsRepository.h"
 
 #include "models/Conversation.h"
-#include "models/ConversationUser.h"
 #include "results/ServiceResult.h"
+#include "views/ConversationView.h"
+#include "views/UserView.h"
 
 #include <memory>
 #include <optional>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 // Forward declarations
 class Logger;
@@ -26,8 +30,8 @@ public:
         UNKNOWN_CONVERSATION
     };
 
-    using ConversationResult = ServiceResult<ConversationsResultCode, std::optional<Conversation>>;
-    using ConversationsResult = ServiceResult<ConversationsResultCode, std::vector<Conversation>>;
+    using ConversationResult = ServiceResult<ConversationsResultCode, std::optional<ConversationView>>;
+    using ConversationsResult = ServiceResult<ConversationsResultCode, std::vector<ConversationView>>;
 
     struct CloseConversationDto
     {
@@ -83,7 +87,7 @@ public:
     /**
      * NOTES:
      *  - Opens the conversation for every user who still has it closed, called when a message is sent
-     *  - Returns only the user ids that changed, so the caller knows who to notify
+     *  - Returns conversation with every user open whether or not anything changed
      */
     ConversationResult OpenForAllUsers(const OpenConversationForAllUsersDto& openConversationForAllUsersDto);
     ConversationResult FindById(const FindConversationByIdDto& findConversationByIdDto);
@@ -94,6 +98,8 @@ public:
     std::string ConvertConversationsResultCodeToString(ConversationsResultCode conversationsResultCode);
 
 private:
+    using UserViewsMap = std::unordered_map<std::string, UserView>;
+
     std::unique_ptr<IConversationsRepository> m_conversationsRepository = nullptr;
 
     UsersService& m_usersService;
@@ -102,6 +108,10 @@ private:
     // NOTE: Borrowed from the module, which owns it and outlives this service
     Logger& m_logger;
 
+    UserViewsMap BuildUserViewsMap(const std::vector<Conversation>& conversations) const;
+    std::vector<ConversationView> ConvertConversationsToConversationViews(const std::vector<Conversation>& conversations) const;
+    ConversationView ConvertConversationToConversationView(const Conversation& conversation) const;
+    ConversationView ConvertConversationToConversationView(const Conversation& conversation, const UserViewsMap& userViewsMap) const;
     // NOTE: Adds initiator user id to user ids, sorts and deduplicates, every method taking user ids goes through it
     std::vector<std::string> NormalizeUserIds(const std::string& initiatorUserId, const std::vector<std::string>& userIds) const;
 };

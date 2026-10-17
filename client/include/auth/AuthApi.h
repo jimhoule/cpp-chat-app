@@ -17,6 +17,9 @@
 #include "serializer/LoginSocketEventSerializer.h"
 #include "serializer/LogoutSocketEventSerializer.h"
 #include "serializer/RegisterSocketEventSerializer.h"
+#include "views/UserView.h"
+
+#include <optional>
 
 // Forward declarations
 class Logger;
@@ -57,6 +60,7 @@ public:
     void Login(const LoginParams& loginParams);
     void Logout();
     void Register(const RegisterParams& registerParams);
+    const UserView* GetCurrentUser() const;
     bool HasStoredSession() const;
 
 private:
@@ -85,6 +89,8 @@ private:
     ErrorSocketEventPayloadDeserializer m_errorSocketEventPayloadDeserializer = {};
 
     SessionStore& m_sessionStore;
+
+    std::optional<UserView> m_currentUser = std::nullopt;
 
     Logger& m_logger;
 };

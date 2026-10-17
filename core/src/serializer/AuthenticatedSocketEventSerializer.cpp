@@ -7,15 +7,14 @@
 // **********
 std::string AuthenticatedSocketEventSerializer::Serialize(const AuthenticatedSocketEvent& authenticatedSocketEvent)
 {
-    Json userJson = {};
-    userJson.Set("id", authenticatedSocketEvent.payload.user.id);
-    userJson.Set("email", authenticatedSocketEvent.payload.user.email);
-    userJson.Set("firstName", authenticatedSocketEvent.payload.user.firstName);
-    userJson.Set("lastName", authenticatedSocketEvent.payload.user.lastName);
-    userJson.Set("password", authenticatedSocketEvent.payload.user.password);
+    Json userViewJson = {};
+    userViewJson.Set("id", authenticatedSocketEvent.payload.user.id);
+    userViewJson.Set("email", authenticatedSocketEvent.payload.user.email);
+    userViewJson.Set("firstName", authenticatedSocketEvent.payload.user.firstName);
+    userViewJson.Set("lastName", authenticatedSocketEvent.payload.user.lastName);
 
     Json payloadJson = {};
-    payloadJson.Set("user", userJson);
+    payloadJson.Set("user", userViewJson);
 
     Json json = {};
     json.SetEnum<SocketEventName>("name", authenticatedSocketEvent.name);

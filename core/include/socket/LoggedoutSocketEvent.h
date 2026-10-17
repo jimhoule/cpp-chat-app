@@ -2,8 +2,6 @@
 
 #include "socket/SocketEvent.h"
 
-#include <string>
-
 struct LoggedoutSocketEventPayload
 {
     LoggedoutSocketEventPayload() = default;

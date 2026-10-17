@@ -1,14 +1,14 @@
 #pragma once
 
-#include "models/User.h"
+#include "views/UserView.h"
 
 // NOTE: Sent when another user comes online
 struct UserOnlineEvent
 {
     UserOnlineEvent() = default;
-    UserOnlineEvent(const User& user)
+    UserOnlineEvent(const UserView& user)
         : user(user)
     {}
 
-    User user = {};
+    UserView user = {};
 };

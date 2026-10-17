@@ -1,17 +1,17 @@
 #pragma once
 
-#include "models/User.h"
 #include "socket/SocketEvent.h"
+#include "views/UserView.h"
 
 #include <string>
 
 struct UserOnlineSocketEventPayload
 {
     UserOnlineSocketEventPayload() = default;
-    UserOnlineSocketEventPayload(const User& user) : user(user)
+    UserOnlineSocketEventPayload(const UserView& user) : user(user)
     {}
 
-    User user = {};
+    UserView user = {};
 };
 
 struct UserOnlineSocketEvent : public SocketEvent<UserOnlineSocketEventPayload>

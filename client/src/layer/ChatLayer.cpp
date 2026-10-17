@@ -1,6 +1,7 @@
 #include "layer/ChatLayer.h"
 
 #include "auth/AuthApi.h"
+#include "conversations/ConversationsApi.h"
 #include "deserializer/MessageCreatedSocketEventPayloadDeserializer.h"
 #include "deserializer/UserOnlineSocketEventPayloadDeserializer.h"
 #include "log/Logger.h"
@@ -13,14 +14,24 @@ constexpr int SERVER_PORT =  5000;
 // * PUBLIC *
 // **********
 
-ChatLayer::ChatLayer(const std::string& id, const Gui& gui, Navigation& navigation, AuthApi& authApi, MessagesApi& messagesApi, Logger& logger)
+ChatLayer::ChatLayer(
+    const std::string& id,
+    const Gui& gui,
+    Navigation& navigation,
+    AuthApi& authApi,
+    ConversationsApi& conversationsApi,
+    MessagesApi& messagesApi,
+    Logger& logger
+)
     : Layer(id, logger)
     , m_gui(gui)
     , m_navigation(navigation)
     , m_authApi(authApi)
+    , m_conversationsApi(conversationsApi)
     , m_messagesApi(messagesApi)
     , m_loggedOutObserver(*this, &ChatLayer::HandleLoggedOut)
     , m_userOnlineObserver(*this, &ChatLayer::HandleUserOnline)
+    , m_allOpenConversationsFoundObserver(*this,&ChatLayer::HandleAllOpenConversationsFound )
     , m_messageCreatedObserver(*this, &ChatLayer::HandleMessageCreated)
 {}
 
@@ -28,72 +39,28 @@ void ChatLayer::OnAttach()
 {
     m_authApi.GetLoggedOutSubject().Subscribe(&m_loggedOutObserver);
     m_authApi.GetUserOnlineSubject().Subscribe(&m_userOnlineObserver);
+    m_conversationsApi.GetAllOpenConversationsFoundSubject().Subscribe(&m_allOpenConversationsFoundObserver);
     m_messagesApi.GetMessageCreatedSubject().Subscribe(&m_messageCreatedObserver);
 
+    m_conversationsApi.FindAllOpen();
+
     // Users
-    User CurrentUser = {};
-    CurrentUser.id = "CurrentUser";
-    CurrentUser.email = "currentuser@fake.com";
-    CurrentUser.firstName = "Olivier";
-    CurrentUser.lastName = "Perron";
-    CurrentUser.password = "passwordCurrentUser";
-
-    m_currentUser = std::make_shared<User>(CurrentUser);
-
-    User User1 = {};
+    UserView User1 = {};
     User1.id = "User1";
     User1.email = "user1@fake.com";
     User1.firstName = "Marc";
     User1.lastName = "Bum";
-    User1.password = "passwordUser1";
 
-    User User2 = {};
+    UserView User2 = {};
     User2.id = "User2";
     User1.email = "user2@fake.com";
     User2.firstName = "Simon";
     User2.lastName = "Robichaud";
-    User2.password = "passwordUser2";
 
     m_users = {
-        std::make_shared<User>(User1),
-        std::make_shared<User>(User2),
+        std::make_shared<UserView>(User1),
+        std::make_shared<UserView>(User2),
     };
-
-    m_usersMap[User1.id] = User1;
-    m_usersMap[User2.id] = User2;
-
-    ConversationUser currentConversationUser = {};
-    currentConversationUser.userId = m_currentUser->id;
-    currentConversationUser.isOpen = false;
-
-    ConversationUser conversationUser1 = {};
-    conversationUser1.userId = User1.id;
-    conversationUser1.isOpen = false;
-
-    ConversationUser conversationUser2 = {};
-    conversationUser1.userId = User2.id;
-    conversationUser1.isOpen = false;
-
-    // Conversations
-    Conversation Conversation1 = {};
-    Conversation1.id = "Conversation1";
-    Conversation1.users = { currentConversationUser, conversationUser1 };
-    Conversation1.createdAt = std::time(0);
-
-    Conversation Conversation2 = {};
-    Conversation2.id = "Conversation2";
-    Conversation2.users = { currentConversationUser, conversationUser2 };
-    Conversation2.createdAt = std::time(0);
-
-    m_conversations = {
-        std::make_shared<Conversation>(Conversation1),
-        std::make_shared<Conversation>(Conversation2)
-    };
-
-    m_selectedConversation = m_conversations[0];
-
-    m_conversationMessagesMap[Conversation1.id] = {};
-    m_conversationMessagesMap[Conversation2.id] = {};
 
     // Textures
     m_blankImageTexture.Load("../../assets/Blank.jpg", 0);
@@ -110,7 +77,9 @@ void ChatLayer::OnDetach()
 {
     m_authApi.GetLoggedOutSubject().Unsubscribe(&m_loggedOutObserver);
     m_authApi.GetUserOnlineSubject().Unsubscribe(&m_userOnlineObserver);
+    m_conversationsApi.GetAllOpenConversationsFoundSubject().Unsubscribe(&m_allOpenConversationsFoundObserver);
     m_messagesApi.GetMessageCreatedSubject().Unsubscribe(&m_messageCreatedObserver);
+    
     Reset();
 }
 
@@ -231,13 +200,16 @@ void ChatLayer::OnRender()
                     searchModalBodyContainer.cornerRounding = searchModal.cornerRounding;
                     searchModalBodyContainer.isAutoResizableY = true;
                     searchModalBodyContainer.DrawContent = [this, &searchModal](const Gui::ContainerState& state) {
-                        if (m_searchValue.empty()) return;
+                        if (m_searchValue.empty())
+                        {
+                            return;
+                        }
 
                         const Vector2 searchModalBodyContainerAvailableSpace = m_gui.GetAvailableSpace();
 
-                        std::function<std::vector<std::shared_ptr<User>>(std::string&)> search = [this](std::string& value) {
+                        std::function<std::vector<std::shared_ptr<UserView>>(std::string&)> search = [this](std::string& value) {
                             // Defines a lambda function as the predicate for filtering
-                            std::function<bool(std::shared_ptr<User>)> isFound = [&value](std::shared_ptr<User> user) {
+                            std::function<bool(std::shared_ptr<UserView>)> isFound = [&value](std::shared_ptr<UserView> user) {
                                 // Defines a lambda function for converting a char to a lowercase char
                                 std::function<int(unsigned char)> convertCharToLowercase = [&value](unsigned char character){
                                     return std::tolower(character);
@@ -260,18 +232,21 @@ void ChatLayer::OnRender()
                             };
 
                             // Copies elements that satisfy the predicate into the new vector
-                            std::vector<std::shared_ptr<User>> filteredUsers = {};
+                            std::vector<std::shared_ptr<UserView>> filteredUsers = {};
                             std::copy_if(m_users.begin(), m_users.end(), std::back_inserter(filteredUsers), isFound);
 
                             return std::move(filteredUsers);
                         };
 
-                        std::vector<std::shared_ptr<User>> users = search(m_searchValue);
-                        if (users.empty()) return;
-
-                        for (int index = 0; index < users.size(); index++)
+                        std::vector<std::shared_ptr<UserView>> users = search(m_searchValue);
+                        if (users.empty())
                         {
-                            std::shared_ptr<User> user = users[index];
+                            return;
+                        }
+
+                        for (std::size_t index = 0; index < users.size(); index++)
+                        {
+                            std::shared_ptr<UserView> user = users[index];
 
                             // USER CONTAINER
                             Gui::Container userContainer = {};
@@ -321,7 +296,10 @@ void ChatLayer::OnRender()
                     // SEARCH TEXT INPUT
                     Gui::Placeholder searchTextInputPlaceholder = {};
                     searchTextInputPlaceholder.color = Rgba(120, 125, 172, 255);
-                    if (!m_gui.AreAnyModalsOpen()) searchTextInputPlaceholder.text = "Enter search here...";
+                    if (!m_gui.AreAnyModalsOpen())
+                    {
+                        searchTextInputPlaceholder.text = "Enter search here...";
+                    }
 
                     Gui::TextInput searchTextInput = {};
                     searchTextInput.id = "searchTextInput";
@@ -383,8 +361,15 @@ void ChatLayer::OnRender()
                         m_gui.DrawImageButton(currentUserImageButton);
 
                         // Closes setting drop down menu if a modal is open
-                        if (m_gui.AreAnyModalsOpen()) m_isSettingsDropDownMenuOpen = false;
-                        if (!m_isSettingsDropDownMenuOpen) return;
+                        if (m_gui.AreAnyModalsOpen())
+                        {
+                            m_isSettingsDropDownMenuOpen = false;
+                        }
+
+                        if (!m_isSettingsDropDownMenuOpen)
+                        {
+                            return;
+                        }
 
                         // SETTINGS DROP DOWN MENU
                         Gui::DropDownMenuItem profileDropDownMenuItem = {};
@@ -484,24 +469,24 @@ void ChatLayer::OnRender()
                 conversationsNode.DrawContent = [this]() {
                     const Vector2 conversationsNodeAvailableSpace = m_gui.GetAvailableSpace();
 
-                    for (int index = 0; index < m_conversations.size(); index++)
+                    for (std::size_t index = 0; index < m_conversations.size(); index++)
                     {
-                        const std::shared_ptr<Conversation> conversation = m_conversations[index];
+                        const ConversationView conversation = m_conversations[index];
 
                         // CONVERSATION CONTAINER
                         Rgba bgColor = Rgba(50, 56, 102, 255);
-                        if (conversation->id == m_selectedConversation->id) bgColor = Rgba(100, 100, 100, 255);
+                        if (conversation.id == m_selectedConversationId) bgColor = Rgba(100, 100, 100, 255);
 
                         Gui::Container conversationContainer = {};
-                        conversationContainer.id = "conversationContainer" + conversation->id;
+                        conversationContainer.id = "conversationContainer" + conversation.id;
                         conversationContainer.size = Vector2(conversationsNodeAvailableSpace.x, conversationsNodeAvailableSpace.y * 0.05f);
                         conversationContainer.cornerRounding = 10.f;
                         conversationContainer.bgColor = bgColor;
                         conversationContainer.bgColorHovered = Rgba(0, 0, 0, 255);
                         conversationContainer.isAutoResizableY = true;
                         conversationContainer.OnClick = [this, &conversation]() {
-                            m_selectedConversation = conversation;
-                            m_logger.Info("SELECTED CONVERSATION id: " + m_selectedConversation->id);
+                            m_selectedConversationId = conversation.id;
+                            m_logger.Info("SELECTED CONVERSATION id: " + m_selectedConversationId);
                         };
                         conversationContainer.DrawContent = [this, &conversation, index](const Gui::ContainerState& state) {
                             const Vector2 conversationContainerAvailableSpace = m_gui.GetAvailableSpace();
@@ -515,16 +500,27 @@ void ChatLayer::OnRender()
 
                             // CONVERSATION TEXT
                             Gui::Text conversationText = {};
-                            conversationText.value = m_usersMap[conversation->users[1].userId].firstName;
+                            // Selects name of first user that is not the current user
+                            for (const ConversationUserView& conversationUserView : conversation.users)
+                            {
+                                if (conversationUserView.user.id != m_authApi.GetCurrentUser()->id)
+                                {
+                                    conversationText.value = conversationUserView.user.firstName;
+                                    break;
+                                }
+                            }
 
                             m_gui.SetPositionX(conversationImage.size.x + 10.0f);
                             m_gui.DrawText(conversationText);
 
                             // CLOSE CONVERSATION IMAGE BUTTON CONTAINER
-                            if (!state.isHovered) return;
+                            if (!state.isHovered)
+                            {
+                                return;
+                            }
 
                             Gui::Container closeConversationImageButtonContainer = {};
-                            closeConversationImageButtonContainer.id = "closeConversationImageButtonContainer" + conversation->id;
+                            closeConversationImageButtonContainer.id = "closeConversationImageButtonContainer" + conversation.id;
                             closeConversationImageButtonContainer.size = conversationImage.size;
                             closeConversationImageButtonContainer.padding = Vector2(5.0f, 5.0f);
                             // NOTE: Transparent background
@@ -538,18 +534,28 @@ void ChatLayer::OnRender()
                                 closeConversationImageButtonImage.cornerRounding = 0.0f;
 
                                 Gui::ImageButton closeConversationImageButton = {};
-                                closeConversationImageButton.id = "closeConversationImageButton" + conversation->id;
+                                closeConversationImageButton.id = "closeConversationImageButton" + conversation.id;
                                 closeConversationImageButton.image = closeConversationImageButtonImage;
                                 closeConversationImageButton.tintColorHovered = Rgba(200, 200, 0, 255);
                                 closeConversationImageButton.OnClick = [this, index]() {
-                                    const std::string& id = m_conversations[index]->id;
+                                    const std::string id = m_conversations[index].id;
 
                                     // Deletes conversation
                                     m_conversations.erase(m_conversations.begin() + index);
-                                    // Selects first conversation if deleted conversation is the selected one
-                                    if (m_selectedConversation->id == id) m_selectedConversation = m_conversations[0];
-
                                     m_logger.Info("DELETED CONVERSATION id: " + id);
+
+                                    // Checks if list is now empty
+                                    if (m_conversations.empty())
+                                    {
+                                        m_selectedConversationId = "";
+                                        return;
+                                    }
+
+                                    // Selects first conversation if deleted conversation is the selected one
+                                    if (m_selectedConversationId == id)
+                                    {
+                                        m_selectedConversationId = m_conversations[0].id;
+                                    }
                                 };
 
                                 m_gui.DrawImageButton(closeConversationImageButton);
@@ -591,12 +597,12 @@ void ChatLayer::OnRender()
             messagesContainer.DrawContent = [this](const Gui::ContainerState& state) {
                 const Vector2 messagesContainerAvailableSpace = m_gui.GetAvailableSpace();
 
-                std::vector<Message> selectedConversationMessage = m_conversationMessagesMap[m_selectedConversation->id];
-                for (int index = 0; index < selectedConversationMessage.size(); index++)
+                const std::vector<Message>& selectedConversationMessage = m_conversationMessagesMap[m_selectedConversationId];
+                for (std::size_t index = 0; index < selectedConversationMessage.size(); index++)
                 {
                     // MESSAGE CONTAINER
                     const Message& message = selectedConversationMessage[index];
-                    const std::string& id = "messageContainer" + std::to_string(index);
+                    const std::string id = "messageContainer" + std::to_string(index);
 
                     Gui::Container messageContainer = {};
                     messageContainer.id = id;
@@ -684,7 +690,10 @@ void ChatLayer::OnRender()
             // MESSAGE TEXT INPUT
             Gui::Placeholder messageTextInputPlaceholder = {};
             messageTextInputPlaceholder.color = Rgba(120, 125, 172, 255);
-            if (!m_gui.AreAnyModalsOpen()) messageTextInputPlaceholder.text = "Enter message here...";
+            if (!m_gui.AreAnyModalsOpen())
+            {
+                messageTextInputPlaceholder.text = "Enter message here...";
+            }
 
             Gui::TextInput messageTextInput = {};
             messageTextInput.id = "messageTextInput";
@@ -722,16 +731,16 @@ void ChatLayer::OnRender()
             sendButton.bgColorActive = Rgba(150, 0, 0, 255); // Darker red when active
             sendButton.bgColorHovered = Rgba(255, 100, 100, 255); // Lighter red on hover
             sendButton.cornerRounding = 10.0f;
-            sendButton.isDisabled = m_messageValue.empty();
+            sendButton.isDisabled = m_messageValue.empty() || m_selectedConversationId.empty();
             sendButton.OnClick = [this]() {
                 Message newMessage = {};
                 newMessage.id = "tempId";
-                newMessage.conversationId = m_selectedConversation->id;
-                newMessage.senderId = m_currentUser->id;
+                newMessage.conversationId = m_selectedConversationId;
+                newMessage.senderId = m_authApi.GetCurrentUser()->id;
                 newMessage.text = m_messageValue;
                 newMessage.createdAt = std::time(0);
 
-                std::vector<Message>& selectedConversationMessages = m_conversationMessagesMap[m_selectedConversation->id];
+                std::vector<Message>& selectedConversationMessages = m_conversationMessagesMap[m_selectedConversationId];
                 selectedConversationMessages.push_back(newMessage);
 
                 HandleSendMessageButtonClicked();
@@ -752,6 +761,11 @@ void ChatLayer::OnRender()
 // ***********
 // * PRIVATE *
 // ***********
+void ChatLayer::HandleAllOpenConversationsFound(const AllOpenConversationsFoundEvent& allOpenConversationsFoundEvent)
+{
+    m_conversations = allOpenConversationsFoundEvent.conversations;
+}
+
 void ChatLayer::HandleMessageCreated(const MessageCreatedEvent& messageCreatedEvent)
 {
     m_logger.Info("Message created id: " + messageCreatedEvent.message.id);
@@ -777,7 +791,7 @@ void ChatLayer::HandleLogoutButtonClicked()
 void ChatLayer::HandleSendMessageButtonClicked()
 {
     MessagesApi::CreateMessageParams createMessageParams = {};
-    createMessageParams.conversationId = m_selectedConversation->id;
+    createMessageParams.conversationId = m_selectedConversationId;
     createMessageParams.text = m_messageValue;
     m_messagesApi.Create(createMessageParams);
 
@@ -792,21 +806,16 @@ void ChatLayer::Reset()
     // search
     m_searchValue.clear();
 
+    // Conversations
+    m_conversations.clear();
+    m_selectedConversationId = "";
+    m_conversationMessagesMap = {};
+
     // Messages
     m_messageValue.clear();
 
     // Users
-    m_currentUser = nullptr;
     m_users.clear();
-
-    // Conversations
-    /**
-     * NOTES:
-     *  - Clearing m_conversations will also reset m_selectedConversation which is a shared pointer to one of the conversations in m_conversations
-     *  - Resetting m_selectedConversation manually before clearing m_conversations would mke the app crash as clearing would try to release an
-     *    already released resource
-     */
-    m_conversations.clear();
 
     // Textures
     m_blankImageTexture.Destroy();

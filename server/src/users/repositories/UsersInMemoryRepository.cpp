@@ -39,3 +39,18 @@ std::optional<User> UsersInMemoryRepository::FindById(const std::string& id) con
 
     return std::nullopt;
 }
+
+std::vector<User> UsersInMemoryRepository::FindByIds(const std::unordered_set<std::string>& ids) const
+{
+    std::vector<User> users = {};
+    for (const User& user : m_users)
+    {
+        bool isFound = ids.find(user.id) != ids.end();
+        if (isFound)
+        {
+            users.push_back(user);
+        }
+    }
+
+    return users;
+}

@@ -1,4 +1,5 @@
 #include "auth/AuthModule.h"
+#include "conversations/ConversationsModule.h"
 #include "deserializer/LoginSocketEventPayloadDeserializer.h"
 #include "deserializer/RegisterSocketEventPayloadDeserializer.h"
 #include "encryption/EncryptionModule.h"
@@ -22,7 +23,7 @@ int main()
 
 	// NOTE: Declared before the server and the error handler that borrow them
 	Logger socketServerLogger("SERVER", "core/src/socket/SocketServer");
-	Logger handleErrorsLogger("SERVER", "server/src/middlewares/HandleErrors");
+	Logger handleErrorsLogger("ERRORS", "server/src/middlewares/HandleErrors");
 
 	SocketServer server(PORT, socketServerLogger);
 	server.OnError(HandleErrors(server, handleErrorsLogger));
@@ -33,6 +34,7 @@ int main()
 	SessionsModule sessionsModule(uuidModule.GetService());
 	UsersModule usersModule(encryptionModule.GetService(), uuidModule.GetService());
 	AuthModule authModule(server, sessionsModule.GetService(), usersModule.GetService());
+	ConversationsModule conversationsModule(server, usersModule.GetService(), uuidModule.GetService());
 	MessagesModule messagesModule(server, uuidModule.GetService());
 
 	server.Init();

@@ -1,18 +1,18 @@
 #pragma once
 
-#include "models/Conversation.h"
 #include "socket/SocketEvent.h"
+#include "views/ConversationView.h"
 
 #include <vector>
 
 struct AllOpenConversationsFoundByUserIdSocketEventPayload
 {
     AllOpenConversationsFoundByUserIdSocketEventPayload() = default;
-    AllOpenConversationsFoundByUserIdSocketEventPayload(const std::vector<Conversation>& conversations)
+    AllOpenConversationsFoundByUserIdSocketEventPayload(const std::vector<ConversationView>& conversations)
         : conversations(conversations)
     {}
 
-    std::vector<Conversation> conversations;
+    std::vector<ConversationView> conversations;
 };
 
 struct AllOpenConversationsFoundByUserIdSocketEvent : public SocketEvent<AllOpenConversationsFoundByUserIdSocketEventPayload>

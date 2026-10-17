@@ -1,7 +1,7 @@
 #pragma once
 
-#include "models/Conversation.h"
 #include "socket/SocketEvent.h"
+#include "views/ConversationView.h"
 
 #include <optional>
 #include <vector>
@@ -9,11 +9,11 @@
 struct ConversationFoundByUserIdsSocketEventPayload
 {
     ConversationFoundByUserIdsSocketEventPayload() = default;
-    ConversationFoundByUserIdsSocketEventPayload(const std::optional<Conversation>& conversation)
+    ConversationFoundByUserIdsSocketEventPayload(const std::optional<ConversationView>& conversation)
         : conversation(conversation)
     {}
 
-    std::optional<Conversation> conversation;
+    std::optional<ConversationView> conversation;
 };
 
 struct ConversationFoundByUserIdsSocketEvent : public SocketEvent<ConversationFoundByUserIdsSocketEventPayload>

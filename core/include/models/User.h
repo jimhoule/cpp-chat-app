@@ -4,8 +4,6 @@
 
 struct User
 {
-    User() = default;
-
     std::string id;
     std::string email;
     std::string firstName;

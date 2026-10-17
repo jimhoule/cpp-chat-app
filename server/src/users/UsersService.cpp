@@ -35,15 +35,8 @@ UsersService::UserResult UsersService::Create(const CreateUserDto& createUserDto
     user.lastName = createUserDto.lastName;
     user.password = m_encryptionService.Encrypt(encryptStringDto);
 
-    userResult.data = m_usersRepository->Create(user);
-
-    return userResult;
-}
-
-UsersService::UserResult UsersService::FindByEmail(const FindUserByEmailDto& findUserByEmailDto)
-{
-    UserResult userResult = {};
-    userResult.data = m_usersRepository->FindByEmail(findUserByEmailDto.email);
+    UserView userView = ConvertUserToUserView(m_usersRepository->Create(user));
+    userResult.data = userView;
 
     return userResult;
 }
@@ -51,23 +44,58 @@ UsersService::UserResult UsersService::FindByEmail(const FindUserByEmailDto& fin
 UsersService::UserResult UsersService::FindById(const FindUserByIdDto& findUserByIdDto)
 {
     UserResult userResult = {};
-    userResult.data = m_usersRepository->FindById(findUserByIdDto.id);
+
+    std::optional<User> user = m_usersRepository->FindById(findUserByIdDto.id);
+    if (user.has_value())
+    {
+        UserView userView = ConvertUserToUserView(user.value());
+        userResult.data = userView;
+    }
 
     return userResult;
 }
 
-UsersService::UserResult UsersService::VerifyPassword(const VerifyUserPasswordDto& verifyUserPasswordDto)
+UsersService::UsersResult UsersService::FindByIds(const FindUsersByIdsDto& findUsersByIdsDto)
+{
+    const std::vector<User> users = m_usersRepository->FindByIds(findUsersByIdsDto.ids);
+
+    std::vector<UserView> userViews = {};
+    for (const User& user : users)
+    {
+        UserView userView = ConvertUserToUserView(user);
+        userViews.push_back(userView);
+    }
+
+    UsersResult usersResult = {};
+    usersResult.data = userViews;
+
+    return usersResult;
+}
+
+UsersService::UserResult UsersService::VerifyCredentials(const VerifyUserCredentialsDto& verifyUserCredentialsDto)
 {
     UserResult userResult = {};
 
+    // Checks if a user with this email exists
+    std::optional<User> user = m_usersRepository->FindByEmail(verifyUserCredentialsDto.email);
+    if (!user.has_value())
+    {
+        userResult.code = UsersResultCode::UNKNOWN_USER;
+        return userResult;
+    }
+
     EncryptionService::VerifyStringDto verifyStringDto = {};
-    verifyStringDto.string = verifyUserPasswordDto.password;
-    verifyStringDto.hashedString = verifyUserPasswordDto.hashedPassword;
+    verifyStringDto.string = verifyUserCredentialsDto.password;
+    verifyStringDto.hashedString = user.value().password;
     bool isVerified = m_encryptionService.Verify(verifyStringDto);
     if (!isVerified)
     {
         userResult.code = UsersResultCode::INVALID_PASSWORD;
+        return userResult;
     }
+
+    UserView userView = ConvertUserToUserView(user.value());
+    userResult.data = userView;
 
     return userResult;
 }
@@ -85,7 +113,24 @@ std::string UsersService::ConvertUsersResultCodeToString(UsersResultCode usersRe
         case UsersResultCode::INVALID_PASSWORD:
             return "INVALID PASSWORD";
 
+        case UsersResultCode::UNKNOWN_USER:
+            return "UNKNOWN USER";
+
         default:
             return "Unknown users result code";
     }
+}
+
+// ***********
+// * PRIVATE *
+// ***********
+UserView UsersService::ConvertUserToUserView(const User& user) const
+{
+    UserView userView = {};
+    userView.id = user.id;
+    userView.email = user.email;
+    userView.firstName = user.firstName;
+    userView.lastName = user.lastName;
+
+    return userView;
 }
