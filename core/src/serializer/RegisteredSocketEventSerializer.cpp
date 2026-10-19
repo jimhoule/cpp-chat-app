@@ -1,17 +1,14 @@
 #include "serializer/RegisteredSocketEventSerializer.h"
 
 #include "json/Json.h"
+#include "json/UserJson.h"
 
 // **********
 // * PUBLIC *
 // **********
 std::string RegisteredSocketEventSerializer::Serialize(const RegisteredSocketEvent& registeredSocketEvent)
 {
-    Json userViewJson = {};
-    userViewJson.Set("id", registeredSocketEvent.payload.user.id);
-    userViewJson.Set("email", registeredSocketEvent.payload.user.email);
-    userViewJson.Set("firstName", registeredSocketEvent.payload.user.firstName);
-    userViewJson.Set("lastName", registeredSocketEvent.payload.user.lastName);
+    Json userViewJson = ConvertUserViewToJson(registeredSocketEvent.payload.user);
 
     Json payloadJson = {};
     payloadJson.Set("sessionId", registeredSocketEvent.payload.sessionId);

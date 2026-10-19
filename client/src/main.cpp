@@ -14,6 +14,7 @@
 #include "navigation/Navigation.h"
 #include "sessions/SessionStore.h"
 #include "socket/SocketClient.h"
+#include "users/UsersApi.h"
 
 #include <GLAD/glad.h>
 #include <GLFW/glfw3.h>
@@ -80,6 +81,7 @@ int main()
     Logger authApiLogger("AUTH", "client/src/auth/AuthApi");
     Logger conversationsApiLogger("CONVERSATIONS", "client/src/conversations/ConversationsApi");
     Logger messagesApiLogger("MESSAGES", "client/src/auth/AuthApi");
+    Logger usersApiLogger("USERS", "client/src/users/UsersApi");
     Logger navigationLogger("NAVIGATION", "client/src/navigation/Navigation");
     Logger sessionStoreLogger("SESSION", "client/src/sessions/SessionStore");
     DebugLogger chatLogger("CHAT", "client/src/layer/ChatLayer", debugOverlay);
@@ -94,12 +96,13 @@ int main()
     AuthApi authApi(socketClient, sessionStore, authApiLogger);
     ConversationsApi conversationsApi(socketClient, conversationsApiLogger);
     MessagesApi messagesApi(socketClient, messagesApiLogger);
+    UsersApi usersApi(socketClient, usersApiLogger);
 
     // Navigation
     Navigation navigation(layerStack, navigationLogger);
 
     Navigation::Screen chatScreen = {};
-    chatScreen.layer = std::make_unique<ChatLayer>("Chat", gui, navigation, authApi, conversationsApi, messagesApi, chatLogger);
+    chatScreen.layer = std::make_unique<ChatLayer>("Chat", gui, navigation, authApi, conversationsApi, messagesApi, usersApi, chatLogger);
     Navigation::Screen loginScreen = {};
     loginScreen.layer = std::make_unique<LoginLayer>("Login", gui, navigation, authApi, loginLogger);
     Navigation::Screen registerScreen = {};

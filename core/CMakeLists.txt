@@ -10,6 +10,7 @@ file(GLOB LAYER_SOURCE_FILES "src/layer/*.cpp")
 file(GLOB LOG_SOURCE_FILES "src/log/*.cpp")
 file(GLOB SERIALIZER_SOURCE_FILES "src/serializer/*.cpp")
 file(GLOB SOCKET_SOURCE_FILES "src/socket/*.cpp")
+file(GLOB UTILS_SOURCE_FILES "src/utils/*.cpp")
 
 add_library(${CORE_LIB_NAME} STATIC
     ${DESERIALIZER_SOURCE_FILES}
@@ -18,6 +19,7 @@ add_library(${CORE_LIB_NAME} STATIC
     ${LOG_SOURCE_FILES}
     ${SERIALIZER_SOURCE_FILES}
     ${SOCKET_SOURCE_FILES}
+    ${UTILS_SOURCE_FILES}
     src/Texture.cpp
 )
 # NOTE: PUBLIC because nlohmann appears in Core's public headers, so consumers need its include path

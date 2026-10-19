@@ -32,7 +32,7 @@ int main()
 	EncryptionModule encryptionModule;
 	UuidModule uuidModule;
 	SessionsModule sessionsModule(uuidModule.GetService());
-	UsersModule usersModule(encryptionModule.GetService(), uuidModule.GetService());
+	UsersModule usersModule(server, encryptionModule.GetService(), uuidModule.GetService());
 	AuthModule authModule(server, sessionsModule.GetService(), usersModule.GetService());
 	ConversationsModule conversationsModule(server, usersModule.GetService(), uuidModule.GetService());
 	MessagesModule messagesModule(server, uuidModule.GetService());

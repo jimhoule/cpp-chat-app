@@ -1,6 +1,7 @@
 #include "users/UsersService.h"
 
 #include "encryption/EncryptionService.h"
+#include "models/User.h"
 #include "uuid/UuidService.h"
 
 // **********
@@ -67,6 +68,34 @@ UsersService::UsersResult UsersService::FindByIds(const FindUsersByIdsDto& findU
     }
 
     UsersResult usersResult = {};
+    usersResult.data = userViews;
+
+    return usersResult;
+}
+
+UsersService::UsersResult UsersService::Search(const SearchUsersDto& searchUsersDto)
+{
+    UsersResult usersResult = {};
+
+    // Returns empty result if empty search string was sent
+    if (searchUsersDto.search.empty())
+    {
+        return usersResult;
+    }
+
+    // Searches users
+    const std::vector<User> users = m_usersRepository->Search(searchUsersDto.search);
+
+    // Converts users to user views
+    std::vector<UserView> userViews = {};
+    // NOTE: The final size is known, so the vector allocates once instead of reallocating as it grows
+    userViews.reserve(users.size());
+    for (const User& user : users)
+    {
+        const UserView userView = ConvertUserToUserView(user);
+        userViews.push_back(userView);
+    }
+
     usersResult.data = userViews;
 
     return usersResult;

@@ -46,6 +46,11 @@ public:
         std::unordered_set<std::string> ids;
     };
 
+    struct SearchUsersDto
+    {
+        std::string search;
+    };
+
     struct VerifyUserCredentialsDto
     {
         std::string email;
@@ -57,6 +62,7 @@ public:
     UserResult Create(const CreateUserDto& createUserDto);
     UserResult FindById(const FindUserByIdDto& findUserByIdDto);
     UsersResult FindByIds(const FindUsersByIdsDto& findUsersByIdsDto);
+    UsersResult Search(const SearchUsersDto& searchUsersDto);
     UserResult VerifyCredentials(const VerifyUserCredentialsDto& verifyUserCredentialsDto);
     std::string ConvertUsersResultCodeToString(UsersResultCode usersResultCode);
 

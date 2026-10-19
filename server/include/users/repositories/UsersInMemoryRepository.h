@@ -20,6 +20,7 @@ public:
     std::optional<User> FindByEmail(const std::string& email) const override;
     std::optional<User> FindById(const std::string& id) const override;
     std::vector<User> FindByIds(const std::unordered_set<std::string>& ids) const override;
+    std::vector<User> Search(const std::string& search) const override;
 
 private:
     std::vector<User> m_users = {};

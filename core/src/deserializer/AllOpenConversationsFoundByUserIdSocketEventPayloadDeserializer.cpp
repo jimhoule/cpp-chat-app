@@ -15,6 +15,8 @@ AllOpenConversationsFoundByUserIdSocketEventPayload AllOpenConversationsFoundByU
     const std::vector<Json> conversationViewJsons = json.GetObjectArray("conversations");
 
     std::vector<ConversationView> conversationViews = {};
+    // NOTE: The final size is known, so the vector allocates once instead of reallocating as it grows
+    conversationViews.reserve(conversationViewJsons.size());
     for (const Json& conversationViewJson : conversationViewJsons)
     {
         ConversationView conversationView = ConvertJsonToConversationView(conversationViewJson);

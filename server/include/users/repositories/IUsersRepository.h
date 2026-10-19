@@ -24,4 +24,5 @@ public:
     virtual std::optional<User> FindByEmail(const std::string& email) const = 0;
     virtual std::optional<User> FindById(const std::string& id) const = 0;
     virtual std::vector<User> FindByIds(const std::unordered_set<std::string>& ids) const = 0;
+    virtual std::vector<User> Search(const std::string& search) const = 0;
 };

@@ -1,5 +1,7 @@
 #include "users/repositories/UsersInMemoryRepository.h"
 
+#include "utils/Strings.h"
+
 // **********
 // * PUBLIC *
 // **********
@@ -47,6 +49,43 @@ std::vector<User> UsersInMemoryRepository::FindByIds(const std::unordered_set<st
     {
         bool isFound = ids.find(user.id) != ids.end();
         if (isFound)
+        {
+            users.push_back(user);
+        }
+    }
+
+    return users;
+}
+
+std::vector<User> UsersInMemoryRepository::Search(const std::string& search) const
+{
+    const std::string lowerCaseSearch = ConvertStringToLowerCase(search);
+
+    std::vector<User> users = {};
+    for (const User& user : m_users)
+    {
+        const std::string lowerCaseEmail = ConvertStringToLowerCase(user.email);
+        const std::size_t emailPos = lowerCaseEmail.find(lowerCaseSearch);
+        const bool isEmailFound = emailPos != std::string::npos;
+        if (isEmailFound)
+        {
+            users.push_back(user);
+            continue;
+        }
+
+        const std::string lowerCaseFirstName = ConvertStringToLowerCase(user.firstName);
+        const std::size_t firstNamePos = lowerCaseFirstName.find(lowerCaseSearch);
+        const bool isFirstNameFound = firstNamePos != std::string::npos;
+        if (isFirstNameFound)
+        {
+            users.push_back(user);
+            continue;
+        }
+
+        const std::string lowerCaseLastName = ConvertStringToLowerCase(user.lastName);
+        const std::size_t lastNamePos = lowerCaseLastName.find(lowerCaseSearch);
+        const bool isLastNameFound = lastNamePos != std::string::npos;
+        if (isLastNameFound)
         {
             users.push_back(user);
         }

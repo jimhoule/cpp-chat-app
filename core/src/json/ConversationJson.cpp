@@ -1,8 +1,8 @@
 #include "json/ConversationJson.h"
 
+#include "json/UserJson.h"
 #include "views/UserView.h"
 
-#include <nlohmann/json.hpp>
 #include <vector>
 
 Json ConvertConversationViewToJson(const ConversationView& conversationView)
@@ -44,11 +44,7 @@ ConversationView ConvertJsonToConversationView(const Json& json)
 
 Json ConvertConversationUserViewToJson(const ConversationUserView& conversationUserView)
 {
-    Json userViewJson = {};
-    userViewJson.Set("id", conversationUserView.user.id);
-    userViewJson.Set("email", conversationUserView.user.email);
-    userViewJson.Set("firstName", conversationUserView.user.firstName);
-    userViewJson.Set("lastName", conversationUserView.user.lastName);
+    Json userViewJson = ConvertUserViewToJson(conversationUserView.user);
 
     Json conversationUserViewJson = {};
     conversationUserViewJson.Set("user", userViewJson);
@@ -61,11 +57,7 @@ ConversationUserView ConvertJsonToConversationUserView(const Json& json)
 {
     Json userViewJson = json.GetObject("user");
 
-    UserView userView = {};
-    userView.id = userViewJson.GetString("id");
-    userView.email = userViewJson.GetString("email");
-    userView.firstName = userViewJson.GetString("firstName");
-    userView.lastName = userViewJson.GetString("lastName");
+    UserView userView = ConvertJsonToUserView(userViewJson);
 
     ConversationUserView conversationUserView = {};
     conversationUserView.user = userView;

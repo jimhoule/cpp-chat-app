@@ -1,16 +1,18 @@
 #pragma once
 
 #include "log/Logger.h"
+#include "users/UsersHandler.h"
 #include "users/UsersService.h"
 
 // Forward declaration
 class EncryptionService;
+class SocketServer;
 class UuidService;
 
 class UsersModule
 {
 public:
-    UsersModule(EncryptionService& encryptionService, UuidService& uuidService);
+    UsersModule(SocketServer& socketServer, EncryptionService& encryptionService, UuidService& uuidService);
 
     UsersService& GetService();
 
@@ -22,7 +24,9 @@ private:
      */
     Logger m_usersRepositoryLogger;
     Logger m_usersServiceLogger;
+    Logger m_usersHandlerLogger;
     
     // NOTE: Here the service is not a reference because users service is owned by users module (when users module dies, so does users service)
     UsersService m_usersService;
+    UsersHandler m_usersHandler;
 };

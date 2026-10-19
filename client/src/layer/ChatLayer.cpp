@@ -7,6 +7,7 @@
 #include "log/Logger.h"
 #include "navigation/Navigation.h"
 #include "messages/MessagesApi.h"
+#include "users/UsersApi.h"
 
 constexpr int SERVER_PORT =  5000;
 
@@ -21,6 +22,7 @@ ChatLayer::ChatLayer(
     AuthApi& authApi,
     ConversationsApi& conversationsApi,
     MessagesApi& messagesApi,
+    UsersApi& usersApi,
     Logger& logger
 )
     : Layer(id, logger)
@@ -29,10 +31,14 @@ ChatLayer::ChatLayer(
     , m_authApi(authApi)
     , m_conversationsApi(conversationsApi)
     , m_messagesApi(messagesApi)
+    , m_usersApi(usersApi)
     , m_loggedOutObserver(*this, &ChatLayer::HandleLoggedOut)
     , m_userOnlineObserver(*this, &ChatLayer::HandleUserOnline)
-    , m_allOpenConversationsFoundObserver(*this,&ChatLayer::HandleAllOpenConversationsFound )
+    , m_allOpenConversationsFoundObserver(*this, &ChatLayer::HandleAllOpenConversationsFound)
+    , m_conversationClosedObserver(*this, &ChatLayer::HandleConversationClosed)
+    , m_conversationOpenedObserver(*this, &ChatLayer::HandleConversationOpened)
     , m_messageCreatedObserver(*this, &ChatLayer::HandleMessageCreated)
+    , m_usersSearchedObserver(*this, &ChatLayer::HandleUsersSearched)
 {}
 
 void ChatLayer::OnAttach()
@@ -40,27 +46,12 @@ void ChatLayer::OnAttach()
     m_authApi.GetLoggedOutSubject().Subscribe(&m_loggedOutObserver);
     m_authApi.GetUserOnlineSubject().Subscribe(&m_userOnlineObserver);
     m_conversationsApi.GetAllOpenConversationsFoundSubject().Subscribe(&m_allOpenConversationsFoundObserver);
+    m_conversationsApi.GetConversationClosedSubject().Subscribe(&m_conversationClosedObserver);
+    m_conversationsApi.GetConversationOpenedSubject().Subscribe(&m_conversationOpenedObserver);
     m_messagesApi.GetMessageCreatedSubject().Subscribe(&m_messageCreatedObserver);
+    m_usersApi.GetUsersSearchedSubject().Subscribe(&m_usersSearchedObserver);
 
     m_conversationsApi.FindAllOpen();
-
-    // Users
-    UserView User1 = {};
-    User1.id = "User1";
-    User1.email = "user1@fake.com";
-    User1.firstName = "Marc";
-    User1.lastName = "Bum";
-
-    UserView User2 = {};
-    User2.id = "User2";
-    User1.email = "user2@fake.com";
-    User2.firstName = "Simon";
-    User2.lastName = "Robichaud";
-
-    m_users = {
-        std::make_shared<UserView>(User1),
-        std::make_shared<UserView>(User2),
-    };
 
     // Textures
     m_blankImageTexture.Load("../../assets/Blank.jpg", 0);
@@ -78,7 +69,10 @@ void ChatLayer::OnDetach()
     m_authApi.GetLoggedOutSubject().Unsubscribe(&m_loggedOutObserver);
     m_authApi.GetUserOnlineSubject().Unsubscribe(&m_userOnlineObserver);
     m_conversationsApi.GetAllOpenConversationsFoundSubject().Unsubscribe(&m_allOpenConversationsFoundObserver);
+    m_conversationsApi.GetConversationClosedSubject().Unsubscribe(&m_conversationClosedObserver);
+    m_conversationsApi.GetConversationOpenedSubject().Unsubscribe(&m_conversationOpenedObserver);
     m_messagesApi.GetMessageCreatedSubject().Unsubscribe(&m_messageCreatedObserver);
+    m_usersApi.GetUsersSearchedSubject().Unsubscribe(&m_usersSearchedObserver);
     
     Reset();
 }
@@ -181,7 +175,7 @@ void ChatLayer::OnRender()
 
                         m_gui.DisplayInline();
                         m_gui.SetPositionX(searchModalCloseImageButtonContainer.size.x);
-                        m_gui.DrawTextInputSingleline(m_searchValue, searchModalTextInputSingleline);
+                        m_gui.DrawTextInputSingleline(m_searchUsersValue, searchModalTextInputSingleline);
 
                         Gui::Divider bottomDivider = {};
                         bottomDivider.color = Rgba(100, 100, 100, 255);
@@ -200,57 +194,21 @@ void ChatLayer::OnRender()
                     searchModalBodyContainer.cornerRounding = searchModal.cornerRounding;
                     searchModalBodyContainer.isAutoResizableY = true;
                     searchModalBodyContainer.DrawContent = [this, &searchModal](const Gui::ContainerState& state) {
-                        if (m_searchValue.empty())
+                        if (m_searchUsersValue.empty())
                         {
                             return;
                         }
 
                         const Vector2 searchModalBodyContainerAvailableSpace = m_gui.GetAvailableSpace();
 
-                        std::function<std::vector<std::shared_ptr<UserView>>(std::string&)> search = [this](std::string& value) {
-                            // Defines a lambda function as the predicate for filtering
-                            std::function<bool(std::shared_ptr<UserView>)> isFound = [&value](std::shared_ptr<UserView> user) {
-                                // Defines a lambda function for converting a char to a lowercase char
-                                std::function<int(unsigned char)> convertCharToLowercase = [&value](unsigned char character){
-                                    return std::tolower(character);
-                                };
-
-                                std::string& lowercaseFirstName = user->firstName;
-                                std::transform(lowercaseFirstName.begin(), lowercaseFirstName.end(), lowercaseFirstName.begin(), convertCharToLowercase);
-
-                                std::string& lowercaseLastName = user->lastName;
-                                std::transform(lowercaseLastName.begin(), lowercaseLastName.end(), lowercaseLastName.begin(), convertCharToLowercase);
-
-                                // std::string& lowercaseValue = m_searchValue;
-                                std::string& lowercaseValue = value;
-                                std::transform(lowercaseValue.begin(), lowercaseValue.end(), lowercaseValue.begin(), convertCharToLowercase);
-
-                                return (
-                                    lowercaseFirstName.find(lowercaseValue) != std::string::npos ||
-                                    lowercaseLastName.find(lowercaseValue) != std::string::npos
-                                );
-                            };
-
-                            // Copies elements that satisfy the predicate into the new vector
-                            std::vector<std::shared_ptr<UserView>> filteredUsers = {};
-                            std::copy_if(m_users.begin(), m_users.end(), std::back_inserter(filteredUsers), isFound);
-
-                            return std::move(filteredUsers);
-                        };
-
-                        std::vector<std::shared_ptr<UserView>> users = search(m_searchValue);
-                        if (users.empty())
+                        for (std::size_t index = 0; index < m_searchedUsers.size(); index++)
                         {
-                            return;
-                        }
-
-                        for (std::size_t index = 0; index < users.size(); index++)
-                        {
-                            std::shared_ptr<UserView> user = users[index];
+                            // NOTE: Nothing erases during the loop so using a const reference is fine here
+                            const UserView& user = m_searchedUsers[index];
 
                             // USER CONTAINER
                             Gui::Container userContainer = {};
-                            userContainer.id = user->id;
+                            userContainer.id = user.id;
                             userContainer.size = Vector2(searchModalBodyContainerAvailableSpace.x, 40.0f);
                             userContainer.cornerRounding = 10.f;
                             // NOTE: Transparent background
@@ -258,9 +216,10 @@ void ChatLayer::OnRender()
                             userContainer.bgColorHovered = Rgba(50, 56, 102, 255);
                             userContainer.isAutoResizableY = true;
                             userContainer.OnClick = [this, &searchModal, &user]() {
-                                m_logger.Info("selected User with id " + user->id);
+                                HandleSearchedUserButtonClicked(user.id);
+                                
                                 m_gui.CloseModal(searchModal.id);
-                                m_searchValue = "";
+                                m_searchUsersValue = "";
                             };
                             userContainer.DrawContent = [this, &user](const Gui::ContainerState& state) {
                                 const Vector2 userContainerAvailableSpace = m_gui.GetAvailableSpace();
@@ -275,7 +234,7 @@ void ChatLayer::OnRender()
 
                                 // USER TEXT
                                 Gui::Text userText = {};
-                                userText.value = user->firstName + " " + user->lastName;
+                                userText.value = user.firstName + " " + user.lastName;
 
                                 m_gui.DisplayInline();
                                 m_gui.SetPositionX(userImage.size.x * 1.3f);
@@ -510,6 +469,16 @@ void ChatLayer::OnRender()
                                 }
                             }
 
+                            /**
+                             * NOTES:
+                             *  - Falls back to current user for a conversation with oneself
+                             *  - If conversation text is empty, it means it is a self conversation
+                             */
+                            if (conversationText.value.empty())
+                            {
+                                conversationText.value = m_authApi.GetCurrentUser()->firstName + " (you)";
+                            }
+
                             m_gui.SetPositionX(conversationImage.size.x + 10.0f);
                             m_gui.DrawText(conversationText);
 
@@ -539,23 +508,7 @@ void ChatLayer::OnRender()
                                 closeConversationImageButton.tintColorHovered = Rgba(200, 200, 0, 255);
                                 closeConversationImageButton.OnClick = [this, index]() {
                                     const std::string id = m_conversations[index].id;
-
-                                    // Deletes conversation
-                                    m_conversations.erase(m_conversations.begin() + index);
-                                    m_logger.Info("DELETED CONVERSATION id: " + id);
-
-                                    // Checks if list is now empty
-                                    if (m_conversations.empty())
-                                    {
-                                        m_selectedConversationId = "";
-                                        return;
-                                    }
-
-                                    // Selects first conversation if deleted conversation is the selected one
-                                    if (m_selectedConversationId == id)
-                                    {
-                                        m_selectedConversationId = m_conversations[0].id;
-                                    }
+                                    HandleCloseConversationButtonClicked(id);
                                 };
 
                                 m_gui.DrawImageButton(closeConversationImageButton);
@@ -758,12 +711,81 @@ void ChatLayer::OnRender()
     m_gui.DrawWindow(chatWindow);
 }
 
+void ChatLayer::OnUpdate()
+{
+    // Debounces search users
+    const bool isSearchValueDebounced = m_searchUsersDebouncer.Update(m_searchUsersValue);
+    if (isSearchValueDebounced)
+    {
+        UsersApi::SearchUsersParams searchUsersParams = {};
+        searchUsersParams.search = m_searchUsersValue;
+        m_usersApi.Search(searchUsersParams);
+    }
+}
+
 // ***********
 // * PRIVATE *
 // ***********
 void ChatLayer::HandleAllOpenConversationsFound(const AllOpenConversationsFoundEvent& allOpenConversationsFoundEvent)
 {
     m_conversations = allOpenConversationsFoundEvent.conversations;
+}
+
+void ChatLayer::HandleConversationClosed(const ConversationClosedEvent& conversationClosedEvent)
+{
+    for (std::size_t index = 0; index < m_conversations.size(); index++)
+    {
+        const ConversationView& conversation = m_conversations[index];
+        if (conversation.id == conversationClosedEvent.conversation.id)
+        {
+            m_conversations.erase(m_conversations.begin() + index);
+            break;
+        }
+    }
+
+    // Checks if list is now empty
+    if (m_conversations.empty())
+    {
+        m_selectedConversationId = "";
+        return;
+    }
+
+    // Selects first conversation if deleted conversation is the selected one
+    if (m_selectedConversationId == conversationClosedEvent.conversation.id)
+    {
+        m_selectedConversationId = m_conversations[0].id;
+    }
+}
+
+void ChatLayer::HandleConversationOpened(const ConversationOpenedEvent& conversationOpenedEvent)
+{
+    const ConversationView& openedConversation = conversationOpenedEvent.conversation;
+
+    /**
+     * NOTES:
+     *  - Replaces conversation with most recent one if already opened (Open() returns the existing one for the same users)
+     *  - Replaces the conversation because other participants properties may have been updated (ex: name)
+     */
+    bool isAlreadyOpened = false;
+    for (ConversationView& conversation : m_conversations)
+    {
+        if (conversation.id == openedConversation.id)
+        {
+            conversation = openedConversation;
+            isAlreadyOpened = true;
+
+            break;
+        }
+    }
+
+    // Adds conversation if not already opened
+    if (!isAlreadyOpened)
+    {
+        m_conversations.push_back(openedConversation);
+    }
+
+    // Selects opened conversation
+    m_selectedConversationId = openedConversation.id;
 }
 
 void ChatLayer::HandleMessageCreated(const MessageCreatedEvent& messageCreatedEvent)
@@ -783,6 +805,18 @@ void ChatLayer::HandleUserOnline(const UserOnlineEvent& userOnlineEvent)
     m_logger.Info("Online user id: " + userOnlineEvent.user.id);
 }
 
+void ChatLayer::HandleUsersSearched(const UsersSearchedEvent& usersSearchedEvent)
+{
+    m_searchedUsers = usersSearchedEvent.users;
+}
+
+void ChatLayer::HandleCloseConversationButtonClicked(const std::string& conversationId)
+{
+    ConversationsApi::CloseConversationParams closeConversationParams = {};
+    closeConversationParams.conversationId = conversationId;
+    m_conversationsApi.Close(closeConversationParams);
+}
+
 void ChatLayer::HandleLogoutButtonClicked()
 {
     m_authApi.Logout();
@@ -798,13 +832,24 @@ void ChatLayer::HandleSendMessageButtonClicked()
     m_logger.Info("SENT: " + m_messageValue);
 }
 
+// NOTE: Only opens conversation with one user for now (2 users total with the current user added by the server)
+void ChatLayer::HandleSearchedUserButtonClicked(const std::string& userId)
+{
+    const std::vector<std::string> userIds = { userId };
+
+    ConversationsApi::OpenConversationParams openConversationParams = {};
+    openConversationParams.userIds = userIds;
+    m_conversationsApi.Open(openConversationParams);
+}
+
 void ChatLayer::Reset()
 {
     // Settings
     m_isSettingsDropDownMenuOpen = false;
 
     // search
-    m_searchValue.clear();
+    m_searchUsersValue.clear();
+    m_searchUsersDebouncer.Reset();
 
     // Conversations
     m_conversations.clear();
@@ -815,7 +860,7 @@ void ChatLayer::Reset()
     m_messageValue.clear();
 
     // Users
-    m_users.clear();
+    m_searchedUsers.clear();
 
     // Textures
     m_blankImageTexture.Destroy();

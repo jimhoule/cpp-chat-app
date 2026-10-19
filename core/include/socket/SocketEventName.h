@@ -17,8 +17,6 @@ enum class SocketEventName
     LOGGEDOUT,
     REGISTER,
     REGISTERED,
-    USER_OFFLINE,
-    USER_ONLINE,
 
     // Conversations
     CLOSE_CONVERSATION,
@@ -32,7 +30,13 @@ enum class SocketEventName
 
     // Messages
     CREATE_MESSAGE,
-    MESSAGE_CREATED
+    MESSAGE_CREATED,
+
+    // Users
+    SEARCH_USERS,
+    USERS_SEARCHED,
+    USER_OFFLINE,
+    USER_ONLINE
 };
 
 /**
@@ -53,8 +57,6 @@ NLOHMANN_JSON_SERIALIZE_ENUM(SocketEventName, {
     { SocketEventName::LOGGEDOUT, "LOGGEDOUT" },
     { SocketEventName::REGISTER, "REGISTER" },
     { SocketEventName::REGISTERED, "REGISTERED" },
-    { SocketEventName::USER_OFFLINE, "USER_OFFLINE" },
-    { SocketEventName::USER_ONLINE, "USER_ONLINE" },
 
     // Conversations
     { SocketEventName::CLOSE_CONVERSATION, "CLOSE_CONVERSATION" },
@@ -68,7 +70,13 @@ NLOHMANN_JSON_SERIALIZE_ENUM(SocketEventName, {
 
     // Messages
     { SocketEventName::CREATE_MESSAGE, "CREATE_MESSAGE" },
-    { SocketEventName::MESSAGE_CREATED, "MESSAGE_CREATED" }
+    { SocketEventName::MESSAGE_CREATED, "MESSAGE_CREATED" },
+
+    // Users
+    { SocketEventName::SEARCH_USERS, "SEARCH_USERS" },
+    { SocketEventName::USERS_SEARCHED, "USERS_SEARCHED" },
+    { SocketEventName::USER_OFFLINE, "USER_OFFLINE" },
+    { SocketEventName::USER_ONLINE, "USER_ONLINE" }
 });
 
 std::string ConvertSocketEventNameToString(SocketEventName socketEventName);

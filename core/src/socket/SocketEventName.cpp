@@ -33,12 +33,6 @@ std::string ConvertSocketEventNameToString(SocketEventName socketEventName)
         case SocketEventName::REGISTERED:
             return "REGISTERED";
 
-        case SocketEventName::USER_OFFLINE:
-            return "USER OFFLINE";
-
-        case SocketEventName::USER_ONLINE:
-            return "USER ONLINE";
-
 
         // Conversations
         case SocketEventName::CLOSE_CONVERSATION:
@@ -72,6 +66,21 @@ std::string ConvertSocketEventNameToString(SocketEventName socketEventName)
 
         case SocketEventName::MESSAGE_CREATED:
             return "MESSAGE CREATED";
+
+
+        // Users
+        case SocketEventName::SEARCH_USERS:
+            return "SEARCH USERS";
+
+        case SocketEventName::USERS_SEARCHED:
+            return "USERS SEARCHED";
+
+        case SocketEventName::USER_OFFLINE:
+            return "USER OFFLINE";
+
+        case SocketEventName::USER_ONLINE:
+            return "USER ONLINE";
+        
 
         // NOTE: Handles cases where the enum value might be out of range
         default:

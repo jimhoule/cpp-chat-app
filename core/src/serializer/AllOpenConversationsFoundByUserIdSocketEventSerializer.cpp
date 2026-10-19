@@ -4,6 +4,8 @@
 #include "json/Json.h"
 #include "views/ConversationView.h"
 
+#include <vector>
+
 // **********
 // * PUBLIC *
 // **********
