@@ -12,7 +12,7 @@ Chat client and server built using C++.
 
 | Directory | Contents |
 |---|---|
-| `core/` | Shared between client and server — socket layer, JSON wrapper, event types with their serializers and deserializers, models, logging, observer, layer stack |
+| `core/` | The chat platform's shared toolkit, used by the client, the server and any other app speaking this protocol — socket layer, JSON wrapper, event types with their serializers and deserializers, models, views, utils (strings, `Debouncer`), logging, observer, layer stack |
 | `server/` | Socket server, modules, handlers, services, repositories, middlewares |
 | `client/` | GLFW/ImGui desktop app — layers, navigation, APIs, local stores |
 | `gui/` | ImGui wrapper (`Gui`) used by the client layers |
@@ -41,7 +41,7 @@ Both sides speak one JSON shape over a raw TCP socket:
 
 `SocketEventName` travels as a **string**, not an enum position, so inserting a value in the middle can't silently change the meaning of the ones after it. Every event has a typed payload struct in `core/include/socket/`, with a serializer and/or a deserializer in the neighbouring directories — each side only builds the direction it uses, so the pairs are deliberately asymmetric.
 
-Events are named as command/result pairs: `LOGIN`/`LOGGEDIN`, `REGISTER`/`REGISTERED`, `AUTHENTICATE`/`AUTHENTICATED`, `LOGOUT`/`LOGGEDOUT`. Broadcasts are their own names: `USER_ONLINE`, `USER_OFFLINE`, `MESSAGE_CREATED`.
+Events are named as command/result pairs: `LOGIN`/`LOGGEDIN`, `REGISTER`/`REGISTERED`, `AUTHENTICATE`/`AUTHENTICATED`, `LOGOUT`/`LOGGEDOUT`, `OPEN_CONVERSATION`/`CONVERSATION_OPENED`, `CLOSE_CONVERSATION`/`CONVERSATION_CLOSED`, `FIND_ALL_OPEN_CONVERSATIONS_BY_USER_ID`/`ALL_OPEN_CONVERSATIONS_FOUND_BY_USER_ID`, `SEARCH_USERS`/`USERS_SEARCHED`. Broadcasts are their own names: `USER_ONLINE`, `USER_OFFLINE`, `MESSAGE_CREATED`.
 
 Failures come back as a single `ERROR` event carrying a `SocketErrorCode` and the `failedEventName` of the request that failed, so the client can tell which request it answers.
 
@@ -55,17 +55,18 @@ SocketServer  →  route (middlewares + handler)  →  Service  →  Repository
 
 - **Handlers** deserialize the payload, call a service, serialize the result, send it. They never contain domain rules.
 - **Services** own the domain rules and take `Dto` structs as input, returning a `ServiceResult<Code, Data>` — a result code plus an optional payload. They never throw for expected failures.
+- **Views** are what services return: `Dto` in, `View` out. Repositories return models (`User`, `Conversation`), every public service method returns views (`UserView`, `ConversationView`), so handlers and serializers never see a password.
 - **Repositories** are behind interfaces (`ISessionsRepository`, `IUsersRepository`, …) with in-memory implementations today, so storage can be swapped without touching services.
 - **Middlewares** run before a handler and stop the route by throwing. `RequireAuthentication` rejects unauthenticated sockets and populates `context.user`.
 - **`HandleErrors`** is the single error sink: it catches `ExpectedException` (client at fault), `JsonException` (malformed payload) and anything else (server at fault), logs at the right level, and replies with an `ERROR` event.
 
-Services never call their own public methods — shared logic goes into a private helper instead. `SessionsService::IsExpired` and `GenerateExpirationTime` are examples.
+Services never call their own public methods — shared logic goes into a private helper instead. `SessionsService::IsExpired` and `GenerateExpirationTime` are examples. Calling *another* service's public methods is fine, and returns views.
 
 ### Connections
 
 `SocketServer` keeps two indexes that must agree:
 
-- `m_connectionsMap` — socket → `Connection` (which holds an optional `User`)
+- `m_connectionsMap` — socket → `Connection` (which holds an optional `UserView`)
 - `m_userClientSocketsMap` — user id → sockets, for fan-out to someone on several devices
 
 `BindConnectionUser` and `UnbindConnectionUser` are the only things allowed to touch them, and `BindConnectionUser` unbinds first. That makes rebinding safe, which matters because one TCP connection can be bound to several users over its life — the client keeps a single connection for the whole app run, so logging out and back in as someone else reuses the same socket.
@@ -78,7 +79,7 @@ Services never call their own public methods — shared logic goes into a privat
 
 - **Layers** are screens (`SplashLayer`, `LoginLayer`, `RegisterLayer`, `ChatLayer`) with an `OnAttach` / `OnUpdate` / `OnRender` / `OnDetach` lifecycle, held in a `LayerStack`.
 - **Navigation** owns the layers for the app's lifetime and pushes them onto the stack.
-- **APIs** (`AuthApi`, `MessagesApi`) are transport: they serialize and send, register socket handlers, and notify a `Subject<TEvent>` so layers can subscribe without knowing about sockets.
+- **APIs** (`AuthApi`, `ConversationsApi`, `MessagesApi`, `UsersApi`) are transport: they serialize and send, register socket handlers, and notify a `Subject<TEvent>` so layers can subscribe without knowing about sockets.
 - **`SocketClient`** allows several handlers per event name. Each handler is registered with an owner (the API's `this`), and `Off` removes only that owner's handler.
 - **Stores** are local persistence. `SessionStore` is the only one so far.
 
@@ -133,6 +134,14 @@ The file is written with mode `0600` — the default would let every account on 
 
 **Services take `Dto` structs and return `ServiceResult`.** Expected failures are result codes, not exceptions. Only handlers throw, and only `ExpectedException`, which `HandleErrors` turns into a client-facing code.
 
+**`models/User.h` stays in `core/`.** `core/` is the chat platform's shared toolkit, not a generic library: anything speaking this protocol (the client, this server, a second server) builds on it, so the protocol enum, the models and the views all belong there. The price is that keeping passwords off the wire is a convention, not something the compiler enforces: only a users repository or `UsersService` touches `User`, and the password hash never leaves `UsersService` (`VerifyCredentials` checks it internally). `grep -rn "models/User.h"` should only hit the users repository.
+
+**Conversation views embed their participants as `UserView`s, fetched in one batch.** The server resolves user info rather than the client, since a client round trip costs far more than a lookup inside the server. `ConversationsService` collects the distinct participant ids of every conversation it returns, calls `UsersService::FindByIds` once (an `unordered_set` of ids, one repository query), and assembles the views from an id → `UserView` map, so there is no per-conversation lookup (N+1). A participant whose user no longer exists is skipped with a warning. Messages carry only `senderId`, resolved against the conversation's participants.
+
+**User search is server-side.** `SEARCH_USERS` sends the typed text; the server matches it case-insensitively against email, first and last name and answers `USERS_SEARCHED` with `UserView`s. An empty search returns nothing rather than every user. The caller is not excluded, since you can message yourself. The client debounces the input (300 ms, `core/utils/Debouncer`, polled in `ChatLayer::OnUpdate` since the render loop has no timers), so one request goes out once typing stops instead of one per keystroke.
+
+**Opening a conversation sends only the other people.** The client sends the user ids it picked; the server adds the initiator from the authenticated connection, never from the payload, then sorts and deduplicates them. Picking yourself therefore gives a one-participant conversation, shown as "<first name> (you)". `Open` is idempotent: the same set of users always returns the same conversation, so the client replaces it if it is already listed instead of adding a duplicate, then selects it. The sidebar only changes when the server answers (`CONVERSATION_OPENED` / `CONVERSATION_CLOSED`), never optimistically.
+
 **Stores are per build type.** A Debug and a Release build are different binaries with different baked-in constants, so they can't collide on one session file.
 
 **JSON for the session file even though it holds one field.** Consistency with the settings store that will hold several.
@@ -140,10 +149,10 @@ The file is written with mode `0600` — the default would let every account on 
 ## Known gaps
 
 - `SocketClient::Send` and `Connect` ignore failures, which makes a dead server look like a hung client.
-- `ConversationsModule` is never constructed in `server/src/main.cpp`, so its four routes don't exist.
-- `ChatLayer` still builds its users, conversations and messages from hardcoded data.
-- The user's password hash is serialized into four events, including the `USER_ONLINE` broadcast. The planned view types remove it.
+- Message history is not loaded: a conversation only shows the messages sent during this run. Group conversations exist on the server (up to 9 users) but the client can only start one-on-one conversations, one search result at a time.
+- `MessagesService` does not check that the sender belongs to the conversation, so a client can post to any `conversationId`.
+- The client reads at most 1024 bytes per message and there is no framing, so a large response (around four conversations) is cut off and silently dropped.
 - Expired and orphaned sessions are never deleted from the repository.
-- `USER_OFFLINE` is only sent on logout, not on disconnect, so presence goes stale when a client closes.
+- Presence is login-based and wrong with several devices: logging out on one sends `USER_OFFLINE` while another is still connected, and closing the app sends nothing. Planned: connection-based presence (first socket bound / last socket unbound).
 
 See `NEXT_STEPS.txt`.
