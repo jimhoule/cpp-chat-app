@@ -39,6 +39,8 @@ Both sides speak one JSON shape over a raw TCP socket:
 { "name": "LOGGEDIN", "payload": { "sessionId": "...", "user": { ... } } }
 ```
 
+TCP is a byte stream, not a message stream: one `read()` can return half an event or several glued together. Every event is therefore sent as a **length-prefixed frame**, `[4-byte payload length, network byte order][payload]`, built and parsed by `core/socket/Framer`. Each socket has its own `Framer` (one per `Connection` on the server, one `m_framer` on the client) that buffers bytes across reads and hands back only complete payloads. A length above 10 MB means the stream is out of sync and the connection is closed.
+
 `SocketEventName` travels as a **string**, not an enum position, so inserting a value in the middle can't silently change the meaning of the ones after it. Every event has a typed payload struct in `core/include/socket/`, with a serializer and/or a deserializer in the neighbouring directories — each side only builds the direction it uses, so the pairs are deliberately asymmetric.
 
 Events are named as command/result pairs: `LOGIN`/`LOGGEDIN`, `REGISTER`/`REGISTERED`, `AUTHENTICATE`/`AUTHENTICATED`, `LOGOUT`/`LOGGEDOUT`, `OPEN_CONVERSATION`/`CONVERSATION_OPENED`, `CLOSE_CONVERSATION`/`CONVERSATION_CLOSED`, `FIND_ALL_OPEN_CONVERSATIONS_BY_USER_ID`/`ALL_OPEN_CONVERSATIONS_FOUND_BY_USER_ID`, `SEARCH_USERS`/`USERS_SEARCHED`. Broadcasts are their own names: `USER_ONLINE`, `USER_OFFLINE`, `MESSAGE_CREATED`.
@@ -66,7 +68,7 @@ Services never call their own public methods — shared logic goes into a privat
 
 `SocketServer` keeps two indexes that must agree:
 
-- `m_connectionsMap` — socket → `Connection` (which holds an optional `UserView`)
+- `m_connectionsMap` — socket → `Connection` (which holds an optional `UserView` and the socket's `Framer`)
 - `m_userClientSocketsMap` — user id → sockets, for fan-out to someone on several devices
 
 `BindConnectionUser` and `UnbindConnectionUser` are the only things allowed to touch them, and `BindConnectionUser` unbinds first. That makes rebinding safe, which matters because one TCP connection can be bound to several users over its life — the client keeps a single connection for the whole app run, so logging out and back in as someone else reuses the same socket.
@@ -142,17 +144,21 @@ The file is written with mode `0600` — the default would let every account on 
 
 **Opening a conversation sends only the other people.** The client sends the user ids it picked; the server adds the initiator from the authenticated connection, never from the payload, then sorts and deduplicates them. Picking yourself therefore gives a one-participant conversation, shown as "<first name> (you)". `Open` is idempotent: the same set of users always returns the same conversation, so the client replaces it if it is already listed instead of adding a duplicate, then selects it. The sidebar only changes when the server answers (`CONVERSATION_OPENED` / `CONVERSATION_CLOSED`), never optimistically.
 
+**Length prefix framing, not a delimiter.** It is the usual choice for C++ servers and binary protocols, the size is known before reading, and it keeps working if JSON is ever replaced by a binary format, where a delimiter byte could appear inside the payload. `Framer` takes and returns `std::string` as a byte container (binary-safe when built with an explicit size), so a binary serializer would need no `Framer` change. `Framer` throws and the socket class logs and closes, so `Framer` needs no logger.
+
+**Both sides drain the socket on every read.** Client sockets on the server are edge-triggered (`EPOLLET`), so epoll does not notify again for bytes left in the socket: `ReadClientSocket` reads until `EAGAIN`. The client does the same in its once-per-render-frame `Read()`, otherwise a large payload would take many render frames to arrive. All complete frames are extracted first, then dispatched in order.
+
 **Stores are per build type.** A Debug and a Release build are different binaries with different baked-in constants, so they can't collide on one session file.
 
 **JSON for the session file even though it holds one field.** Consistency with the settings store that will hold several.
 
 ## Known gaps
 
-- `SocketClient::Send` and `Connect` ignore failures, which makes a dead server look like a hung client.
+- `SocketClient::Send` and `Connect` ignore failures, which makes a dead server look like a hung client, and `Connect` calls `exit()` instead of reporting the failure.
+- `send()` on both sides ignores partial writes. On a non-blocking socket a large frame can be written only partly, which now corrupts the framed stream.
 - Message history is not loaded: a conversation only shows the messages sent during this run. Group conversations exist on the server (up to 9 users) but the client can only start one-on-one conversations, one search result at a time.
 - `MessagesService` does not check that the sender belongs to the conversation, so a client can post to any `conversationId`.
-- The client reads at most 1024 bytes per message and there is no framing, so a large response (around four conversations) is cut off and silently dropped.
 - Expired and orphaned sessions are never deleted from the repository.
-- Presence is login-based and wrong with several devices: logging out on one sends `USER_OFFLINE` while another is still connected, and closing the app sends nothing. Planned: connection-based presence (first socket bound / last socket unbound).
+- Presence is login-based and wrong with several devices: logging out on one sends `USER_OFFLINE` while another is still connected, and closing the app sends nothing. Planned: presence based on authenticated connections (online when a user's first socket is bound to them at login, offline when their last one is unbound), not on raw TCP connections, which exist before login.
 
 See `NEXT_STEPS.txt`.
