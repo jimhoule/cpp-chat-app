@@ -39,7 +39,7 @@ Both sides speak one JSON shape over a raw TCP socket:
 { "name": "LOGGEDIN", "payload": { "sessionId": "...", "user": { ... } } }
 ```
 
-TCP is a byte stream, not a message stream: one `read()` can return half an event or several glued together. Every event is therefore sent as a **length-prefixed frame**, `[4-byte payload length, network byte order][payload]`, built and parsed by `core/socket/Framer`. Each socket has its own `Framer` (one per `Connection` on the server, one `m_framer` on the client) that buffers bytes across reads and hands back only complete payloads. A length above 10 MB means the stream is out of sync and the connection is closed.
+TCP is a byte stream, not a message stream: one `read()` can return half an event or several glued together. Every event is therefore sent as a **length-prefixed frame**, `[4-byte payload length, network byte order][payload]`, built and parsed by `core/socket/Framer`. Each socket has its own `Framer` (in each `Connection` on the server, in the single `m_connection` on the client) that buffers bytes across reads and hands back only complete payloads. A length above 10 MB means the stream is out of sync and the connection is closed.
 
 `SocketEventName` travels as a **string**, not an enum position, so inserting a value in the middle can't silently change the meaning of the ones after it. Every event has a typed payload struct in `core/include/socket/`, with a serializer and/or a deserializer in the neighbouring directories — each side only builds the direction it uses, so the pairs are deliberately asymmetric.
 
@@ -68,7 +68,7 @@ Services never call their own public methods — shared logic goes into a privat
 
 `SocketServer` keeps two indexes that must agree:
 
-- `m_connectionsMap` — socket → `Connection` (which holds an optional `UserView` and the socket's `Framer`)
+- `m_connectionsMap` — socket → `Connection` (which holds an optional `UserView`, the socket's `Framer` and its write buffer)
 - `m_userClientSocketsMap` — user id → sockets, for fan-out to someone on several devices
 
 `BindConnectionUser` and `UnbindConnectionUser` are the only things allowed to touch them, and `BindConnectionUser` unbinds first. That makes rebinding safe, which matters because one TCP connection can be bound to several users over its life — the client keeps a single connection for the whole app run, so logging out and back in as someone else reuses the same socket.
@@ -146,7 +146,9 @@ The file is written with mode `0600` — the default would let every account on 
 
 **Length prefix framing, not a delimiter.** It is the usual choice for C++ servers and binary protocols, the size is known before reading, and it keeps working if JSON is ever replaced by a binary format, where a delimiter byte could appear inside the payload. `Framer` takes and returns `std::string` as a byte container (binary-safe when built with an explicit size), so a binary serializer would need no `Framer` change. `Framer` throws and the socket class logs and closes, so `Framer` needs no logger.
 
-**Both sides drain the socket on every read.** Client sockets on the server are edge-triggered (`EPOLLET`), so epoll does not notify again for bytes left in the socket: `ReadClientSocket` reads until `EAGAIN`. The client does the same in its once-per-render-frame `Read()`, otherwise a large payload would take many render frames to arrive. All complete frames are extracted first, then dispatched in order.
+**Both sides drain the socket on every read.** Client sockets on the server are edge-triggered (`EPOLLET`), so epoll does not notify again for bytes left in the socket: `ReadClientSocket` reads until `EAGAIN`. The client does the same in `Read()`, called by its once-per-render-frame `Update()`, otherwise a large payload would take many render frames to arrive. All complete frames are extracted first, then dispatched in order.
+
+**Both sides keep a write buffer, neither waits on `send()`.** A non-blocking `send()` can take only part of a frame, and dropping the rest would corrupt the framed stream. Each `Connection` keeps the unsent bytes in `writeBuffer` and `SendWriteBuffer` sends what it can. On the server, client sockets are registered for `EPOLLOUT` too, and epoll reports when a full socket has room again. On the client, `Update()` retries once per render frame. The client does not block until the socket has room, since that would freeze the render loop. On macOS `send()` during a non-blocking connect returns `ENOTCONN`, so the client keeps the bytes and retries, the same as for `EAGAIN`. The server never closes inside `SendTo`, because `SendAll` loops over `m_connectionsMap`: on a send error it drops the buffer and lets epoll's `EPOLLERR` / `EPOLLHUP` close the socket. SIGPIPE is disabled (`MSG_NOSIGNAL` on Linux, `SO_NOSIGPIPE` on macOS) so a peer that is gone returns an error instead of killing the process.
 
 **Stores are per build type.** A Debug and a Release build are different binaries with different baked-in constants, so they can't collide on one session file.
 
@@ -154,8 +156,8 @@ The file is written with mode `0600` — the default would let every account on 
 
 ## Known gaps
 
-- `SocketClient::Send` and `Connect` ignore failures, which makes a dead server look like a hung client, and `Connect` calls `exit()` instead of reporting the failure.
-- `send()` on both sides ignores partial writes. On a non-blocking socket a large frame can be written only partly, which now corrupts the framed stream.
+- `SocketClient::Connect` and `SocketServer`'s setup call `exit()` instead of reporting the failure.
+- The write buffers have no cap: a peer that never reads makes them grow without limit.
 - Message history is not loaded: a conversation only shows the messages sent during this run. Group conversations exist on the server (up to 9 users) but the client can only start one-on-one conversations, one search result at a time.
 - `MessagesService` does not check that the sender belongs to the conversation, so a client can post to any `conversationId`.
 - Expired and orphaned sessions are never deleted from the repository.

@@ -7,36 +7,59 @@
 #include <fcntl.h>
 #include <iostream>
 #include <stdexcept>
+#include <sys/socket.h>
 #include <unistd.h>
 
 constexpr int BUFFER_SIZE = 4096;
+/**
+ * NOTES:
+ * 	- Sending to a server that is gone must return an error instead of killing the client (SIGPIPE)
+ * 	- Linux has MSG_NOSIGNAL per send()
+ * 	- MacOS has SO_NOSIGPIPE per socket (set in Connect())
+ */
+#ifdef MSG_NOSIGNAL
+constexpr int SEND_FLAGS = MSG_NOSIGNAL;
+#else
+constexpr int SEND_FLAGS = 0;
+#endif
 
 // **********
 // * PUBLIC *
 // **********
 void SocketClient::Close()
 {
-	close(m_socket);
-	m_socket = -1;
+	close(m_connection.socket);
+	// NOTE: Resets everything tied to old socket's byte stream so a reconnect starts clean
+	m_connection = {};
 }
 
 void SocketClient::Connect(int serverPort, const std::string &serverIpAddress)
 {
 	// Creates socket file descriptor
-	m_socket = socket(AF_INET, SOCK_STREAM, 0);
-	if (m_socket < 0)
+	m_connection.socket = socket(AF_INET, SOCK_STREAM, 0);
+	if (m_connection.socket == -1)
 	{
 		perror("socket creation failed");
 		exit(EXIT_FAILURE);
 	}
 
 	// Sets the socket to non-blocking mode
-	int fcntlResult = fcntl(m_socket, F_SETFL, O_NONBLOCK);
+	int fcntlResult = fcntl(m_connection.socket, F_SETFL, O_NONBLOCK);
 	if (fcntlResult < 0)
 	{
 		perror("fcntl failed");
 		exit(EXIT_FAILURE);
 	}
+
+	/**
+	 * NOTES:
+	 * 	- On macos sending to a server that is gone kills the client (SIGPIPE)
+	 * 	- SO_NOSIGPIPE makes send() return an error (EPIPE) instead
+	 */
+	#ifdef SO_NOSIGPIPE
+		int noSigPipe = 1;
+		setsockopt(m_connection.socket, SOL_SOCKET, SO_NOSIGPIPE, &noSigPipe, sizeof(noSigPipe));
+	#endif
 
 	// Connects to server
 	sockaddr_in serverAddress = sockaddr_in{};
@@ -44,7 +67,7 @@ void SocketClient::Connect(int serverPort, const std::string &serverIpAddress)
 	serverAddress.sin_port = htons(serverPort);
 	serverAddress.sin_addr.s_addr = inet_addr(serverIpAddress.c_str());
 
-	int connectResult = connect(m_socket, reinterpret_cast<sockaddr *>(&serverAddress), sizeof(serverAddress));
+	int connectResult = connect(m_connection.socket, reinterpret_cast<sockaddr *>(&serverAddress), sizeof(serverAddress));
 	if (connectResult < 0)
 	{
 		// Non-blocking connect will return immediately
@@ -101,82 +124,26 @@ void SocketClient::On(SocketEventName socketEventName, EventHandlerOwner owner, 
 	handlerEntries.push_back(handlerEntry);
 }
 
-void SocketClient::Read()
-{
-	if (m_socket < 0)
-	{
-		return;
-	}
-
-	/**
-	 * NOTES:
-	 * 	- Reads until socket is empty
-	 *	- One read() per Read() call would take several render frames to receive a big payload
-	 */
-	std::array<char, BUFFER_SIZE> chunk = {};
-	while (true)
-	{
-		// Reads response from server
-		ssize_t readResult = read(m_socket, chunk.data(), BUFFER_SIZE);
-
-		// Adds chunk to frame
-		if (readResult > 0)
-		{
-			m_framer.Append(chunk.data(), readResult);
-			continue;
-		}
-
-		// NOTE: Server is closed
-		if (readResult == 0)
-		{
-			std::cout << "Server closed" << std::endl;
-			Close();
-			
-			return;
-		}
-
-		// NOTE: EAGAIN means nothing more to read for now
-		if (errno == EAGAIN || errno == EWOULDBLOCK)
-		{
-			break;
-		}
-
-		perror("read failed");
-
-		return;
-	}
-
-	/**
-	 * NOTES:
-	 * 	- Can return several events (sent close together) or none (payload not fully arrived yet)
-	 * 	- Throws when stream is out of sync (ex: server without framing) and if left uncaught it would
-	 * 	  reach the main loop and terminate the client
-	 * 	- The try only covers ExtractFrames() so an std::length_error thrown by a handler is not reported
-	 * 	  as an invalid frame
-	 */
-	std::vector<std::string> serializedSocketEvents = {};
-	try
-	{
-		serializedSocketEvents = m_framer.ExtractFrames();
-	}
-	catch(const std::length_error& exception)
-	{
-		std::cout << "Invalid frame from server, " << exception.what() << std::endl;
-		Close();
-
-		return;
-	}
-
-	for (const std::string& serializedSocketEvent : serializedSocketEvents)
-	{
-		DispatchSocketEvent(serializedSocketEvent);
-	}
-}
-
 void SocketClient::Send(const std::string &serializedSocketEvent)
 {
-	const std::string frame = Framer::Encode(serializedSocketEvent);
-	send(m_socket, frame.data(), frame.size(), 0);
+	if (m_connection.socket == -1)
+	{
+		return;
+	}
+
+	/**
+	 * NOTES:
+	 *	- Never waits so a slow server cannot freeze the render loop
+	 *	- Send what it can now and SendWriteBuffer() sends the rest on the next frame
+	 */
+	m_connection.writeBuffer += Framer::Encode(serializedSocketEvent);
+	SendWriteBuffer();
+}
+
+void SocketClient::Update()
+{
+	Read();
+	SendWriteBuffer();
 }
 
 // ***********
@@ -200,4 +167,126 @@ void SocketClient::DispatchSocketEvent(const std::string& serializedSocketEvent)
 		const EventHandler& HandleSocketEvent = handlerEntry.handler;
 		HandleSocketEvent(socketEvent.payload);
 	}
+}
+
+void SocketClient::Read()
+{
+	if (m_connection.socket == -1)
+	{
+		return;
+	}
+
+	/**
+	 * NOTES:
+	 * 	- Reads until socket is empty
+	 *	- One read() per Read() call would take several render frames to receive a big payload
+	 */
+	std::array<char, BUFFER_SIZE> chunk = {};
+	while (true)
+	{
+		// Reads response from server
+		ssize_t readResult = read(m_connection.socket, chunk.data(), BUFFER_SIZE);
+
+		// Adds chunk to frame
+		if (readResult > 0)
+		{
+			m_connection.framer.Append(chunk.data(), readResult);
+			continue;
+		}
+
+		// NOTE: Server is closed
+		if (readResult == 0)
+		{
+			std::cout << "Server closed" << std::endl;
+			Close();
+			
+			return;
+		}
+
+		// NOTE: EAGAIN means nothing more to read for now
+		if (errno == EAGAIN || errno == EWOULDBLOCK)
+		{
+			break;
+		}
+
+		// NOTE: Real error and also how a failed connect shows up (ECONNREFUSED)
+		perror("read failed");
+		Close();
+
+		return;
+	}
+
+	/**
+	 * NOTES:
+	 * 	- Can return several events (sent close together) or none (payload not fully arrived yet)
+	 * 	- Throws when stream is out of sync (ex: server without framing) and if left uncaught it would
+	 * 	  reach the main loop and terminate the client
+	 * 	- The try only covers ExtractFrames() so an std::length_error thrown by a handler is not reported
+	 * 	  as an invalid frame
+	 */
+	std::vector<std::string> serializedSocketEvents = {};
+	try
+	{
+		serializedSocketEvents = m_connection.framer.ExtractFrames();
+	}
+	catch(const std::length_error& exception)
+	{
+		std::cout << "Invalid frame from server, " << exception.what() << std::endl;
+		Close();
+
+		return;
+	}
+
+	for (const std::string& serializedSocketEvent : serializedSocketEvents)
+	{
+		DispatchSocketEvent(serializedSocketEvent);
+	}
+}
+
+void SocketClient::SendWriteBuffer()
+{
+	if (m_connection.socket == -1 || m_connection.writeBuffer.empty())
+	{
+		return;
+	}
+
+	// NOTE: How many bytes of write buffer have been sent so far
+	std::size_t sentSize = 0;
+	while (sentSize < m_connection.writeBuffer.size())
+	{
+		std::size_t size = m_connection.writeBuffer.size() - sentSize;
+		ssize_t sendResult = send(m_connection.socket, m_connection.writeBuffer.data() + sentSize, size, SEND_FLAGS);
+
+		// Sends the rest of the bytes that did not go out
+		if (sendResult > 0)
+		{
+			sentSize += sendResult;
+			continue;
+		}
+
+		// Tries again because it was interrupted by a signal before sending anything
+		if (sendResult == -1 && errno == EINTR)
+		{
+			continue;
+		}
+
+		/**
+		 * NOTES:
+		 * 	- Socket is full (EAGAIN) or still connecting (ENOTCONN for macos and EAGAIN for linux)
+		 * 	- The rest waits in the write buffer and the next frame's SendWriteBuffer() tries again
+		 */
+		if (sendResult == -1 && (errno == EAGAIN || errno == EWOULDBLOCK || errno == ENOTCONN))
+		{
+			break;
+		}
+
+		// NOTE: Real error so the server is gone (EPIPE, ECONNRESET)
+		perror("Send failed");
+		Close();
+
+		return;
+	}
+
+	// NOTE: Removes what was sent in one erase just like SendWriteBuffer() from SocketServer
+	m_connection.writeBuffer.erase(0, sentSize);
 }

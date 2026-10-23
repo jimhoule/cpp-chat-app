@@ -119,7 +119,7 @@ int main()
 
     while(!glfwWindowShouldClose(glfwWindow))
     {
-        socketClient.Read();
+        socketClient.Update();
 
         glfwPollEvents();
 

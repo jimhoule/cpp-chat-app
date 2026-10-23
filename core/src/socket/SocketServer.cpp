@@ -115,13 +115,17 @@ void SocketServer::Listen()
 		exit(EXIT_FAILURE);
 	}
 
-    // Adds listening socket to epoll
-	struct epoll_event event;
-	event.events = EPOLLIN; // We are interested in read events
-	event.data.fd = m_socket;
+    /**
+	 * NOTES:
+	 * 	- Adds listening socket to epoll
+	 * 	- We are interested in read events
+	 */
+	struct epoll_event interestEvent;
+	interestEvent.events = EPOLLIN;
+	interestEvent.data.fd = m_socket;
 
-    int EpollCtlResult = epoll_ctl(epoll, EPOLL_CTL_ADD, m_socket, &event);
-	if (EpollCtlResult == -1)
+    int listeningSocketEpollResult = epoll_ctl(epoll, EPOLL_CTL_ADD, m_socket, &interestEvent);
+	if (listeningSocketEpollResult == -1)
 	{
 		m_logger.Error("Failed to add listening socket to epoll");
 		exit(EXIT_FAILURE);
@@ -133,29 +137,49 @@ void SocketServer::Listen()
 	socklen_t address_length = sizeof(m_address);
 	while (true)
 	{
-		int eventsCount = epoll_wait(epoll, events, MAX_EPOLL_EVENTS, -1);
-		if (eventsCount == -1)
+		int reeadyEventsCount = epoll_wait(epoll, events, MAX_EPOLL_EVENTS, -1);
+		if (reeadyEventsCount == -1)
 		{
 			m_logger.Error("Failed to wait for client socket connections");
 			break;
 		}
 
 		// Loops through all the events that have occurred
-		for (int i = 0; i < eventsCount; i++) {
-			// Existing connection
-			if (events[i].data.fd != m_socket)
+		for (int index = 0; index < reeadyEventsCount; index++) {
+			const epoll_event& readyEvent = events[index];
+
+			// EXISTING CONNECTION
+			if (readyEvent.data.fd != m_socket)
 			{
-				int clientSocket = events[i].data.fd;
-				ReadClientSocket(clientSocket);
+				int clientSocket = readyEvent.data.fd;
+
+				/**
+				 * NOTES:
+				 * 	- Socket has room again so send what is waiting
+				 * 	- Done before reading because reading can close the socket
+				 */
+				if (readyEvent.events & EPOLLOUT)
+				{
+					WriteClientSocket(clientSocket);
+				}
+
+				/**
+				 * NOTES:
+				 * 	- EPOLLERR / EPOLLHUP also go to ReadClientSocket()
+				 * 	- read() fails or returns 0 and it closes the socket
+				 */
+				if (readyEvent.events & (EPOLLIN | EPOLLERR | EPOLLHUP))
+				{
+					ReadClientSocket(clientSocket);
+				}
 
 				continue;
 			}
 
-			// New connection
-			// Accepts new connections
+			// NEW CONNECTION
 			int clientSocket = accept(m_socket, reinterpret_cast<sockaddr *>(&m_address), &address_length);
 			// Handles non-blocking accept errors
-			if (clientSocket < 0 && (errno == EAGAIN || errno == EWOULDBLOCK))
+			if (clientSocket == -1 && (errno == EAGAIN || errno == EWOULDBLOCK))
 			{
 				continue;
 			}
@@ -173,10 +197,16 @@ void SocketServer::Listen()
 			m_connectionsMap.insert(std::pair(clientSocket, connection));
 			SetNonBlockingSocket(clientSocket);
 
-			// Adds the new client socket to the epoll interest list
-			event.events = EPOLLIN | EPOLLET; // Monitor for read events, edge-triggered
-			event.data.fd = clientSocket;
-			if (epoll_ctl(epoll, EPOLL_CTL_ADD, clientSocket, &event) == -1)
+			/**
+			 * NOTES:
+			 * 	- Adds the new client socket to the epoll interest list
+			 * 	- Monitor for read events, edge-triggered
+			 * 	- EPOLLOUT stays on and it only fires when a full socket has room again
+			 */
+			interestEvent.events = EPOLLIN | EPOLLOUT | EPOLLET;
+			interestEvent.data.fd = clientSocket;
+			int clientSocketEpollResult = epoll_ctl(epoll, EPOLL_CTL_ADD, clientSocket, &interestEvent);
+			if (clientSocketEpollResult == -1)
 			{
 				m_logger.Error("Failed to add client socket to epoll");
 				CloseClientSocket(clientSocket);
@@ -272,8 +302,21 @@ void SocketServer::SendAllExcept(const std::unordered_set<int>& exceptionClientS
 
 void SocketServer::SendTo(int clientSocket, const std::string& serializedSocketEvent)
 {
-	const std::string frame = Framer::Encode(serializedSocketEvent);
-	send(clientSocket, frame.data(), frame.size(), 0);
+	std::unordered_map<int, Connection>::iterator connectionsMapIterator = m_connectionsMap.find(clientSocket);
+	if (connectionsMapIterator == m_connectionsMap.end())
+	{
+		m_logger.Error("Socket connection not found for client socket " + std::to_string(clientSocket));
+		return;
+	}
+
+	/**
+	 * NOTES:
+	 * 	- Adds the frame behind the bytes already written so frames always go out in order
+	 * 	- Usually the socket has room and everything is sent right away
+	 */
+	Connection& connection = connectionsMapIterator->second;
+	connection.writeBuffer += Framer::Encode(serializedSocketEvent);
+	SendWriteBuffer(connection);
 }
 
 void SocketServer::SendTo(const std::string& userId, const std::string& serializedSocketEvent)
@@ -502,8 +545,65 @@ void SocketServer::ReadClientSocket(int clientSocket)
 	}
 }
 
+void SocketServer::SendWriteBuffer(Connection& connection)
+{
+	// NOTE: How many bytes of write buffer have been sent so far
+	std::size_t sentSize = 0;
+	while (sentSize < connection.writeBuffer.size())
+	{
+		// NOTE: Using MSG_NOSIGNAL so sending to a client that is gone returns an error instead of killing the server (SIGPIPE)
+		std::size_t size = connection.writeBuffer.size() - sentSize;
+		ssize_t sendResult = send(connection.clientSocket, connection.writeBuffer.data() + sentSize, size, MSG_NOSIGNAL);
+
+		// Sends the rest of the bytes that did not go out
+		if (sendResult > 0)
+		{
+			sentSize += sendResult;
+			continue;
+		}
+
+		// Tries again because it was interrupted by a signal before sending anything
+		if (sendResult == -1 && errno == EINTR)
+		{
+			continue;
+		}
+
+		// NOTE: Socket is full so the rest waits in writeBuffer until EPOLLOUT
+		if (sendResult == -1 && (errno == EAGAIN || errno == EWOULDBLOCK))
+		{
+			break;
+		}
+
+		/**
+		 * NOTES:
+		 * 	- Real error so the client is gone (EPIPE, ECONNRESET)
+		 * 	- Connection is not closed here (SendTo() can run inside SendAll() loop over connections map and erasing would break it)
+		 * 	- epoll reports EPOLLERR / EPOLLHUP for the socket and ReadClientSocket closes it
+		 */
+		m_logger.Error("Failed to send to client socket " + std::to_string(connection.clientSocket) + ", " + std::strerror(errno));
+		connection.writeBuffer.clear();
+
+		return;
+	}
+
+	// NOTE: Removes what was sent in one erase just like ExtractFrames() from Framer
+	connection.writeBuffer.erase(0, sentSize);
+}
+
 void SocketServer::SetNonBlockingSocket(int socket)
 {
 	int flags = fcntl(socket, F_GETFL, 0);
     fcntl(socket, F_SETFL, flags | O_NONBLOCK);
+}
+
+void SocketServer::WriteClientSocket(int clientSocket)
+{
+	// Finds connection
+	std::unordered_map<int, Connection>::iterator connectionsMapIterator = m_connectionsMap.find(clientSocket);
+	if (connectionsMapIterator == m_connectionsMap.end())
+	{
+		return;
+	}
+
+	SendWriteBuffer(connectionsMapIterator->second);
 }

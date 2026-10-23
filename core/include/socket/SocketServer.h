@@ -63,6 +63,12 @@ private:
         int clientSocket = -1;
         std::optional<UserView> user = std::nullopt;
         Framer framer = {};
+        /**
+         * NOTES:
+         *  - Bytes waiting to be sent (send() only takes what fits in the socket, the rest waits here)
+         *  - Sent once epoll says socket has room again (EPOLLOUT)
+         */
+        std::string writeBuffer = "";
     };
 
     struct EventRoute
@@ -91,5 +97,7 @@ private:
     // NOTE: Runs every middleware in order, then the handler
     void ExecuteRoute(const EventRoute& route, EventContext& context);
     void ReadClientSocket(int clientSocket);
+    void SendWriteBuffer(Connection& connection);
     void SetNonBlockingSocket(int socket);
+    void WriteClientSocket(int clientSocket);
 };

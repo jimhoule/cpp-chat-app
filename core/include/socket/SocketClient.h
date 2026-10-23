@@ -22,10 +22,18 @@ public:
     void Connect(int serverPort, const std::string &serverIpAddress);
     void Off(SocketEventName socketEventName, EventHandlerOwner owner);
     void On(SocketEventName socketEventName, EventHandlerOwner owner, const EventHandler& handler);
-    void Read();
     void Send(const std::string &serializedSocketEvent);
+    void Update();
 
 private:
+    struct Connection
+    {
+        int socket = -1;
+        Framer framer = {};
+        // NOTE: Bytes waiting to be sent (SendWriteBuffer() sends them on the next frame)
+        std::string writeBuffer = "";
+    };
+
     struct EventHandlerEntry
     {
         EventHandlerOwner owner;
@@ -35,10 +43,11 @@ private:
     using EventHandlerEntries = std::vector<EventHandlerEntry>;
     using EventHandlersMap = std::unordered_map<SocketEventName, EventHandlerEntries>;
 
-	int m_socket = -1;
+    Connection m_connection = {};
     EventHandlersMap m_handlersMap = {};
     SocketEventDeserializer m_socketEventDeserializer = {};
-    Framer m_framer = {};
 
     void DispatchSocketEvent(const std::string& serializedSocketEvent);
+    void Read();
+    void SendWriteBuffer();
 };
