@@ -1,5 +1,7 @@
 #pragma once
 
+#include "deserializer/SocketEventDeserializer.h"
+#include "socket/Framer.h"
 #include "socket/SocketEvent.h"
 
 #include <arpa/inet.h>
@@ -29,9 +31,14 @@ private:
         EventHandlerOwner owner;
         EventHandler handler;
     };
+    
     using EventHandlerEntries = std::vector<EventHandlerEntry>;
     using EventHandlersMap = std::unordered_map<SocketEventName, EventHandlerEntries>;
 
-	int m_socket = 0;
+	int m_socket = -1;
     EventHandlersMap m_handlersMap = {};
+    SocketEventDeserializer m_socketEventDeserializer = {};
+    Framer m_framer = {};
+
+    void DispatchSocketEvent(const std::string& serializedSocketEvent);
 };

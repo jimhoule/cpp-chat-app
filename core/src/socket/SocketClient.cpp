@@ -1,5 +1,4 @@
 #include "socket/SocketClient.h"
-#include "deserializer/SocketEventDeserializer.h"
 
 #include <arpa/inet.h>
 #include <array>
@@ -7,9 +6,10 @@
 #include <cstdlib>
 #include <fcntl.h>
 #include <iostream>
+#include <stdexcept>
 #include <unistd.h>
 
-constexpr int BUFFER_SIZE = 1024;
+constexpr int BUFFER_SIZE = 4096;
 
 // **********
 // * PUBLIC *
@@ -17,6 +17,7 @@ constexpr int BUFFER_SIZE = 1024;
 void SocketClient::Close()
 {
 	close(m_socket);
+	m_socket = -1;
 }
 
 void SocketClient::Connect(int serverPort, const std::string &serverIpAddress)
@@ -102,42 +103,101 @@ void SocketClient::On(SocketEventName socketEventName, EventHandlerOwner owner, 
 
 void SocketClient::Read()
 {
-    // Reads response from server
-	std::array<char, BUFFER_SIZE> serializedSocketEventBuffer = {0};
-    ssize_t readResult = read(m_socket, serializedSocketEventBuffer.data(), BUFFER_SIZE);
+	if (m_socket < 0)
+	{
+		return;
+	}
 
-    if (readResult == 0)
-    {
-        std::cout << "Server closed" << std::endl;
-        return;
-    }
+	/**
+	 * NOTES:
+	 * 	- Reads until socket is empty
+	 *	- One read() per Read() call would take several render frames to receive a big payload
+	 */
+	std::array<char, BUFFER_SIZE> chunk = {};
+	while (true)
+	{
+		// Reads response from server
+		ssize_t readResult = read(m_socket, chunk.data(), BUFFER_SIZE);
 
-
-    if (readResult > 0)
-    {
-        const std::string& serializedSocketEvent(serializedSocketEventBuffer.data());
-
-        SocketEventDeserializer socketEventDeserializer = {};
-        SocketEvent<std::string> socketEvent = socketEventDeserializer.Deserialize(serializedSocketEvent);
-
-		// NOTE: find, not operator[], which would insert an empty handler entries vector for an unknown event
-        EventHandlersMap::iterator handlersMapIterator = m_handlersMap.find(socketEvent.name);
-        if (handlersMapIterator == m_handlersMap.end())
-        {
-            std::cout << "No handler registered for socket event " << socketEvent.name << std::endl;
-            return;
-        }
-
-		EventHandlerEntries& handlerEntries = handlersMapIterator->second;
-		for (const EventHandlerEntry& handlerEntry : handlerEntries)
+		// Adds chunk to frame
+		if (readResult > 0)
 		{
-			const EventHandler& HandleSocketEvent = handlerEntry.handler;
-        	HandleSocketEvent(socketEvent.payload);
+			m_framer.Append(chunk.data(), readResult);
+			continue;
 		}
-    }
+
+		// NOTE: Server is closed
+		if (readResult == 0)
+		{
+			std::cout << "Server closed" << std::endl;
+			Close();
+			
+			return;
+		}
+
+		// NOTE: EAGAIN means nothing more to read for now
+		if (errno == EAGAIN || errno == EWOULDBLOCK)
+		{
+			break;
+		}
+
+		perror("read failed");
+
+		return;
+	}
+
+	/**
+	 * NOTES:
+	 * 	- Can return several events (sent close together) or none (payload not fully arrived yet)
+	 * 	- Throws when stream is out of sync (ex: server without framing) and if left uncaught it would
+	 * 	  reach the main loop and terminate the client
+	 * 	- The try only covers ExtractFrames() so an std::length_error thrown by a handler is not reported
+	 * 	  as an invalid frame
+	 */
+	std::vector<std::string> serializedSocketEvents = {};
+	try
+	{
+		serializedSocketEvents = m_framer.ExtractFrames();
+	}
+	catch(const std::length_error& exception)
+	{
+		std::cout << "Invalid frame from server, " << exception.what() << std::endl;
+		Close();
+
+		return;
+	}
+
+	for (const std::string& serializedSocketEvent : serializedSocketEvents)
+	{
+		DispatchSocketEvent(serializedSocketEvent);
+	}
 }
 
 void SocketClient::Send(const std::string &serializedSocketEvent)
 {
-	send(m_socket, serializedSocketEvent.c_str(), serializedSocketEvent.length(), 0);
+	const std::string frame = Framer::Encode(serializedSocketEvent);
+	send(m_socket, frame.data(), frame.size(), 0);
+}
+
+// ***********
+// * PRIVATE *
+// ***********
+void SocketClient::DispatchSocketEvent(const std::string& serializedSocketEvent)
+{
+	SocketEvent<std::string> socketEvent = m_socketEventDeserializer.Deserialize(serializedSocketEvent);
+
+	// NOTE: find, not operator[], which would insert an empty handler entries vector for an unknown event
+	EventHandlersMap::iterator handlersMapIterator = m_handlersMap.find(socketEvent.name);
+	if (handlersMapIterator == m_handlersMap.end())
+	{
+		std::cout << "No handler registered for socket event " << socketEvent.name << std::endl;
+		return;
+	}
+
+	EventHandlerEntries& handlerEntries = handlersMapIterator->second;
+	for (const EventHandlerEntry& handlerEntry : handlerEntries)
+	{
+		const EventHandler& HandleSocketEvent = handlerEntry.handler;
+		HandleSocketEvent(socketEvent.payload);
+	}
 }

@@ -3,17 +3,19 @@
 #include "log/Logger.h"
 
 #include <algorithm>
+#include <array>
 #include <cerrno>
 #include <cstdlib>
 #include <cstring>
 #include <fcntl.h>
 #include <iostream>
+#include <stdexcept>
 #include <sys/epoll.h>
 #include <unistd.h>
 
 constexpr int MAX_EPOLL_EVENTS = 10;
 constexpr int MAX_PENDING_CONNECTIONS = 5;
-constexpr int BUFFER_SIZE = 1000000;
+constexpr int BUFFER_SIZE = 4096;
 
 // **********
 // * PUBLIC *
@@ -196,7 +198,7 @@ void SocketServer::On(SocketEventName socketEventName, const std::vector<EventMi
 		return;
 	}
 
-	std::unordered_map<SocketEventName, EventRoute>::iterator routesMapIterator = m_routesMap.find(socketEventName);
+	EventRoutesMap::iterator routesMapIterator = m_routesMap.find(socketEventName);
 	if (routesMapIterator != m_routesMap.end())
 	{
 		m_logger.Warning("A route is already registered for this socket event. It will be replaced");
@@ -218,7 +220,8 @@ void SocketServer::OnError(const EventErrorHandler& errorHandler)
 
 void SocketServer::SendAll(const std::string& serializedSocketEvent)
 {
-	for (const std::pair<int, Connection>& pair : m_connectionsMap)
+	// NOTE: The map stores pair<const int, Connection> so without the int key being a const the reference binds to a copy of each connection
+	for (const std::pair<const int, Connection>& pair : m_connectionsMap)
 	{
 		SendTo(pair.first, serializedSocketEvent);
 	}
@@ -226,26 +229,42 @@ void SocketServer::SendAll(const std::string& serializedSocketEvent)
 
 void SocketServer::SendAllExcept(int exceptionClientSocket, const std::string& serializedSocketEvent)
 {
-	for (const std::pair<int, Connection>& pair : m_connectionsMap)
+	// NOTE: The map stores pair<const int, Connection> so without the int key being a const the reference binds to a copy of each connection
+	for (const std::pair<const int, Connection>& pair : m_connectionsMap)
     {
 		// If connection has no user, it means the client is not authenticated yet
-		if (!pair.second.user.has_value()) continue;
+		if (!pair.second.user.has_value())
+		{
+			continue;
+		}
+
         // If client socket is an exception (client socket not to send to)
-        if (pair.first == exceptionClientSocket) continue;
+        if (pair.first == exceptionClientSocket)
+		{
+			continue;
+		}
 
         SendTo(pair.first, serializedSocketEvent);
     }
 }
 
-void SocketServer::SendAllExcept(std::unordered_map<int, bool> exceptionClientSocketsMap, const std::string& serializedSocketEvent)
+void SocketServer::SendAllExcept(const std::unordered_set<int>& exceptionClientSockets, const std::string& serializedSocketEvent)
 {
-	for (const std::pair<int, Connection>& pair : m_connectionsMap)
+	// NOTE: The map stores pair<const int, Connection> so without the int key being a const the reference binds to a copy of each connection
+	for (const std::pair<const int, Connection>& pair : m_connectionsMap)
     {
 		// If connection has no user, it means the client is not authenticated yet
-		if (!pair.second.user.has_value()) continue;
-        // If client socket is in the exception map (client socket not to send to)
-        std::unordered_map<int, bool>::iterator exceptionClientSocketMapIterator = exceptionClientSocketsMap.find(pair.first);
-        if (exceptionClientSocketMapIterator == exceptionClientSocketsMap.end()) continue;
+		if (!pair.second.user.has_value())
+		{
+			continue;
+		}
+
+        // If client socket is in the exception set (client socket not to send to)
+        std::unordered_set<int>::const_iterator exceptionClientSocketsIterator = exceptionClientSockets.find(pair.first);
+        if (exceptionClientSocketsIterator != exceptionClientSockets.end())
+		{
+			continue;
+		}
 
         SendTo(pair.first, serializedSocketEvent);
     }
@@ -253,7 +272,8 @@ void SocketServer::SendAllExcept(std::unordered_map<int, bool> exceptionClientSo
 
 void SocketServer::SendTo(int clientSocket, const std::string& serializedSocketEvent)
 {
-	send(clientSocket, serializedSocketEvent.c_str(), serializedSocketEvent.length(), 0);
+	const std::string frame = Framer::Encode(serializedSocketEvent);
+	send(clientSocket, frame.data(), frame.size(), 0);
 }
 
 void SocketServer::SendTo(const std::string& userId, const std::string& serializedSocketEvent)
@@ -265,15 +285,15 @@ void SocketServer::SendTo(const std::string& userId, const std::string& serializ
 		return;
 	}
 
-	SendToMany(userClientSocketsMapIterator->second, serializedSocketEvent);
+	SendTo(userClientSocketsMapIterator->second, serializedSocketEvent);
 }
 
-void SocketServer::SendToMany(std::vector<int> clientSockets, const std::string& serializedSocketEvent)
+void SocketServer::SendTo(const std::vector<int>& clientSockets, const std::string& serializedSocketEvent)
 {
-    for (int clientSocket : clientSockets)
-    {
-        SendTo(clientSocket, serializedSocketEvent);
-    }
+	for (int clientSocket : clientSockets)
+	{
+		SendTo(clientSocket, serializedSocketEvent);
+	}
 }
 
 void SocketServer::UnbindConnectionUser(int clientSocket)
@@ -350,36 +370,11 @@ std::optional<SocketEvent<std::string>> SocketServer::DeserializeSocketEvent(int
 		// NOTE: Without an event name the client cannot tell which request failed
 		m_logger.Warning("Dropped unreadable socket event from client socket " + std::to_string(clientSocket) + ", " + exception.what());
 		return std::nullopt;
-	}
-	
+	}	
 }
 
-void SocketServer::ReadClientSocket(int clientSocket) {
-    // Reads response from client socket
-    std::array<char, BUFFER_SIZE> SerializedSocketEventBuffer = {0};
-    ssize_t ReadResult = read(clientSocket, SerializedSocketEventBuffer.data(), BUFFER_SIZE);
-	// Client socket response reading threw an error
-	// NOTE: If errno is EAGAIN, that means we have read all data so we can continue to the next event.
-	if (ReadResult == -1 && errno != EAGAIN)
-	{
-		m_logger.Error("Failed to read client socket");
-		CloseClientSocket(clientSocket);
-
-		return;
-    }
-	
-	// Client socket closed connection
-	if (ReadResult == 0)
-	{
-		m_logger.Info("Client socket " + std::to_string(clientSocket) + " disconnected");
-        // NOTE:  This automatically removes it from epoll
-		CloseClientSocket(clientSocket);
-
-		return;
-    }
-
-	// Client socket response was read successfully
-	const std::string& serializedSocketEvent(SerializedSocketEventBuffer.data());
+void SocketServer::DispatchSocketEvent(int clientSocket, const std::string& serializedSocketEvent)
+{
 	std::optional<SocketEvent<std::string>> socketEvent = DeserializeSocketEvent(clientSocket, serializedSocketEvent);
 	if (!socketEvent.has_value())
 	{
@@ -389,7 +384,7 @@ void SocketServer::ReadClientSocket(int clientSocket) {
 	try
 	{
 		// NOTE: find, not operator[], which would insert an empty route for an unknown event name
-		std::unordered_map<SocketEventName, EventRoute>::iterator routesMapIterator = m_routesMap.find(socketEvent.value().name);
+		EventRoutesMap::iterator routesMapIterator = m_routesMap.find(socketEvent.value().name);
 		if (routesMapIterator == m_routesMap.end())
 		{
 			m_logger.Warning("No route registered for socket event from client socket " + std::to_string(clientSocket));
@@ -418,19 +413,97 @@ void SocketServer::ReadClientSocket(int clientSocket) {
 	}
 }
 
-void SocketServer::SetNonBlockingSocket(int socket)
-{
-	int Flags = fcntl(socket, F_GETFL, 0);
-    fcntl(socket, F_SETFL, Flags | O_NONBLOCK);
-}
-
 void SocketServer::ExecuteRoute(const EventRoute& route, EventContext& context)
 {
-	// NOTE: A middleware stops the route by throwing, which exits this loop before the handler runs
+	// NOTE: A middleware stops the route by throwing which exits this loop before the handler runs
 	for (const EventMiddleware& middleware : route.middlewares)
 	{
 		middleware(context);
 	}
 
 	route.handler(context);
+}
+
+void SocketServer::ReadClientSocket(int clientSocket)
+{
+	// Finds connection
+	std::unordered_map<int, Connection>::iterator connectionsMapIterator = m_connectionsMap.find(clientSocket);
+	if (connectionsMapIterator == m_connectionsMap.end())
+	{
+		m_logger.Warning("No socket connections found");
+		return;
+	}
+
+	Framer& framer = connectionsMapIterator->second.framer;
+
+	/**
+	 * NOTES:
+	 * 	- Reads until client socket is empty
+	 * 	- Client sockets are edge triggered (EPOLLET) and epoll does not notify again for bytes left in the socket
+	 */
+	std::array<char, BUFFER_SIZE> chunk = {};
+	while (true)
+	{
+		ssize_t readResult = read(clientSocket, chunk.data(), BUFFER_SIZE);
+
+		// Adds chunk to frame
+		if (readResult > 0)
+		{
+			framer.Append(chunk.data(), readResult);
+			continue;
+		}
+
+		// NOTE: EAGAIN means nothing more to read for now
+		if (readResult == -1 && (errno == EAGAIN || errno == EWOULDBLOCK))
+		{
+			break;
+		}
+
+		// NOTE: Client socket closed connection
+		if (readResult == 0)
+		{
+			m_logger.Info("Client socket " + std::to_string(clientSocket) + " disconnected");
+		}
+		// NOTE: read result is -1 and errno is other than EAGAIN or EWOULDBLOCK
+		else
+		{
+			m_logger.Error("Failed to read client socket " + std::to_string(clientSocket) + ", " + std::strerror(errno));
+		}
+
+		// NOTE: This automatically removes it from epoll
+		CloseClientSocket(clientSocket);
+
+		return;
+	}
+
+	/**
+	 * NOTES:
+	 * 	- Can return several events (sent close together) or none (payload not fully arrived yet)
+	 * 	- Throws when stream is out of sync (ex: client without framing) and nothing can recover it
+	 * 	- The try only covers ExtractFrames() so an std::length_error thrown by a handler is not reported
+	 * 	  as an invalid frame
+	 */
+	std::vector<std::string> serializedSocketEvents = {};
+	try
+	{
+		serializedSocketEvents = framer.ExtractFrames();
+	}
+	catch(const std::length_error& exception)
+	{
+		m_logger.Warning("Invalid frame from client socket " + std::to_string(clientSocket) + ", " + exception.what());
+		CloseClientSocket(clientSocket);
+
+		return;
+	}
+
+	for (const std::string& serializedSocketEvent : serializedSocketEvents)
+	{
+		DispatchSocketEvent(clientSocket, serializedSocketEvent);
+	}
+}
+
+void SocketServer::SetNonBlockingSocket(int socket)
+{
+	int flags = fcntl(socket, F_GETFL, 0);
+    fcntl(socket, F_SETFL, flags | O_NONBLOCK);
 }
