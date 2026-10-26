@@ -9,8 +9,8 @@ MessagesApi::MessagesApi(SocketClient& socketClient, Logger& logger)
     : m_socketClient(socketClient)
     , m_logger(logger)
 {
-    SocketClient::EventHandler HandleMessageCreated = [this](const std::string& serializedMessageCreatedSocketEventPayload) {
-        const MessageCreatedSocketEventPayload messageCreatedSocketEventPayload = m_messageCreatedSocketEventPayloadDeserializer.Deserialize(serializedMessageCreatedSocketEventPayload);
+    SocketClient::EventHandler HandleMessageCreated = [this](const SocketClient::EventContext& context) {
+        const MessageCreatedSocketEventPayload messageCreatedSocketEventPayload = m_messageCreatedSocketEventPayloadDeserializer.Deserialize(context.serializedPayload);
 
         // Sends event to subcriptions
         const MessageCreatedEvent messageCreatedEvent(messageCreatedSocketEventPayload.message);

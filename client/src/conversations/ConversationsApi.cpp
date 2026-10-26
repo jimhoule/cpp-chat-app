@@ -9,24 +9,24 @@ ConversationsApi::ConversationsApi(SocketClient& socketClient, Logger& logger)
     : m_socketClient(socketClient)
     , m_logger(logger)
 {
-    SocketClient::EventHandler HandleAllOpenConversationsFound = [this](const std::string& serializedAllOpenConversationsFoundByUserIdSocketEventPayload) {
-        const AllOpenConversationsFoundByUserIdSocketEventPayload allOpenConversationsFoundByUserIdSocketEventPayload = m_allOpenConversationsFoundByUserIdSocketEventPayloadDeserializer.Deserialize(serializedAllOpenConversationsFoundByUserIdSocketEventPayload);
+    SocketClient::EventHandler HandleAllOpenConversationsFound = [this](const SocketClient::EventContext& context) {
+        const AllOpenConversationsFoundByUserIdSocketEventPayload allOpenConversationsFoundByUserIdSocketEventPayload = m_allOpenConversationsFoundByUserIdSocketEventPayloadDeserializer.Deserialize(context.serializedPayload);
 
         // Sends event to subcriptions
         const AllOpenConversationsFoundEvent allOpenConversationsFoundEvent(allOpenConversationsFoundByUserIdSocketEventPayload.conversations);
         m_allOpenConversationsFoundSubject.Notify(allOpenConversationsFoundEvent);
     };
 
-    SocketClient::EventHandler HandleConversationClosed = [this](const std::string& serializedConversationClosedSocketEventPayload) {
-        const ConversationClosedSocketEventPayload conversationClosedEventPayload = m_conversationClosedSocketEventPayloadDeserializer.Deserialize(serializedConversationClosedSocketEventPayload);
+    SocketClient::EventHandler HandleConversationClosed = [this](const SocketClient::EventContext& context) {
+        const ConversationClosedSocketEventPayload conversationClosedEventPayload = m_conversationClosedSocketEventPayloadDeserializer.Deserialize(context.serializedPayload);
 
         // Sends event to subcriptions
         const ConversationClosedEvent conversationClosedEvent(conversationClosedEventPayload.conversation);
         m_conversationClosedSubject.Notify(conversationClosedEvent);
     };
 
-    SocketClient::EventHandler HandleConversationOpened = [this](const std::string& serializedConversationOpenedSocketEventPayload) {
-        const ConversationOpenedSocketEventPayload conversationOpenedSocketEventPayload = m_conversationOpenedSocketEventPayloadDeserializer.Deserialize(serializedConversationOpenedSocketEventPayload);
+    SocketClient::EventHandler HandleConversationOpened = [this](const SocketClient::EventContext& context) {
+        const ConversationOpenedSocketEventPayload conversationOpenedSocketEventPayload = m_conversationOpenedSocketEventPayloadDeserializer.Deserialize(context.serializedPayload);
 
         // Sends event to subcriptions
         const ConversationOpenedEvent conversationOpenedEvent(conversationOpenedSocketEventPayload.conversation);

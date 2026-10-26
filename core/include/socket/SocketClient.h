@@ -13,7 +13,12 @@
 class SocketClient
 {
 public:
-    using EventHandler = std::function<void(const std::string&)>;
+struct EventContext
+    {
+        std::string serializedPayload = "";
+    };
+
+    using EventHandler = std::function<void(const EventContext&)>;
     using EventHandlerOwner = const void*;
 
     SocketClient() = default;

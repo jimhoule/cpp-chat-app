@@ -161,11 +161,14 @@ void SocketClient::DispatchSocketEvent(const std::string& serializedSocketEvent)
 		return;
 	}
 
+	EventContext context = {};
+	context.serializedPayload = socketEvent.payload;
+
 	EventHandlerEntries& handlerEntries = handlersMapIterator->second;
 	for (const EventHandlerEntry& handlerEntry : handlerEntries)
 	{
 		const EventHandler& HandleSocketEvent = handlerEntry.handler;
-		HandleSocketEvent(socketEvent.payload);
+		HandleSocketEvent(context);
 	}
 }
 

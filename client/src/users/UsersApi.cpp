@@ -9,8 +9,8 @@ UsersApi::UsersApi(SocketClient& socketClient, Logger& logger)
     : m_socketClient(socketClient)
     , m_logger(logger)
 {
-    SocketClient::EventHandler HandleUsersSearched = [this](const std::string& serializedUsersSearchedSocketEventPayload) {
-        const UsersSearchedSocketEventPayload usersSearchedSocketEventPayload = m_usersSearchedSocketEventPayloadDeserializer.Deserialize(serializedUsersSearchedSocketEventPayload);
+    SocketClient::EventHandler HandleUsersSearched = [this](const SocketClient::EventContext& context) {
+        const UsersSearchedSocketEventPayload usersSearchedSocketEventPayload = m_usersSearchedSocketEventPayloadDeserializer.Deserialize(context.serializedPayload);
 
         // Sends event to subcriptions
         const UsersSearchedEvent usersSearchedEvent(usersSearchedSocketEventPayload.users);

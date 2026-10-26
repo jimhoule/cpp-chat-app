@@ -55,7 +55,7 @@ Composition happens in `server/src/main.cpp`. Each **module** owns its loggers, 
 SocketServer  →  route (middlewares + handler)  →  Service  →  Repository
 ```
 
-- **Handlers** deserialize the payload, call a service, serialize the result, send it. They never contain domain rules.
+- **Handlers** receive an `EventContext` (client socket, `serializedPayload`, and `user` once authenticated), deserialize the payload, call a service, serialize the result, send it. They never contain domain rules.
 - **Services** own the domain rules and take `Dto` structs as input, returning a `ServiceResult<Code, Data>` — a result code plus an optional payload. They never throw for expected failures.
 - **Views** are what services return: `Dto` in, `View` out. Repositories return models (`User`, `Conversation`), every public service method returns views (`UserView`, `ConversationView`), so handlers and serializers never see a password.
 - **Repositories** are behind interfaces (`ISessionsRepository`, `IUsersRepository`, …) with in-memory implementations today, so storage can be swapped without touching services.
@@ -82,7 +82,7 @@ Services never call their own public methods — shared logic goes into a privat
 - **Layers** are screens (`SplashLayer`, `LoginLayer`, `RegisterLayer`, `ChatLayer`) with an `OnAttach` / `OnUpdate` / `OnRender` / `OnDetach` lifecycle, held in a `LayerStack`.
 - **Navigation** owns the layers for the app's lifetime and pushes them onto the stack.
 - **APIs** (`AuthApi`, `ConversationsApi`, `MessagesApi`, `UsersApi`) are transport: they serialize and send, register socket handlers, and notify a `Subject<TEvent>` so layers can subscribe without knowing about sockets.
-- **`SocketClient`** allows several handlers per event name. Each handler is registered with an owner (the API's `this`), and `Off` removes only that owner's handler.
+- **`SocketClient`** allows several handlers per event name. Each handler is registered with an owner (the API's `this`), and `Off` removes only that owner's handler. Handlers receive a `SocketClient::EventContext`, the same shape as the server's (only `serializedPayload` today), so new per-event data can be added without changing every handler's signature.
 - **Stores** are local persistence. `SessionStore` is the only one so far.
 
 Layers follow one shape: call an API method, subscribe to the matching subject, navigate when it fires.
