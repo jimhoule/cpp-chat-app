@@ -7,7 +7,7 @@
 // **********
 LogoutSocketEventPayload LogoutSocketEventPayloadDeserializer::Deserialize(const std::string& jsonString)
 {
-    Json json = Json::Parse(jsonString);
+    const Json json = Json::Parse(jsonString);
 
     LogoutSocketEventPayload logoutSocketEventPayload = {};
     logoutSocketEventPayload.sessionId = json.GetString("sessionId");

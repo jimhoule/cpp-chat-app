@@ -321,10 +321,10 @@ void SocketServer::SendTo(int clientSocket, const std::string& serializedSocketE
 
 void SocketServer::SendTo(const std::string& userId, const std::string& serializedSocketEvent)
 {
+	// NOTE: User has no socket (offline) so there is nothing to send
 	std::unordered_map<std::string, std::vector<int>>::iterator userClientSocketsMapIterator = m_userClientSocketsMap.find(userId);
 	if (userClientSocketsMapIterator == m_userClientSocketsMap.end())
 	{
-		m_logger.Error("User not found in user sockets map");
 		return;
 	}
 

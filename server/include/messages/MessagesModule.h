@@ -5,13 +5,14 @@
 #include "messages/MessagesHandler.h"
 
 // Forward declarations
+class ConversationsService;
 class SocketServer;
 class UuidService;
 
 class MessagesModule
 {
 public:
-    MessagesModule(SocketServer& socketServer, UuidService& uuidService);
+    MessagesModule(SocketServer& socketServer, ConversationsService& conversationsService,  UuidService& uuidService);
 
     // Deletes move constructor and assign operator
     MessagesModule(const MessagesModule&) = delete;

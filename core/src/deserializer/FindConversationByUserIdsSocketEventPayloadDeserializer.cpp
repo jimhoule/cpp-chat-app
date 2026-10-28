@@ -7,7 +7,7 @@
 // **********
 FindConversationByUserIdsSocketEventPayload FindConversationByUserIdsSocketEventPayloadDeserializer::Deserialize(const std::string& jsonString)
 {
-    Json json = Json::Parse(jsonString);
+    const Json json = Json::Parse(jsonString);
 
     FindConversationByUserIdsSocketEventPayload findConversationByUserIdsSocketEventPayload = {};
     findConversationByUserIdsSocketEventPayload.userIds = json.GetStringArray("userIds");

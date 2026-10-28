@@ -19,7 +19,7 @@ std::string AllOpenConversationsFoundByUserIdSocketEventSerializer::Serialize(co
     conversationViewJsons.reserve(conversationViews.size());
     for (const ConversationView& conversationView : conversationViews)
     {
-        Json conversationViewJson = ConvertConversationViewToJson(conversationView);
+        const Json conversationViewJson = ConvertConversationViewToJson(conversationView);
         conversationViewJsons.push_back(conversationViewJson);
     }
 

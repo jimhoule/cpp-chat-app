@@ -8,7 +8,7 @@
 std::string LoggedoutSocketEventSerializer::Serialize(const LoggedoutSocketEvent& loggedoutSocketEvent)
 {
     // Sends empty payload
-    Json payloadJson = {};
+    const Json payloadJson = {};
 
     Json json = {};
     json.SetEnum<SocketEventName>("name", loggedoutSocketEvent.name);

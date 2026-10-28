@@ -8,7 +8,7 @@
 // **********
 std::string ConversationOpenedSocketEventSerializer::Serialize(const ConversationOpenedSocketEvent& conversationOpenedSocketEvent)
 {
-    Json conversationViewJson = ConvertConversationViewToJson(conversationOpenedSocketEvent.payload.conversation);
+    const Json conversationViewJson = ConvertConversationViewToJson(conversationOpenedSocketEvent.payload.conversation);
 
     Json payloadJson = {};
     payloadJson.Set("conversation", conversationViewJson);

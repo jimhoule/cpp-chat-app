@@ -11,7 +11,7 @@
 // **********
 AllOpenConversationsFoundByUserIdSocketEventPayload AllOpenConversationsFoundByUserIdSocketEventPayloadDeserializer::Deserialize(const std::string& jsonString)
 {
-    Json json = Json::Parse(jsonString);
+    const Json json = Json::Parse(jsonString);
     const std::vector<Json> conversationViewJsons = json.GetObjectArray("conversations");
 
     std::vector<ConversationView> conversationViews = {};
@@ -19,7 +19,7 @@ AllOpenConversationsFoundByUserIdSocketEventPayload AllOpenConversationsFoundByU
     conversationViews.reserve(conversationViewJsons.size());
     for (const Json& conversationViewJson : conversationViewJsons)
     {
-        ConversationView conversationView = ConvertJsonToConversationView(conversationViewJson);
+        const ConversationView conversationView = ConvertJsonToConversationView(conversationViewJson);
         conversationViews.push_back(conversationView);
     }
 

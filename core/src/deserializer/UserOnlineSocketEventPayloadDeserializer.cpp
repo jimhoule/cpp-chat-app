@@ -1,20 +1,21 @@
 #include "deserializer/UserOnlineSocketEventPayloadDeserializer.h"
 
 #include "json/Json.h"
+#include "json/UserJson.h"
+#include "views/UserView.h"
 
 // **********
 // * PUBLIC *
 // **********
 UserOnlineSocketEventPayload UserOnlineSocketEventPayloadDeserializer::Deserialize(const std::string& jsonString)
 {
-    Json json = Json::Parse(jsonString);
-    Json userJson = json.GetObject("user");
+    const Json json = Json::Parse(jsonString);
+    const Json userViewJson = json.GetObject("user");
+
+    const UserView userView = ConvertJsonToUserView(userViewJson);
 
     UserOnlineSocketEventPayload userOnlineSocketEventPayload = {};
-    userOnlineSocketEventPayload.user.id = userJson.GetString("id");
-    userOnlineSocketEventPayload.user.email = userJson.GetString("email");
-    userOnlineSocketEventPayload.user.firstName = userJson.GetString("firstName");
-    userOnlineSocketEventPayload.user.lastName = userJson.GetString("lastName");
+    userOnlineSocketEventPayload.user = userView;
 
     return userOnlineSocketEventPayload;
 }

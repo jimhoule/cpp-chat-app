@@ -19,7 +19,7 @@ std::string UsersSearchedSocketEventSerializer::Serialize(const UsersSearchedSoc
     userViewJsons.reserve(userViews.size());
     for (const UserView& userView : userViews)
     {
-        Json userViewJson = ConvertUserViewToJson(userView);
+        const Json userViewJson = ConvertUserViewToJson(userView);
         userViewJsons.push_back(userViewJson);
     }
 

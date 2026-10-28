@@ -7,11 +7,11 @@
 // **********
 // * PUBLIC *
 // **********
-MessagesModule::MessagesModule(SocketServer& socketServer, UuidService& uuidService)
+MessagesModule::MessagesModule(SocketServer& socketServer, ConversationsService& conversationsService, UuidService& uuidService)
     : m_messagesRepositoryLogger("MESSAGES", "server/src/messages/repositories/MessagesInMemoryRepository")
     , m_messagesServiceLogger("MESSAGES", "server/src/messages/MessagesService")
     , m_messagesHandlerLogger("MESSAGES", "server/src/messages/MessagesHandler")
-    , m_messagesService(std::make_unique<MessagesInMemoryRepository>(m_messagesRepositoryLogger), uuidService, m_messagesServiceLogger)
+    , m_messagesService(std::make_unique<MessagesInMemoryRepository>(m_messagesRepositoryLogger), conversationsService, uuidService, m_messagesServiceLogger)
     , m_messagesHandler(socketServer, m_messagesService, m_messagesHandlerLogger)
 {
     socketServer.On(

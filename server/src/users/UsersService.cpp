@@ -1,7 +1,6 @@
 #include "users/UsersService.h"
 
 #include "encryption/EncryptionService.h"
-#include "models/User.h"
 #include "uuid/UuidService.h"
 
 // **********
@@ -123,7 +122,7 @@ UsersService::UserResult UsersService::VerifyCredentials(const VerifyUserCredent
         return userResult;
     }
 
-    UserView userView = ConvertUserToUserView(user.value());
+    const UserView userView = ConvertUserToUserView(user.value());
     userResult.data = userView;
 
     return userResult;

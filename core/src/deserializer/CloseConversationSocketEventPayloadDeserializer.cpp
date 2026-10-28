@@ -7,7 +7,7 @@
 // **********
 CloseConversationSocketEventPayload CloseConversationSocketEventPayloadDeserializer::Deserialize(const std::string& jsonString)
 {
-    Json json = Json::Parse(jsonString);
+    const Json json = Json::Parse(jsonString);
 
     CloseConversationSocketEventPayload closeConversationSocketEventPayload = {};
     closeConversationSocketEventPayload.conversationId = json.GetString("conversationId");

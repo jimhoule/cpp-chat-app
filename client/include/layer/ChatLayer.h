@@ -7,14 +7,15 @@
 #include "conversations/AllOpenConversationsFoundEvent.h"
 #include "conversations/ConversationClosedEvent.h"
 #include "conversations/ConversationOpenedEvent.h"
+#include "conversations/ConversationReopenedEvent.h"
 #include "layer/Layer.h"
 #include "messages/MessageCreatedEvent.h"
-#include "models/Message.h"
 #include "observer/Observer.h"
 #include "Texture.h"
 #include "users/UsersSearchedEvent.h"
 #include "utils/Debouncer.h"
 #include "views/ConversationView.h"
+#include "views/MessageView.h"
 #include "views/UserView.h"
 
 #include <string>
@@ -62,6 +63,7 @@ private:
     Observer<AllOpenConversationsFoundEvent, ChatLayer> m_allOpenConversationsFoundObserver;
     Observer<ConversationClosedEvent, ChatLayer> m_conversationClosedObserver;
     Observer<ConversationOpenedEvent, ChatLayer> m_conversationOpenedObserver;
+    Observer<ConversationReopenedEvent, ChatLayer> m_conversationReopenedObserver;
 
     MessagesApi& m_messagesApi;
     Observer<MessageCreatedEvent, ChatLayer> m_messageCreatedObserver;
@@ -73,19 +75,17 @@ private:
     bool m_isSettingsDropDownMenuOpen = false;
 
     // Search
+    std::vector<UserView> m_searchedUsers = {};
     std::string m_searchUsersValue = "";
     Debouncer m_searchUsersDebouncer = Debouncer(std::chrono::milliseconds(300));
 
     // Messages
     std::string m_messageValue = "";
 
-    // Users
-    std::vector<UserView> m_searchedUsers = {};
-
     // Conversations
     std::vector<ConversationView> m_conversations = {};
     std::string m_selectedConversationId = "";
-    std::unordered_map<std::string, std::vector<Message>> m_conversationMessagesMap = {};
+    std::unordered_map<std::string, std::vector<MessageView>> m_conversationMessagesMap = {};
 
     // Textures
     Texture m_blankImageTexture = {};
@@ -95,6 +95,7 @@ private:
     void HandleAllOpenConversationsFound(const AllOpenConversationsFoundEvent& allOpenConversationsFoundEvent);
     void HandleConversationClosed(const ConversationClosedEvent& conversationClosedEvent);
     void HandleConversationOpened(const ConversationOpenedEvent& conversationOpenedEvent);
+    void HandleConversationReopened(const ConversationReopenedEvent& conversationReopenedEvent);
     void HandleMessageCreated(const MessageCreatedEvent& messageCreatedEvent);
     void HandleLoggedOut(const LoggedOutEvent& loggedOutEvent);
     void HandleUserOnline(const UserOnlineEvent& userOnlineEvent);
@@ -105,4 +106,5 @@ private:
     // NOTE: Only opens conversation with one user for now (2 users total with the current user added by the server)
     void HandleSearchedUserButtonClicked(const std::string& userId);
     void Reset();
+    void UpsertConversation(const ConversationView& upsertedConversation);
 };

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "models/User.h"
 #include "results/ServiceResult.h"
 #include "users/repositories/IUsersRepository.h"
 #include "views/UserView.h"

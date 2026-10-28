@@ -7,7 +7,7 @@
 // **********
 LoginSocketEventPayload LoginSocketEventPayloadDeserializer::Deserialize(const std::string& jsonString)
 {
-    Json json = Json::Parse(jsonString);
+    const Json json = Json::Parse(jsonString);
 
     LoginSocketEventPayload loginSocketEventPayload = {};
     loginSocketEventPayload.email = json.GetString("email");

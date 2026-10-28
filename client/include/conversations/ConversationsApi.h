@@ -3,9 +3,11 @@
 #include "conversations/AllOpenConversationsFoundEvent.h"
 #include "conversations/ConversationClosedEvent.h"
 #include "conversations/ConversationOpenedEvent.h"
+#include "conversations/ConversationReopenedEvent.h"
 #include "deserializer/AllOpenConversationsFoundByUserIdSocketEventPayloadDeserializer.h"
 #include "deserializer/ConversationClosedSocketEventPayloadDeserializer.h"
 #include "deserializer/ConversationOpenedSocketEventPayloadDeserializer.h"
+#include "deserializer/ConversationReopenedSocketEventPayloadDeserializer.h"
 #include "observer/IObservable.h"
 #include "observer/Subject.h"
 #include "serializer/CloseConversationSocketEventSerializer.h"
@@ -39,6 +41,7 @@ public:
     IObservable<AllOpenConversationsFoundEvent>& GetAllOpenConversationsFoundSubject();
     IObservable<ConversationClosedEvent>& GetConversationClosedSubject();
     IObservable<ConversationOpenedEvent>& GetConversationOpenedSubject();
+    IObservable<ConversationReopenedEvent>& GetConversationReopenedSubject();
 
     void FindAllOpen();
     void Close(const CloseConversationParams& closeConversationParams);
@@ -50,6 +53,7 @@ private:
     Subject<AllOpenConversationsFoundEvent> m_allOpenConversationsFoundSubject = {};
     Subject<ConversationClosedEvent> m_conversationClosedSubject = {};
     Subject<ConversationOpenedEvent> m_conversationOpenedSubject = {};
+    Subject<ConversationReopenedEvent> m_conversationReopenedSubject = {};
 
     FindAllOpenConversationsByUserIdSocketEventSerializer m_findAllOpenConversationsByUserIdSocketEventSerializer = {};
     AllOpenConversationsFoundByUserIdSocketEventPayloadDeserializer m_allOpenConversationsFoundByUserIdSocketEventPayloadDeserializer = {};
@@ -59,6 +63,8 @@ private:
 
     OpenConversationSocketEventSerializer m_openConversationSocketEventSerializer = {};
     ConversationOpenedSocketEventPayloadDeserializer m_conversationOpenedSocketEventPayloadDeserializer = {};
+
+    ConversationReopenedSocketEventPayloadDeserializer m_conversationReopenedSocketEventPayloadDeserializer = {};
 
     Logger& m_logger;
 };

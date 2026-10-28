@@ -9,7 +9,7 @@
 // **********
 ErrorSocketEventPayload ErrorSocketEventPayloadDeserializer::Deserialize(const std::string& jsonString)
 {
-    Json json = Json::Parse(jsonString);
+    const Json json = Json::Parse(jsonString);
 
     ErrorSocketEventPayload errorSocketEventPayload = {};
     errorSocketEventPayload.code = json.GetEnum<SocketErrorCode>("code");

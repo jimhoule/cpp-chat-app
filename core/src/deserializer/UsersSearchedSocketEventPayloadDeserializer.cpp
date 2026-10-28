@@ -11,7 +11,7 @@
 // **********
 UsersSearchedSocketEventPayload UsersSearchedSocketEventPayloadDeserializer::Deserialize(const std::string& jsonString)
 {
-    Json json = Json::Parse(jsonString);
+    const Json json = Json::Parse(jsonString);
     const std::vector<Json> userViewJsons = json.GetObjectArray("users");
 
     std::vector<UserView> userViews = {};
@@ -19,7 +19,7 @@ UsersSearchedSocketEventPayload UsersSearchedSocketEventPayloadDeserializer::Des
     userViews.reserve(userViewJsons.size());
     for (const Json& userViewJson : userViewJsons)
     {
-        UserView userView = ConvertJsonToUserView(userViewJson);
+        const UserView userView = ConvertJsonToUserView(userViewJson);
         userViews.push_back(userView);
     }
 

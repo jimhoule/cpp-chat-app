@@ -7,7 +7,7 @@
 // **********
 AuthenticateSocketEventPayload AuthenticateSocketEventPayloadDeserializer::Deserialize(const std::string& jsonString)
 {
-    Json json = Json::Parse(jsonString);
+    const Json json = Json::Parse(jsonString);
 
     AuthenticateSocketEventPayload authenticateSocketEventPayload = {};
     authenticateSocketEventPayload.sessionId = json.GetString("sessionId");

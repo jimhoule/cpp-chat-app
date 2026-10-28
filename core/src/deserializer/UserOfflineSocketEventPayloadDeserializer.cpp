@@ -7,7 +7,7 @@
 // **********
 UserOfflineSocketEventPayload UserOfflineSocketEventPayloadDeserializer::Deserialize(const std::string& jsonString)
 {
-    Json json = Json::Parse(jsonString);
+    const Json json = Json::Parse(jsonString);
 
     UserOfflineSocketEventPayload userOfflineSocketEventPayload = {};
     userOfflineSocketEventPayload.userId = json.GetString("userId");

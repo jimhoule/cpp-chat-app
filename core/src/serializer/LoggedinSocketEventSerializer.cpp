@@ -8,7 +8,7 @@
 // **********
 std::string LoggedinSocketEventSerializer::Serialize(const LoggedinSocketEvent& loggedinSocketEvent)
 {
-    Json userViewJson = ConvertUserViewToJson(loggedinSocketEvent.payload.user);
+    const Json userViewJson = ConvertUserViewToJson(loggedinSocketEvent.payload.user);
 
     Json payloadJson = {};
     payloadJson.Set("sessionId", loggedinSocketEvent.payload.sessionId);

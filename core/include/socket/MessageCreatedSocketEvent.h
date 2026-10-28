@@ -1,17 +1,17 @@
 #pragma once
 
-#include "models/Message.h"
 #include "socket/SocketEvent.h"
+#include "views/MessageView.h"
 
 #include <string>
 
 struct MessageCreatedSocketEventPayload
 {
     MessageCreatedSocketEventPayload() = default;
-    MessageCreatedSocketEventPayload(const Message& message) : message(message)
+    MessageCreatedSocketEventPayload(const MessageView& message) : message(message)
     {}
 
-    Message message = {};
+    MessageView message = {};
 };
 
 struct MessageCreatedSocketEvent : public SocketEvent<MessageCreatedSocketEventPayload>

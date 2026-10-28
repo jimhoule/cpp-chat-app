@@ -7,10 +7,10 @@
 // **********
 SocketEvent<std::string> SocketEventDeserializer::Deserialize(const std::string& jsonString)
 {
-    Json json = Json::Parse(jsonString);
+    const Json json = Json::Parse(jsonString);
 
-    SocketEventName name = json.GetEnum<SocketEventName>("name");
-    std::string payload = json.GetRaw("payload");
+    const SocketEventName name = json.GetEnum<SocketEventName>("name");
+    const std::string payload = json.GetRaw("payload");
     SocketEvent<std::string> socketEvent(name, payload);
 
     return socketEvent;

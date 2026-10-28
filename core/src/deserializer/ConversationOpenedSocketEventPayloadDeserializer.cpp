@@ -14,7 +14,7 @@ ConversationOpenedSocketEventPayload ConversationOpenedSocketEventPayloadDeseria
     const Json json = Json::Parse(jsonString);
     const Json conversationViewJson = json.GetObject("conversation");
 
-    ConversationView conversationView = ConvertJsonToConversationView(conversationViewJson);
+    const ConversationView conversationView = ConvertJsonToConversationView(conversationViewJson);
 
     ConversationOpenedSocketEventPayload conversationOpenedSocketEventPayload = {};
     conversationOpenedSocketEventPayload.conversation = conversationView;

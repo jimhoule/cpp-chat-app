@@ -33,9 +33,18 @@ ConversationsApi::ConversationsApi(SocketClient& socketClient, Logger& logger)
         m_conversationOpenedSubject.Notify(conversationOpenedEvent);
     };
 
+    SocketClient::EventHandler HandleConversationReopened = [this](const SocketClient::EventContext& context) {
+        const ConversationReopenedSocketEventPayload conversationReopenedSocketEventPayload = m_conversationReopenedSocketEventPayloadDeserializer.Deserialize(context.serializedPayload);
+
+        // Sends event to subcriptions
+        const ConversationReopenedEvent conversationReopenedEvent(conversationReopenedSocketEventPayload.conversation);
+        m_conversationReopenedSubject.Notify(conversationReopenedEvent);
+    };
+
     m_socketClient.On(SocketEventName::ALL_OPEN_CONVERSATIONS_FOUND_BY_USER_ID, this, HandleAllOpenConversationsFound);
     m_socketClient.On(SocketEventName::CONVERSATION_CLOSED, this, HandleConversationClosed);
     m_socketClient.On(SocketEventName::CONVERSATION_OPENED, this, HandleConversationOpened);
+    m_socketClient.On(SocketEventName::CONVERSATION_REOPENED, this, HandleConversationReopened);
 }
 
 ConversationsApi::~ConversationsApi()
@@ -43,6 +52,7 @@ ConversationsApi::~ConversationsApi()
     m_socketClient.Off(SocketEventName::ALL_OPEN_CONVERSATIONS_FOUND_BY_USER_ID, this);
     m_socketClient.Off(SocketEventName::CONVERSATION_CLOSED, this);
     m_socketClient.Off(SocketEventName::CONVERSATION_OPENED, this);
+    m_socketClient.Off(SocketEventName::CONVERSATION_REOPENED, this);
 }
 
 IObservable<AllOpenConversationsFoundEvent>& ConversationsApi::GetAllOpenConversationsFoundSubject()
@@ -58,6 +68,11 @@ IObservable<ConversationClosedEvent>& ConversationsApi::GetConversationClosedSub
 IObservable<ConversationOpenedEvent>& ConversationsApi::GetConversationOpenedSubject()
 {
     return m_conversationOpenedSubject;
+}
+
+IObservable<ConversationReopenedEvent>& ConversationsApi::GetConversationReopenedSubject()
+{
+    return m_conversationReopenedSubject;
 }
 
 void ConversationsApi::FindAllOpen()

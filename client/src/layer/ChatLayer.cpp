@@ -37,6 +37,7 @@ ChatLayer::ChatLayer(
     , m_allOpenConversationsFoundObserver(*this, &ChatLayer::HandleAllOpenConversationsFound)
     , m_conversationClosedObserver(*this, &ChatLayer::HandleConversationClosed)
     , m_conversationOpenedObserver(*this, &ChatLayer::HandleConversationOpened)
+    , m_conversationReopenedObserver(*this, &ChatLayer::HandleConversationReopened)
     , m_messageCreatedObserver(*this, &ChatLayer::HandleMessageCreated)
     , m_usersSearchedObserver(*this, &ChatLayer::HandleUsersSearched)
 {}
@@ -48,6 +49,7 @@ void ChatLayer::OnAttach()
     m_conversationsApi.GetAllOpenConversationsFoundSubject().Subscribe(&m_allOpenConversationsFoundObserver);
     m_conversationsApi.GetConversationClosedSubject().Subscribe(&m_conversationClosedObserver);
     m_conversationsApi.GetConversationOpenedSubject().Subscribe(&m_conversationOpenedObserver);
+    m_conversationsApi.GetConversationReopenedSubject().Subscribe(&m_conversationReopenedObserver);
     m_messagesApi.GetMessageCreatedSubject().Subscribe(&m_messageCreatedObserver);
     m_usersApi.GetUsersSearchedSubject().Subscribe(&m_usersSearchedObserver);
 
@@ -71,6 +73,7 @@ void ChatLayer::OnDetach()
     m_conversationsApi.GetAllOpenConversationsFoundSubject().Unsubscribe(&m_allOpenConversationsFoundObserver);
     m_conversationsApi.GetConversationClosedSubject().Unsubscribe(&m_conversationClosedObserver);
     m_conversationsApi.GetConversationOpenedSubject().Unsubscribe(&m_conversationOpenedObserver);
+    m_conversationsApi.GetConversationReopenedSubject().Unsubscribe(&m_conversationReopenedObserver);
     m_messagesApi.GetMessageCreatedSubject().Unsubscribe(&m_messageCreatedObserver);
     m_usersApi.GetUsersSearchedSubject().Unsubscribe(&m_usersSearchedObserver);
     
@@ -550,11 +553,11 @@ void ChatLayer::OnRender()
             messagesContainer.DrawContent = [this](const Gui::ContainerState& state) {
                 const Vector2 messagesContainerAvailableSpace = m_gui.GetAvailableSpace();
 
-                const std::vector<Message>& selectedConversationMessage = m_conversationMessagesMap[m_selectedConversationId];
+                const std::vector<MessageView>& selectedConversationMessage = m_conversationMessagesMap[m_selectedConversationId];
                 for (std::size_t index = 0; index < selectedConversationMessage.size(); index++)
                 {
                     // MESSAGE CONTAINER
-                    const Message& message = selectedConversationMessage[index];
+                    const MessageView& message = selectedConversationMessage[index];
                     const std::string id = "messageContainer" + std::to_string(index);
 
                     Gui::Container messageContainer = {};
@@ -686,16 +689,6 @@ void ChatLayer::OnRender()
             sendButton.cornerRounding = 10.0f;
             sendButton.isDisabled = m_messageValue.empty() || m_selectedConversationId.empty();
             sendButton.OnClick = [this]() {
-                Message newMessage = {};
-                newMessage.id = "tempId";
-                newMessage.conversationId = m_selectedConversationId;
-                newMessage.senderId = m_authApi.GetCurrentUser()->id;
-                newMessage.text = m_messageValue;
-                newMessage.createdAt = std::time(0);
-
-                std::vector<Message>& selectedConversationMessages = m_conversationMessagesMap[m_selectedConversationId];
-                selectedConversationMessages.push_back(newMessage);
-
                 HandleSendMessageButtonClicked();
             };
 
@@ -759,39 +752,26 @@ void ChatLayer::HandleConversationClosed(const ConversationClosedEvent& conversa
 
 void ChatLayer::HandleConversationOpened(const ConversationOpenedEvent& conversationOpenedEvent)
 {
-    const ConversationView& openedConversation = conversationOpenedEvent.conversation;
+    const ConversationView& conversation = conversationOpenedEvent.conversation;
 
-    /**
-     * NOTES:
-     *  - Replaces conversation with most recent one if already opened (Open() returns the existing one for the same users)
-     *  - Replaces the conversation because other participants properties may have been updated (ex: name)
-     */
-    bool isAlreadyOpened = false;
-    for (ConversationView& conversation : m_conversations)
-    {
-        if (conversation.id == openedConversation.id)
-        {
-            conversation = openedConversation;
-            isAlreadyOpened = true;
+    UpsertConversation(conversation);
+    // NOTE: Client asked to open it so it gets the focus
+    m_selectedConversationId = conversation.id;
+}
 
-            break;
-        }
-    }
-
-    // Adds conversation if not already opened
-    if (!isAlreadyOpened)
-    {
-        m_conversations.push_back(openedConversation);
-    }
-
-    // Selects opened conversation
-    m_selectedConversationId = openedConversation.id;
+void ChatLayer::HandleConversationReopened(const ConversationReopenedEvent& conversationReopenedEvent)
+{
+    // NOTE: Reopened by someone else's message so it is added without taking the focus
+    UpsertConversation(conversationReopenedEvent.conversation);
 }
 
 void ChatLayer::HandleMessageCreated(const MessageCreatedEvent& messageCreatedEvent)
 {
-    m_logger.Info("Message created id: " + messageCreatedEvent.message.id);
-    m_logger.Info("Message created text: " + messageCreatedEvent.message.text);
+    const MessageView& message = messageCreatedEvent.message;
+
+    // NOTE: A message in a conversation a user had closed comes after CONVERSATION_REOPENED so the conversation is already open again
+    std::vector<MessageView>& conversationMessages = m_conversationMessagesMap[message.conversationId];
+    conversationMessages.push_back(message);
 }
 
 void ChatLayer::HandleLoggedOut(const LoggedOutEvent& loggedOutEvent)
@@ -848,6 +828,7 @@ void ChatLayer::Reset()
     m_isSettingsDropDownMenuOpen = false;
 
     // search
+    m_searchedUsers.clear();
     m_searchUsersValue.clear();
     m_searchUsersDebouncer.Reset();
 
@@ -859,11 +840,28 @@ void ChatLayer::Reset()
     // Messages
     m_messageValue.clear();
 
-    // Users
-    m_searchedUsers.clear();
-
     // Textures
     m_blankImageTexture.Destroy();
     m_closableImageTexture.Destroy();
     m_whiteLeftArrowImageTexture.Destroy();
+}
+
+void ChatLayer::UpsertConversation(const ConversationView& upsertedConversation)
+{
+    /**
+     * NOTES:
+     *  - Replaces conversation with most recent one if already listed (Open() returns the existing one for the same users)
+     *  - Replaces conversation because other participants properties may have been updated (ex: name)
+     */
+    for (ConversationView& conversation : m_conversations)
+    {
+        if (conversation.id == upsertedConversation.id)
+        {
+            conversation = upsertedConversation;
+
+            return;
+        }
+    }
+
+    m_conversations.push_back(upsertedConversation);
 }

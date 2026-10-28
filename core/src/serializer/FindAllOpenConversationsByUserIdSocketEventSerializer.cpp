@@ -8,7 +8,7 @@
 std::string FindAllOpenConversationsByUserIdSocketEventSerializer::Serialize(const FindAllOpenConversationsByUserIdSocketEvent& findAllOpenConversationsByUserIdSocketEvent)
 {
     // Sends empty payload
-    Json payloadJson = {};
+    const Json payloadJson = {};
 
     Json json = {};
     json.SetEnum<SocketEventName>("name", findAllOpenConversationsByUserIdSocketEvent.name);

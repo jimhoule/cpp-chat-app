@@ -47,6 +47,9 @@ std::string ConvertSocketEventNameToString(SocketEventName socketEventName)
         case SocketEventName::CONVERSATION_OPENED:
             return "CONVERSATION OPENED";
 
+        case SocketEventName::CONVERSATION_REOPENED:
+            return "CONVERSATION REOPENED";
+
         case SocketEventName::FIND_ALL_OPEN_CONVERSATIONS_BY_USER_ID:
             return "FIND ALL OPEN CONVERSATIONS BY USER ID";
 

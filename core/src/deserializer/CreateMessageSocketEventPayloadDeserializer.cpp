@@ -7,7 +7,7 @@
 // **********
 CreateMessageSocketEventPayload CreateMessageSocketEventPayloadDeserializer::Deserialize(const std::string& jsonString)
 {
-    Json json = Json::Parse(jsonString);
+    const Json json = Json::Parse(jsonString);
 
     CreateMessageSocketEventPayload createMessageSocketEventPayload = {};
     createMessageSocketEventPayload.conversationId = json.GetString("conversationId");

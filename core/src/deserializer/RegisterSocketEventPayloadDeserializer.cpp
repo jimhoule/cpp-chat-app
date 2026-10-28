@@ -7,7 +7,7 @@
 // **********
 RegisterSocketEventPayload RegisterSocketEventPayloadDeserializer::Deserialize(const std::string& jsonString)
 {
-    Json json = Json::Parse(jsonString);
+    const Json json = Json::Parse(jsonString);
 
     RegisterSocketEventPayload registerSocketEventPayload = {};
     registerSocketEventPayload.firstName = json.GetString("firstName");

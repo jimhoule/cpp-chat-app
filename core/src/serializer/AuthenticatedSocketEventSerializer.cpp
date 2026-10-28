@@ -8,7 +8,7 @@
 // **********
 std::string AuthenticatedSocketEventSerializer::Serialize(const AuthenticatedSocketEvent& authenticatedSocketEvent)
 {
-    Json userViewJson = ConvertUserViewToJson(authenticatedSocketEvent.payload.user);
+    const Json userViewJson = ConvertUserViewToJson(authenticatedSocketEvent.payload.user);
 
     Json payloadJson = {};
     payloadJson.Set("user", userViewJson);

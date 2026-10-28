@@ -1,21 +1,21 @@
 #include "deserializer/MessageCreatedSocketEventPayloadDeserializer.h"
 
 #include "json/Json.h"
+#include "json/MessageJson.h"
+#include "views/MessageView.h"
 
 // **********
 // * PUBLIC *
 // **********
 MessageCreatedSocketEventPayload MessageCreatedSocketEventPayloadDeserializer::Deserialize(const std::string& jsonString)
 {
-    Json json = Json::Parse(jsonString);
-    Json messageJson = json.GetObject("message");
+    const Json json = Json::Parse(jsonString);
+    const Json messageViewJson = json.GetObject("message");
+
+    const MessageView messageView = ConvertJsonToMessageView(messageViewJson);
 
     MessageCreatedSocketEventPayload messageCreatedSocketEventPayload = {};
-    messageCreatedSocketEventPayload.message.id = messageJson.GetString("id");
-    messageCreatedSocketEventPayload.message.conversationId = messageJson.GetString("conversationId");
-    messageCreatedSocketEventPayload.message.senderId = messageJson.GetString("senderId");
-    messageCreatedSocketEventPayload.message.text = messageJson.GetString("text");
-    messageCreatedSocketEventPayload.message.createdAt = messageJson.GetTime("createdAt");
+    messageCreatedSocketEventPayload.message = messageView;
 
     return messageCreatedSocketEventPayload;
 }

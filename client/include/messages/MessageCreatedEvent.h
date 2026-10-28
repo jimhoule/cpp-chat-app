@@ -1,13 +1,13 @@
 #pragma once
 
-#include "models/Message.h"
+#include "views/MessageView.h"
 
 struct MessageCreatedEvent
 {
     MessageCreatedEvent() = default;
-    MessageCreatedEvent(const Message& message)
+    MessageCreatedEvent(const MessageView& message)
         : message(message)
     {}
 
-    Message message = {};
+    MessageView message = {};
 };
