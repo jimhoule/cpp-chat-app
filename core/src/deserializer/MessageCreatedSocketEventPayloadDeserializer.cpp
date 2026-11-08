@@ -4,6 +4,8 @@
 #include "json/MessageJson.h"
 #include "views/MessageView.h"
 
+#include <utility>
+
 // **********
 // * PUBLIC *
 // **********
@@ -12,10 +14,10 @@ MessageCreatedSocketEventPayload MessageCreatedSocketEventPayloadDeserializer::D
     const Json json = Json::Parse(jsonString);
     const Json messageViewJson = json.GetObject("message");
 
-    const MessageView messageView = ConvertJsonToMessageView(messageViewJson);
+    MessageView messageView = ConvertJsonToMessageView(messageViewJson);
 
     MessageCreatedSocketEventPayload messageCreatedSocketEventPayload = {};
-    messageCreatedSocketEventPayload.message = messageView;
+    messageCreatedSocketEventPayload.message = std::move(messageView);
 
     return messageCreatedSocketEventPayload;
 }

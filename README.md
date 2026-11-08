@@ -43,7 +43,7 @@ TCP is a byte stream, not a message stream: one `read()` can return half an even
 
 `SocketEventName` travels as a **string**, not an enum position, so inserting a value in the middle can't silently change the meaning of the ones after it. Every event has a typed payload struct in `core/include/socket/`, with a serializer and/or a deserializer in the neighbouring directories — each side only builds the direction it uses, so the pairs are deliberately asymmetric.
 
-Events are named as command/result pairs: `LOGIN`/`LOGGEDIN`, `REGISTER`/`REGISTERED`, `AUTHENTICATE`/`AUTHENTICATED`, `LOGOUT`/`LOGGEDOUT`, `OPEN_CONVERSATION`/`CONVERSATION_OPENED`, `CLOSE_CONVERSATION`/`CONVERSATION_CLOSED`, `FIND_ALL_OPEN_CONVERSATIONS_BY_USER_ID`/`ALL_OPEN_CONVERSATIONS_FOUND_BY_USER_ID`, `SEARCH_USERS`/`USERS_SEARCHED`. Broadcasts are their own names: `USER_ONLINE`, `USER_OFFLINE`, `MESSAGE_CREATED`.
+Events are named as command/result pairs: `LOGIN`/`LOGGEDIN`, `REGISTER`/`REGISTERED`, `AUTHENTICATE`/`AUTHENTICATED`, `LOGOUT`/`LOGGEDOUT`, `OPEN_CONVERSATION`/`CONVERSATION_OPENED`, `CLOSE_CONVERSATION`/`CONVERSATION_CLOSED`, `FIND_ALL_OPEN_CONVERSATIONS_BY_USER_ID`/`ALL_OPEN_CONVERSATIONS_FOUND_BY_USER_ID`, `FIND_MESSAGES_PAGE_BY_CONVERSATION_ID`/`MESSAGES_PAGE_FOUND_BY_CONVERSATION_ID`, `SEARCH_USERS`/`USERS_SEARCHED`. Broadcasts are their own names: `USER_ONLINE`, `USER_OFFLINE`, `MESSAGE_CREATED`.
 
 Failures come back as a single `ERROR` event carrying a `SocketErrorCode` and the `failedEventName` of the request that failed, so the client can tell which request it answers.
 
@@ -84,6 +84,7 @@ Services never call their own public methods — shared logic goes into a privat
 - **APIs** (`AuthApi`, `ConversationsApi`, `MessagesApi`, `UsersApi`) are transport: they serialize and send, register socket handlers, and notify a `Subject<TEvent>` so layers can subscribe without knowing about sockets.
 - **`SocketClient`** allows several handlers per event name. Each handler is registered with an owner (the API's `this`), and `Off` removes only that owner's handler. Handlers receive a `SocketClient::EventContext`, the same shape as the server's (only `serializedPayload` today), so new per-event data can be added without changing every handler's signature.
 - **Stores** are local persistence. `SessionStore` is the only one so far.
+- **`MessageHistories`** (`client/messages/`) holds the loaded messages and next cursor of each conversation, keyed by conversation id. It has no GUI or network dependency: `ChatLayer` decides when to fetch and calls `Has` / `Add` / `AppendLiveMessage` / `MergePage` / `Remove` / `Find`, so the history rules live in one place.
 
 Layers follow one shape: call an API method, subscribe to the matching subject, navigate when it fires.
 
@@ -148,6 +149,10 @@ The file is written with mode `0600` — the default would let every account on 
 
 **Reopened is its own event, not `CONVERSATION_OPENED`.** `CONVERSATION_OPENED` answers the client's own `OPEN_CONVERSATION`, so the client adds the conversation and selects it. `CONVERSATION_REOPENED` means someone else's message brought it back, so the client adds it without taking the focus. Both carry a `ConversationView`, like `CONVERSATION_OPENED` and `CONVERSATION_CLOSED` already do. Separate names keep the client stateless (no "did I ask for this?" flag), let future listeners such as notifications or unread counts subscribe to reopens only, and let the payloads grow apart. Only users who had the conversation closed get it, so an active chat does not resend the whole conversation with every message.
 
+**Message history is loaded in cursor pages, when a conversation is selected.** Selecting a conversation with no history entry creates the entry and sends `FIND_MESSAGES_PAGE_BY_CONVERSATION_ID` with an empty cursor. The server checks membership, fetches 42 + 1 messages before the cursor (send order, newest first, reversed so each page is oldest first), drops the extra oldest one when present and sets `nextCursor` to the id of the new oldest message, otherwise leaves it empty. An empty `nextCursor` is the only "no more pages" signal, a short page is not. The response carries the `conversationId` next to a generic `PageView` (`core/views/PageView`, `core/json/PageJson`), because several conversations can load at once and the protocol has no request id. The cursor is a plain string on both sides, `""` meaning the first page, so the client sends back exactly the `nextCursor` it received.
+
+**The history entry is created when the fetch is sent, and every page is deduplicated.** A history entry means "loading or loaded". Live `MESSAGE_CREATED` messages are appended only to conversations that have an entry, the others are ignored because their first page will include them. Creating the entry before the page arrives keeps a message that lands while the page is in flight, at the cost of a possible duplicate: if the server stored it before building the page, it is in both. Every merged page drops messages whose id is already in the history, then is inserted in front as is (pages are always older than what is there). Closing a conversation erases its entry, so selecting it again fetches fresh.
+
 **Length prefix framing, not a delimiter.** It is the usual choice for C++ servers and binary protocols, the size is known before reading, and it keeps working if JSON is ever replaced by a binary format, where a delimiter byte could appear inside the payload. `Framer` takes and returns `std::string` as a byte container (binary-safe when built with an explicit size), so a binary serializer would need no `Framer` change. `Framer` throws and the socket class logs and closes, so `Framer` needs no logger.
 
 **Both sides drain the socket on every read.** Client sockets on the server are edge-triggered (`EPOLLET`), so epoll does not notify again for bytes left in the socket: `ReadClientSocket` reads until `EAGAIN`. The client does the same in `Read()`, called by its once-per-render-frame `Update()`, otherwise a large payload would take many render frames to arrive. All complete frames are extracted first, then dispatched in order.
@@ -162,7 +167,8 @@ The file is written with mode `0600` — the default would let every account on 
 
 - `SocketClient::Connect` and `SocketServer`'s setup call `exit()` instead of reporting the failure.
 - The write buffers have no cap: a peer that never reads makes them grow without limit.
-- Message history is not loaded: a conversation only shows the messages sent during this run. Group conversations exist on the server (up to 9 users) but the client can only start one-on-one conversations, one search result at a time.
+- Only the first page of message history is loaded (the newest 42 messages); older pages on scroll up are not wired yet.
+- Group conversations exist on the server (up to 9 users) but the client can only start one-on-one conversations, one search result at a time.
 - Expired and orphaned sessions are never deleted from the repository.
 - Presence is login-based and wrong with several devices: logging out on one sends `USER_OFFLINE` while another is still connected, and closing the app sends nothing. Planned: presence based on authenticated connections (online when a user's first socket is bound to them at login, offline when their last one is unbound), not on raw TCP connections, which exist before login.
 

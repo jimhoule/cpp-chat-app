@@ -4,6 +4,8 @@
 #include "json/UserJson.h"
 #include "views/UserView.h"
 
+#include <utility>
+
 // **********
 // * PUBLIC *
 // **********
@@ -12,10 +14,10 @@ UserOnlineSocketEventPayload UserOnlineSocketEventPayloadDeserializer::Deseriali
     const Json json = Json::Parse(jsonString);
     const Json userViewJson = json.GetObject("user");
 
-    const UserView userView = ConvertJsonToUserView(userViewJson);
+    UserView userView = ConvertJsonToUserView(userViewJson);
 
     UserOnlineSocketEventPayload userOnlineSocketEventPayload = {};
-    userOnlineSocketEventPayload.user = userView;
+    userOnlineSocketEventPayload.user = std::move(userView);
 
     return userOnlineSocketEventPayload;
 }

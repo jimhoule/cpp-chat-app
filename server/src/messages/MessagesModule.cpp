@@ -19,6 +19,11 @@ MessagesModule::MessagesModule(SocketServer& socketServer, ConversationsService&
         { RequireAuthentication(socketServer) },
         m_messagesHandler.GetCreateMessageHandler()
     );
+    socketServer.On(
+        SocketEventName::FIND_MESSAGES_PAGE_BY_CONVERSATION_ID,
+        { RequireAuthentication(socketServer) },
+        m_messagesHandler.GetFindMessagesPageByConversationIdHandler()
+    );
 }
 
 MessagesService& MessagesModule::GetService()

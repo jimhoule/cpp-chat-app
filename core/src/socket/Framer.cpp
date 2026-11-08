@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cstring>
 #include <stdexcept>
+#include <utility>
 
 constexpr std::size_t LENGTH_PREFIX_SIZE = sizeof(std::uint32_t);
 constexpr std::uint32_t MAX_MESSAGE_SIZE = 10 * 1024 * 1024;
@@ -78,8 +79,8 @@ std::vector<std::string> Framer::ExtractFrames()
         }
 
         // Copies the current frame's payload out of the buffer without its prefix
-        const std::string payload = m_buffer.substr(offset + LENGTH_PREFIX_SIZE, payloadLength);
-        payloads.push_back(payload);
+        std::string payload = m_buffer.substr(offset + LENGTH_PREFIX_SIZE, payloadLength);
+        payloads.push_back(std::move(payload));
         // Moves past this frame
         offset += LENGTH_PREFIX_SIZE + payloadLength;
     }

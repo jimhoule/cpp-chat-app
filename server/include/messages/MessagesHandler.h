@@ -1,8 +1,10 @@
 #pragma once
 
 #include "deserializer/CreateMessageSocketEventPayloadDeserializer.h"
+#include "deserializer/FindMessagesPageByConversationIdSocketEventPayloadDeserializer.h"
 #include "messages/MessagesService.h"
 #include "serializer/ConversationReopenedSocketEventSerializer.h"
+#include "serializer/MessagesPageFoundByConversationIdSocketEventSerializer.h"
 #include "serializer/MessageCreatedSocketEventSerializer.h"
 #include "socket/SocketErrorCode.h"
 #include "socket/SocketServer.h"
@@ -15,6 +17,7 @@ class MessagesHandler
 public:
     MessagesHandler(SocketServer& socketServer, MessagesService& messagesService, Logger& logger);
 
+    SocketServer::EventHandler GetFindMessagesPageByConversationIdHandler();
     SocketServer::EventHandler GetCreateMessageHandler();
 
 private:
@@ -28,6 +31,9 @@ private:
 
     MessageCreatedSocketEventSerializer m_messageCreatedSocketEventSerializer = {};
     CreateMessageSocketEventPayloadDeserializer m_createMessageSocketEventPayloadDeserializer = {};
+
+    MessagesPageFoundByConversationIdSocketEventSerializer m_messagesPageFoundByConversationIdSocketEventSerializer = {};
+    FindMessagesPageByConversationIdSocketEventPayloadDeserializer m_findMessagesPageByConversationIdSocketEventPayloadDeserializer = {};
 
     SocketErrorCode ConvertMessagesResultCodeToSocketErrorCode(MessagesService::MessagesResultCode messagesResultCode);
 };

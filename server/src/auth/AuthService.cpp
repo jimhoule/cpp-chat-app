@@ -2,6 +2,8 @@
 
 #include "log/Logger.h"
 
+#include <utility>
+
 // **********
 // * PUBLIC *
 // **********
@@ -36,7 +38,7 @@ AuthService::AuthResult AuthService::Authenticate(const AuthenticateDto& authent
     // Fetches user
     UsersService::FindUserByIdDto findUserByIdDto = {};
     findUserByIdDto.id = session.userId;
-    const UsersService::UserResult userResult = m_usersService.FindById(findUserByIdDto);
+    UsersService::UserResult userResult = m_usersService.FindById(findUserByIdDto);
     if (!userResult.data.has_value())
     {
         authResult.code = AuthResultCode::ORPHANED_SESSION;
@@ -54,7 +56,7 @@ AuthService::AuthResult AuthService::Authenticate(const AuthenticateDto& authent
     }
 
     authResult.data.sessionId = session.id;
-    authResult.data.user = userResult.data.value();
+    authResult.data.user = std::move(userResult.data.value());
 
     return authResult;
 }
@@ -67,7 +69,7 @@ AuthService::AuthResult AuthService::Login(const LoginDto& loginDto)
     UsersService::VerifyUserCredentialsDto verifyUserCredentialsDto = {};
     verifyUserCredentialsDto.email = loginDto.email;
     verifyUserCredentialsDto.password = loginDto.password;
-    const UsersService::UserResult userResult = m_usersService.VerifyCredentials(verifyUserCredentialsDto);
+    UsersService::UserResult userResult = m_usersService.VerifyCredentials(verifyUserCredentialsDto);
     if (userResult.code == UsersService::UsersResultCode::UNKNOWN_USER)
     {
         authResult.code = AuthResultCode::UNKNOWN_USER;
@@ -80,13 +82,13 @@ AuthService::AuthResult AuthService::Login(const LoginDto& loginDto)
         return authResult;
     }
 
-    const UserView& user = userResult.data.value();
+    UserView& user = userResult.data.value();
 
     // Creates session
     const Session session = CreateSession(user.id);
 
     authResult.data.sessionId = session.id;
-    authResult.data.user = user;
+    authResult.data.user = std::move(user);
 
     return authResult;
 }
@@ -132,20 +134,20 @@ AuthService::AuthResult AuthService::Register(const RegisterDto& registerDto)
     createUserDto.firstName = registerDto.firstName;
     createUserDto.lastName = registerDto.lastName;
     createUserDto.password = registerDto.password;
-    const UsersService::UserResult userResult = m_usersService.Create(createUserDto);
+    UsersService::UserResult userResult = m_usersService.Create(createUserDto);
     if (userResult.code == UsersService::UsersResultCode::EMAIL_ALREADY_USED)
     {
         authResult.code = AuthResultCode::EMAIL_ALREADY_USED;
         return authResult;
     }
 
-    const UserView& user = userResult.data.value();
+    UserView& user = userResult.data.value();
     
     // Creates session
     const Session session = CreateSession(user.id);
 
     authResult.data.sessionId =  session.id;
-    authResult.data.user = user;
+    authResult.data.user = std::move(user);
 
     return authResult;
 }
@@ -188,7 +190,13 @@ Session AuthService::CreateSession(const std::string& userId)
 {
     SessionsService::CreateSessionDto createSessionDto = {};
     createSessionDto.userId = userId;
-    const SessionsService::SessionResult sessionResult = m_sessionsService.Create(createSessionDto);
+    /**
+     * NOTES:
+     *  - Returning a whole local (return sessionResult) moves automatically but returning part of
+     *    it (a member or value()) copies so std::move is needed here
+     *  - sessionResult is not const so the session can be moved out
+     */
+    SessionsService::SessionResult sessionResult = m_sessionsService.Create(createSessionDto);
 
-    return sessionResult.data.value();
+    return std::move(sessionResult.data.value());
 }

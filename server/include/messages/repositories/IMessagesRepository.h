@@ -2,8 +2,9 @@
 
 #include "models/Message.h"
 
-#include "optional"
+#include <cstddef>
 #include <string>
+#include <vector>
 
 class IMessagesRepository
 {
@@ -19,4 +20,5 @@ public:
     IMessagesRepository& operator=(const IMessagesRepository&) = delete;
 
     virtual Message Create(const Message& message) = 0;
+    virtual std::vector<Message> FindByConversationIdBefore(const std::string& conversationId, const std::string& beforeMessageId, std::size_t limit) = 0;
 };

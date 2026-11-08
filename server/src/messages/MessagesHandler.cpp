@@ -13,6 +13,42 @@ MessagesHandler::MessagesHandler(SocketServer& socketServer, MessagesService& me
     , m_logger(logger)
 {}
 
+SocketServer::EventHandler MessagesHandler::GetFindMessagesPageByConversationIdHandler()
+{
+    return [this](const SocketServer::EventContext& context) {
+        // Gets find messages page by coonversation id socket event payload
+        const FindMessagesPageByConversationIdSocketEventPayload findMessagesPageByConversationIdSocketEventPayload = m_findMessagesPageByConversationIdSocketEventPayloadDeserializer.Deserialize(context.serializedPayload);
+
+        // Fetches messages page
+        MessagesService::FindMessagesPageByConversationIdDto findMessagesPageByConversationIdDto = {};
+        findMessagesPageByConversationIdDto.conversationId = findMessagesPageByConversationIdSocketEventPayload.conversationId;
+        findMessagesPageByConversationIdDto.cursor = findMessagesPageByConversationIdSocketEventPayload.cursor;
+        findMessagesPageByConversationIdDto.userId = context.user->id;
+
+        const MessagesService::MessagesPageResult messagesPageResult = m_messagesService.FindPageByConversationId(findMessagesPageByConversationIdDto);
+        if (messagesPageResult.code != MessagesService::MessagesResultCode::OK)
+        {
+            const std::string messagesResultCodeString = m_messagesService.ConvertMessagesResultCodeToString(messagesPageResult.code);
+            const SocketErrorCode socketErrorCode = ConvertMessagesResultCodeToSocketErrorCode(messagesPageResult.code);
+            throw ExpectedException(
+                socketErrorCode, 
+                "Fetch messages page failed for user " + context.user->id + ", " + messagesResultCodeString
+            );
+        }
+
+        // Serializes messages page found by conversation id socket event
+        const MessagesPageFoundByConversationIdSocketEventPayload messagesPageFoundByConversationIdSocketEventPayload(
+            messagesPageResult.data,
+            findMessagesPageByConversationIdSocketEventPayload.conversationId
+        );
+        const MessagesPageFoundByConversationIdSocketEvent messagesPageFoundByConversationIdSocketEvent(messagesPageFoundByConversationIdSocketEventPayload);
+        const std::string serializedMessagesPageFoundByConversationIdSocketEvent = m_messagesPageFoundByConversationIdSocketEventSerializer.Serialize(messagesPageFoundByConversationIdSocketEvent);
+
+        // Sends messages page found by conversation id socket event
+        m_socketServer.SendTo(context.clientSocket, serializedMessagesPageFoundByConversationIdSocketEvent);
+    };
+}
+
 SocketServer::EventHandler MessagesHandler::GetCreateMessageHandler()
 {
     return [this](const SocketServer::EventContext& context) {

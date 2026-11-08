@@ -9,6 +9,8 @@
 #include "messages/MessagesApi.h"
 #include "users/UsersApi.h"
 
+#include <algorithm>
+
 constexpr int SERVER_PORT =  5000;
 
 // **********
@@ -39,6 +41,7 @@ ChatLayer::ChatLayer(
     , m_conversationOpenedObserver(*this, &ChatLayer::HandleConversationOpened)
     , m_conversationReopenedObserver(*this, &ChatLayer::HandleConversationReopened)
     , m_messageCreatedObserver(*this, &ChatLayer::HandleMessageCreated)
+    , m_messagesPageFoundObserver(*this, &ChatLayer::HandleMessagesPageFound)
     , m_usersSearchedObserver(*this, &ChatLayer::HandleUsersSearched)
 {}
 
@@ -51,6 +54,7 @@ void ChatLayer::OnAttach()
     m_conversationsApi.GetConversationOpenedSubject().Subscribe(&m_conversationOpenedObserver);
     m_conversationsApi.GetConversationReopenedSubject().Subscribe(&m_conversationReopenedObserver);
     m_messagesApi.GetMessageCreatedSubject().Subscribe(&m_messageCreatedObserver);
+    m_messagesApi.GetMessagesPageFoundSubject().Subscribe(&m_messagesPageFoundObserver);
     m_usersApi.GetUsersSearchedSubject().Subscribe(&m_usersSearchedObserver);
 
     m_conversationsApi.FindAllOpen();
@@ -75,6 +79,7 @@ void ChatLayer::OnDetach()
     m_conversationsApi.GetConversationOpenedSubject().Unsubscribe(&m_conversationOpenedObserver);
     m_conversationsApi.GetConversationReopenedSubject().Unsubscribe(&m_conversationReopenedObserver);
     m_messagesApi.GetMessageCreatedSubject().Unsubscribe(&m_messageCreatedObserver);
+    m_messagesApi.GetMessagesPageFoundSubject().Unsubscribe(&m_messagesPageFoundObserver);
     m_usersApi.GetUsersSearchedSubject().Unsubscribe(&m_usersSearchedObserver);
     
     Reset();
@@ -447,8 +452,7 @@ void ChatLayer::OnRender()
                         conversationContainer.bgColorHovered = Rgba(0, 0, 0, 255);
                         conversationContainer.isAutoResizableY = true;
                         conversationContainer.OnClick = [this, &conversation]() {
-                            m_selectedConversationId = conversation.id;
-                            m_logger.Info("SELECTED CONVERSATION id: " + m_selectedConversationId);
+                            SelectConversation(conversation.id);
                         };
                         conversationContainer.DrawContent = [this, &conversation, index](const Gui::ContainerState& state) {
                             const Vector2 conversationContainerAvailableSpace = m_gui.GetAvailableSpace();
@@ -553,7 +557,14 @@ void ChatLayer::OnRender()
             messagesContainer.DrawContent = [this](const Gui::ContainerState& state) {
                 const Vector2 messagesContainerAvailableSpace = m_gui.GetAvailableSpace();
 
-                const std::vector<MessageView>& selectedConversationMessage = m_conversationMessagesMap[m_selectedConversationId];
+                // NOTE: Not drawing messages if no conversation is selected
+                const MessageHistories::MessageHistory* messageHistory = m_messageHistories.Find(m_selectedConversationId);
+                if (messageHistory == nullptr)
+                {
+                    return;
+                }
+
+                const std::vector<MessageView>& selectedConversationMessage = messageHistory->messages;
                 for (std::size_t index = 0; index < selectedConversationMessage.size(); index++)
                 {
                     // MESSAGE CONTAINER
@@ -662,7 +673,7 @@ void ChatLayer::OnRender()
             messageTextInputMultiline.textInput = messageTextInput;
             messageTextInputMultiline.size = Vector2(messageTextInputContainerAvailableSpace);
 
-            m_gui.DrawTextInputMultiline(m_messageValue, messageTextInputMultiline);
+            m_gui.DrawTextInputMultiline(m_messageText, messageTextInputMultiline);
         };
 
         m_gui.SetPositionX(mainWindowAvailableSpace.x * 0.25f);
@@ -687,7 +698,7 @@ void ChatLayer::OnRender()
             sendButton.bgColorActive = Rgba(150, 0, 0, 255); // Darker red when active
             sendButton.bgColorHovered = Rgba(255, 100, 100, 255); // Lighter red on hover
             sendButton.cornerRounding = 10.0f;
-            sendButton.isDisabled = m_messageValue.empty() || m_selectedConversationId.empty();
+            sendButton.isDisabled = m_messageText.empty() || m_selectedConversationId.empty();
             sendButton.OnClick = [this]() {
                 HandleSendMessageButtonClicked();
             };
@@ -726,6 +737,7 @@ void ChatLayer::HandleAllOpenConversationsFound(const AllOpenConversationsFoundE
 
 void ChatLayer::HandleConversationClosed(const ConversationClosedEvent& conversationClosedEvent)
 {
+    // Removes conversation
     for (std::size_t index = 0; index < m_conversations.size(); index++)
     {
         const ConversationView& conversation = m_conversations[index];
@@ -735,6 +747,9 @@ void ChatLayer::HandleConversationClosed(const ConversationClosedEvent& conversa
             break;
         }
     }
+
+    // Removes message history
+    m_messageHistories.Remove(conversationClosedEvent.conversation.id);
 
     // Checks if list is now empty
     if (m_conversations.empty())
@@ -746,7 +761,7 @@ void ChatLayer::HandleConversationClosed(const ConversationClosedEvent& conversa
     // Selects first conversation if deleted conversation is the selected one
     if (m_selectedConversationId == conversationClosedEvent.conversation.id)
     {
-        m_selectedConversationId = m_conversations[0].id;
+        SelectConversation(m_conversations[0].id);
     }
 }
 
@@ -756,7 +771,7 @@ void ChatLayer::HandleConversationOpened(const ConversationOpenedEvent& conversa
 
     UpsertConversation(conversation);
     // NOTE: Client asked to open it so it gets the focus
-    m_selectedConversationId = conversation.id;
+    SelectConversation(conversation.id);
 }
 
 void ChatLayer::HandleConversationReopened(const ConversationReopenedEvent& conversationReopenedEvent)
@@ -767,11 +782,13 @@ void ChatLayer::HandleConversationReopened(const ConversationReopenedEvent& conv
 
 void ChatLayer::HandleMessageCreated(const MessageCreatedEvent& messageCreatedEvent)
 {
-    const MessageView& message = messageCreatedEvent.message;
-
     // NOTE: A message in a conversation a user had closed comes after CONVERSATION_REOPENED so the conversation is already open again
-    std::vector<MessageView>& conversationMessages = m_conversationMessagesMap[message.conversationId];
-    conversationMessages.push_back(message);
+    m_messageHistories.AppendLiveMessage(messageCreatedEvent.message);
+}
+
+void ChatLayer::HandleMessagesPageFound(const MessagesPageFoundEvent& messagesPageFoundEvent)
+{
+    m_messageHistories.MergePage(messagesPageFoundEvent.conversationId, messagesPageFoundEvent.messagesPage);
 }
 
 void ChatLayer::HandleLoggedOut(const LoggedOutEvent& loggedOutEvent)
@@ -806,10 +823,11 @@ void ChatLayer::HandleSendMessageButtonClicked()
 {
     MessagesApi::CreateMessageParams createMessageParams = {};
     createMessageParams.conversationId = m_selectedConversationId;
-    createMessageParams.text = m_messageValue;
+    createMessageParams.text = m_messageText;
     m_messagesApi.Create(createMessageParams);
 
-    m_logger.Info("SENT: " + m_messageValue);
+    // Resets message text after each send
+    m_messageText = "";
 }
 
 // NOTE: Only opens conversation with one user for now (2 users total with the current user added by the server)
@@ -832,18 +850,38 @@ void ChatLayer::Reset()
     m_searchUsersValue.clear();
     m_searchUsersDebouncer.Reset();
 
+    // Messages
+    m_messageHistories.Clear();
+    m_messageText.clear();
+
     // Conversations
     m_conversations.clear();
     m_selectedConversationId = "";
-    m_conversationMessagesMap = {};
-
-    // Messages
-    m_messageValue.clear();
 
     // Textures
     m_blankImageTexture.Destroy();
     m_closableImageTexture.Destroy();
     m_whiteLeftArrowImageTexture.Destroy();
+}
+
+void ChatLayer::SelectConversation(const std::string& conversationId)
+{
+    m_selectedConversationId = conversationId;
+
+    // NOTE: Already loading or loaded so nothing to fetch
+    const bool hasMessageHistory = m_messageHistories.Has(conversationId);
+    if (hasMessageHistory)
+    {
+        return;
+    }
+
+    // NOTE: Added before the fetch so live messages arriving while first page is in flight are kept
+    m_messageHistories.Add(conversationId);
+
+    // Fetches first messages page
+    MessagesApi::FindMessagesPageParams findMessagesPageParams = {};
+    findMessagesPageParams.conversationId = conversationId;
+    m_messagesApi.FindPage(findMessagesPageParams);
 }
 
 void ChatLayer::UpsertConversation(const ConversationView& upsertedConversation)

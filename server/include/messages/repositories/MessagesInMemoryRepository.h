@@ -2,6 +2,8 @@
 
 #include "messages/repositories/IMessagesRepository.h"
 
+#include <cstddef>
+#include <string>
 #include <vector>
 
 // Forward declarations
@@ -13,6 +15,7 @@ public:
     MessagesInMemoryRepository(Logger& logger);
 
     Message Create(const Message& message) override;
+    std::vector<Message> FindByConversationIdBefore(const std::string& conversationId, const std::string& beforeMessageId, std::size_t limit) override;
 
 private:
     std::vector<Message> m_messages = {};

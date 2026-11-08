@@ -3,6 +3,7 @@
 #include "json/UserJson.h"
 #include "views/UserView.h"
 
+#include <utility>
 #include <vector>
 
 Json ConvertConversationViewToJson(const ConversationView& conversationView)
@@ -36,7 +37,7 @@ ConversationView ConvertJsonToConversationView(const Json& json)
     for (const Json& conversationUserViewJson : conversationUserViewJsons)
     {
         ConversationUserView conversationUserView = ConvertJsonToConversationUserView(conversationUserViewJson);
-        conversationView.users.push_back(conversationUserView);
+        conversationView.users.push_back(std::move(conversationUserView));
     }
 
     return conversationView;
@@ -60,7 +61,7 @@ ConversationUserView ConvertJsonToConversationUserView(const Json& json)
     UserView userView = ConvertJsonToUserView(userViewJson);
 
     ConversationUserView conversationUserView = {};
-    conversationUserView.user = userView;
+    conversationUserView.user = std::move(userView);
     conversationUserView.isOpen = json.GetBool("isOpen");
 
     return conversationUserView;

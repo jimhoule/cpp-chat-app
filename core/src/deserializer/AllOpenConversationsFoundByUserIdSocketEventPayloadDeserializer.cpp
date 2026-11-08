@@ -4,6 +4,7 @@
 #include "json/Json.h"
 #include "views/ConversationView.h"
 
+#include <utility>
 #include <vector>
 
 // **********
@@ -19,12 +20,12 @@ AllOpenConversationsFoundByUserIdSocketEventPayload AllOpenConversationsFoundByU
     conversationViews.reserve(conversationViewJsons.size());
     for (const Json& conversationViewJson : conversationViewJsons)
     {
-        const ConversationView conversationView = ConvertJsonToConversationView(conversationViewJson);
-        conversationViews.push_back(conversationView);
+        ConversationView conversationView = ConvertJsonToConversationView(conversationViewJson);
+        conversationViews.push_back(std::move(conversationView));
     }
 
     AllOpenConversationsFoundByUserIdSocketEventPayload allOpenConversationsFoundByUserIdSocketEventPayload = {};
-    allOpenConversationsFoundByUserIdSocketEventPayload.conversations = conversationViews;
+    allOpenConversationsFoundByUserIdSocketEventPayload.conversations = std::move(conversationViews);
 
     return allOpenConversationsFoundByUserIdSocketEventPayload;
 }

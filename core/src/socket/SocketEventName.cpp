@@ -70,6 +70,12 @@ std::string ConvertSocketEventNameToString(SocketEventName socketEventName)
         case SocketEventName::MESSAGE_CREATED:
             return "MESSAGE CREATED";
 
+        case SocketEventName::FIND_MESSAGES_PAGE_BY_CONVERSATION_ID:
+            return "FIND MESSAGES PAGE BY CONVERSATION ID";
+
+        case SocketEventName::MESSAGES_PAGE_FOUND_BY_CONVERSATION_ID:
+            return "MESSAGES PAGE FOUND BY CONVERSATION ID";
+
 
         // Users
         case SocketEventName::SEARCH_USERS:

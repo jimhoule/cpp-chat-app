@@ -36,8 +36,8 @@ void SocketServer::BindConnectionUser(int clientSocket, const UserView& user)
 
 	/**
 	 * NOTES:
-	 * 	- Detaches connection from userit was bound to, if any, so it is neverlisted under two users
-	 * 	- For the case for re authentication
+	 * 	- Detaches connection from user it was bound to, if any, so it is never listed under two users
+	 * 	- For the case for reauthentication
 	 */
 	UnbindConnectionUser(clientSocket);
 
@@ -155,7 +155,7 @@ void SocketServer::Listen()
 
 				/**
 				 * NOTES:
-				 * 	- Socket has room again so send what is waiting
+				 * 	- Socket sends what is waiting because it has room again
 				 * 	- Done before reading because reading can close the socket
 				 */
 				if (readyEvent.events & EPOLLOUT)

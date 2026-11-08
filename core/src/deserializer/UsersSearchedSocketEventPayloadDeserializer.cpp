@@ -4,6 +4,7 @@
 #include "json/Json.h"
 #include "views/UserView.h"
 
+#include <utility>
 #include <vector>
 
 // **********
@@ -19,12 +20,12 @@ UsersSearchedSocketEventPayload UsersSearchedSocketEventPayloadDeserializer::Des
     userViews.reserve(userViewJsons.size());
     for (const Json& userViewJson : userViewJsons)
     {
-        const UserView userView = ConvertJsonToUserView(userViewJson);
-        userViews.push_back(userView);
+        UserView userView = ConvertJsonToUserView(userViewJson);
+        userViews.push_back(std::move(userView));
     }
 
     UsersSearchedSocketEventPayload usersSearchedSocketEventPayload = {};
-    usersSearchedSocketEventPayload.users = userViews;
+    usersSearchedSocketEventPayload.users = std::move(userViews);
 
     return usersSearchedSocketEventPayload;
 }

@@ -4,6 +4,7 @@
 #include "json/Json.h"
 #include "views/ConversationView.h"
 
+#include <utility>
 #include <vector>
 
 // **********
@@ -14,10 +15,10 @@ ConversationOpenedSocketEventPayload ConversationOpenedSocketEventPayloadDeseria
     const Json json = Json::Parse(jsonString);
     const Json conversationViewJson = json.GetObject("conversation");
 
-    const ConversationView conversationView = ConvertJsonToConversationView(conversationViewJson);
+    ConversationView conversationView = ConvertJsonToConversationView(conversationViewJson);
 
     ConversationOpenedSocketEventPayload conversationOpenedSocketEventPayload = {};
-    conversationOpenedSocketEventPayload.conversation = conversationView;
+    conversationOpenedSocketEventPayload.conversation = std::move(conversationView);
 
     return conversationOpenedSocketEventPayload;
 }

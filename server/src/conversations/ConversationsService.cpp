@@ -5,6 +5,7 @@
 #include "uuid/UuidService.h"
 
 #include <unordered_set>
+#include <utility>
 
 // NOTE: A conversation is identified by its exact set of users, so users can never be added to an existing one. Past this size that model breaks down and a named channel is needed
 constexpr size_t MAX_CONVERSATION_USERS = 9;
@@ -31,8 +32,8 @@ ConversationsService::ConversationResult ConversationsService::Close(const Close
         return conversationResult;
     }
 
-    const ConversationView conversationView = ConvertConversationToConversationView(conversation.value());
-    conversationResult.data = conversationView;
+    ConversationView conversationView = ConvertConversationToConversationView(conversation.value());
+    conversationResult.data = std::move(conversationView);
 
     return conversationResult;
 }
@@ -75,8 +76,8 @@ ConversationsService::ConversationResult ConversationsService::Open(const OpenCo
     {
         const std::optional<Conversation> openedConversation = m_conversationsRepository->UpdateIsOpen(existingConversation.value().id, openConversationDto.initiatorUserId, true);
         
-        const ConversationView conversationView = ConvertConversationToConversationView(openedConversation.value());
-        conversationResult.data = conversationView;
+        ConversationView conversationView = ConvertConversationToConversationView(openedConversation.value());
+        conversationResult.data = std::move(conversationView);
 
         return conversationResult;
     }
@@ -91,11 +92,11 @@ ConversationsService::ConversationResult ConversationsService::Open(const OpenCo
         conversationUser.userId = normalizedUserId;
         conversationUser.isOpen = normalizedUserId == openConversationDto.initiatorUserId;
 
-        conversation.users.push_back(conversationUser);
+        conversation.users.push_back(std::move(conversationUser));
     }
 
-    const ConversationView conversationView = ConvertConversationToConversationView(m_conversationsRepository->Create(conversation));
-    conversationResult.data = conversationView;
+    ConversationView conversationView = ConvertConversationToConversationView(m_conversationsRepository->Create(conversation));
+    conversationResult.data = std::move(conversationView);
 
     return conversationResult;
 }
@@ -130,8 +131,8 @@ ConversationsService::ConversationResult ConversationsService::OpenForAllUsers(c
         openedConversation = m_conversationsRepository->UpdateIsOpen(conversation.value().id, conversationUser.userId, true);
     }
 
-    const ConversationView conversationView = ConvertConversationToConversationView(openedConversation.value());
-    conversationResult.data = conversationView;
+    ConversationView conversationView = ConvertConversationToConversationView(openedConversation.value());
+    conversationResult.data = std::move(conversationView);
 
     return conversationResult;
 }
@@ -146,8 +147,8 @@ ConversationsService::ConversationResult ConversationsService::FindById(const Fi
         return conversationResult;
     }
 
-    const ConversationView conversationView = ConvertConversationToConversationView(conversation.value());
-    conversationResult.data = conversationView;
+    ConversationView conversationView = ConvertConversationToConversationView(conversation.value());
+    conversationResult.data = std::move(conversationView);
 
     return conversationResult;
 }
@@ -163,8 +164,8 @@ ConversationsService::ConversationResult ConversationsService::FindByUserIds(con
         return conversationResult;
     }
 
-    const ConversationView conversationView = ConvertConversationToConversationView(conversation.value());
-    conversationResult.data = conversationView;
+    ConversationView conversationView = ConvertConversationToConversationView(conversation.value());
+    conversationResult.data = std::move(conversationView);
 
     return conversationResult;
 }
@@ -175,10 +176,10 @@ ConversationsService::ConversationsResult ConversationsService::FindAllOpenByUse
     const std::vector<Conversation> conversations = m_conversationsRepository->FindAllOpenByUserId(findAllOpenConversationsByUserIdDto.userId);
 
     // Builds conversation views
-    const std::vector<ConversationView> conversationViews = ConvertConversationsToConversationViews(conversations);
+    std::vector<ConversationView> conversationViews = ConvertConversationsToConversationViews(conversations);
 
     ConversationsResult conversationsResult = {};
-    conversationsResult.data = conversationViews;
+    conversationsResult.data = std::move(conversationViews);
 
     return conversationsResult;
 }
@@ -276,8 +277,8 @@ std::vector<ConversationView> ConversationsService::ConvertConversationsToConver
     std::vector<ConversationView> conversationViews = {};
     for (const Conversation& conversation : conversations)
     {
-        const ConversationView conversationView = ConvertConversationToConversationView(conversation, userViewsMap);
-        conversationViews.push_back(conversationView);
+        ConversationView conversationView = ConvertConversationToConversationView(conversation, userViewsMap);
+        conversationViews.push_back(std::move(conversationView));
     }
 
     return conversationViews;
@@ -289,8 +290,14 @@ ConversationView ConversationsService::ConvertConversationToConversationView(con
     const std::vector<Conversation> conversations = { conversation };
     const UserViewsMap userViewsMap = BuildUserViewsMap(conversations);
 
-    // Builds conversation view
-    const ConversationView conversationView = ConvertConversationToConversationView(conversation, userViewsMap);
+    /**
+     * NOTES:
+     *  - Builds conversation view
+     *  - Not const so the return can move it if the compiler does not construct it
+     *    directly in the caller (NRVO is allowed but not guaranteed)
+     *  - A const local cannot be moved from so that fallback would be a copy
+     */
+    ConversationView conversationView = ConvertConversationToConversationView(conversation, userViewsMap);
 
     return conversationView;
 }
@@ -312,14 +319,14 @@ ConversationView ConversationsService::ConvertConversationToConversationView(con
         conversationUserView.isOpen = conversationUser.isOpen;
         conversationUserView.user = userViewsMapIterator->second;
 
-        conversationUserViews.push_back(conversationUserView);
+        conversationUserViews.push_back(std::move(conversationUserView));
     }
 
     // Builds conversation view
     ConversationView conversationView = {};
     conversationView.id = conversation.id;
     conversationView.createdAt = conversation.createdAt;
-    conversationView.users = conversationUserViews;
+    conversationView.users = std::move(conversationUserViews);
 
     return conversationView;
 }

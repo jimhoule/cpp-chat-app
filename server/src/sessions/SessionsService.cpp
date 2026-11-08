@@ -2,6 +2,8 @@
 
 #include "uuid/UuidService.h"
 
+#include <utility>
+
 // 7 days in seconds
 const std::time_t SESSION_TTL_SECONDS = 7 * 24 * 60 * 60;
 
@@ -34,14 +36,14 @@ SessionsService::SessionResult SessionsService::Delete(const DeleteSessionDto& d
 {
     SessionResult sessionResult = {};
     
-    const std::optional<Session> session = m_sessionsRepository->Delete(deleteSessionDto.id);
+    std::optional<Session> session = m_sessionsRepository->Delete(deleteSessionDto.id);
     if (!session.has_value())
     {
         sessionResult.code = SessionsResultCode::UNKNOWN_SESSION;
         return sessionResult;
     }
 
-    sessionResult.data = session;
+    sessionResult.data = std::move(session);
 
     return sessionResult;
 }
@@ -50,7 +52,7 @@ SessionsService::SessionResult SessionsService::FindById(const FindSessionByIdDt
 {
     SessionResult sessionResult = {};
 
-    const std::optional<Session> session = m_sessionsRepository->FindById(findSessionByIdDto.id);
+    std::optional<Session> session = m_sessionsRepository->FindById(findSessionByIdDto.id);
     if (!session.has_value())
     {
         return sessionResult;
@@ -63,7 +65,7 @@ SessionsService::SessionResult SessionsService::FindById(const FindSessionByIdDt
         return sessionResult;
     }
 
-    sessionResult.data = session;
+    sessionResult.data = std::move(session);
 
     return sessionResult;
 }
@@ -73,7 +75,7 @@ SessionsService::SessionResult SessionsService::Refresh(const RefreshSessionDto&
     SessionResult sessionResult = {};
 
     // NOTE: An expired session cannot be refreshed
-    std::optional<Session> existingSession = m_sessionsRepository->FindById(refreshSessionDto.id);
+    const std::optional<Session> existingSession = m_sessionsRepository->FindById(refreshSessionDto.id);
     if (!existingSession.has_value())
     {
         sessionResult.code = SessionsResultCode::UNKNOWN_SESSION;
@@ -89,14 +91,14 @@ SessionsService::SessionResult SessionsService::Refresh(const RefreshSessionDto&
 
     const std::time_t now = std::time(0);
     const std::time_t expiredAt = GenerateExpirationTime(now);
-    const std::optional<Session> session = m_sessionsRepository->Refresh(refreshSessionDto.id, expiredAt);
+    std::optional<Session> session = m_sessionsRepository->Refresh(refreshSessionDto.id, expiredAt);
     if (!session.has_value())
     {
         sessionResult.code = SessionsResultCode::UNKNOWN_SESSION;
         return sessionResult;
     }
 
-    sessionResult.data = session;
+    sessionResult.data = std::move(session);
 
     return sessionResult;
 }
