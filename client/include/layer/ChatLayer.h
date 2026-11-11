@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Gui.h"
-
+#include "ScrollAnchor.h"
 #include "auth/LoggedOutEvent.h"
 #include "auth/UserOnlineEvent.h"
 #include "conversations/AllOpenConversationsFoundEvent.h"
@@ -83,6 +83,7 @@ private:
     // Messages
     MessageHistories m_messageHistories = {};
     std::string m_messageText = "";
+    ScrollAnchor m_messagesScrollAnchor = {};
 
     // Conversations
     std::vector<ConversationView> m_conversations = {};

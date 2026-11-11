@@ -3,13 +3,16 @@
 #include <algorithm>
 #include <iterator>
 #include <unordered_set>
+#include <utility>
 
 // **********
 // * PUBLIC *
 // **********
 void MessageHistories::Add(const std::string& conversationId)
 {
-    m_messageHistoriesMap[conversationId] = {};
+    MessageHistory messageHistory = {};
+    messageHistory.isLoading = true;
+    m_messageHistoriesMap[conversationId] = std::move(messageHistory);
 }
 
 void MessageHistories::AppendLiveMessage(const MessageView& message)
@@ -19,13 +22,13 @@ void MessageHistories::AppendLiveMessage(const MessageView& message)
      *  - No entry means the history is not loaded yet
      *  - First page fetch will include this message
      */
-    MessageHistoriesMap::iterator messageHistoriesMapIterator = m_messageHistoriesMap.find(message.conversationId);
-    if (messageHistoriesMapIterator == m_messageHistoriesMap.end())
+    MessageHistory* messageHistory = FindMutable(message.conversationId);
+    if (messageHistory == nullptr)
     {
         return;
     }
 
-    messageHistoriesMapIterator->second.messages.push_back(message);
+    messageHistory->messages.push_back(message);
 }
 
 void MessageHistories::Clear()
@@ -46,8 +49,9 @@ const MessageHistories::MessageHistory* MessageHistories::Find(const std::string
 
 bool MessageHistories::Has(const std::string& conversationId) const
 {
-    MessageHistoriesMap::const_iterator messageHistoriesMapIterator = m_messageHistoriesMap.find(conversationId);
-    const bool hasMessageHistory = messageHistoriesMapIterator != m_messageHistoriesMap.end();
+    // NOTE: Calling Find() and not FindMutable() because const functions can only call other const functions
+    const MessageHistory* messageHistory = Find(conversationId);
+    const bool hasMessageHistory = messageHistory != nullptr;
 
     return hasMessageHistory;
 }
@@ -55,18 +59,17 @@ bool MessageHistories::Has(const std::string& conversationId) const
 void MessageHistories::MergePage(const std::string& conversationId, const MessagesPageView& messagesPage)
 {
     // NOTE: No entry means the conversation was closed while the page was in flight
-    MessageHistoriesMap::iterator messageHistoriesMapIterator = m_messageHistoriesMap.find(conversationId);
-    if (messageHistoriesMapIterator == m_messageHistoriesMap.end())
+    MessageHistory* messageHistory = FindMutable(conversationId);
+    if (messageHistory == nullptr)
     {
         return;
     }
 
-    MessageHistory& messageHistory = messageHistoriesMapIterator->second;
     std::vector<MessageView> pageMessages = messagesPage.items;
 
     // Drops messages already in the history (live messages that arrived while the page was in flight)
     std::unordered_set<std::string> messageIds = {};
-    for (const MessageView& message : messageHistory.messages)
+    for (const MessageView& message : messageHistory->messages)
     {
         messageIds.insert(message.id);
     }
@@ -90,15 +93,43 @@ void MessageHistories::MergePage(const std::string& conversationId, const Messag
      *  - Starts inserting at the front before the first message (just like push_front()) of the vector
      *    and inserts page messages from first to last
      */
-    messageHistory.messages.insert(
-        messageHistory.messages.begin(),
+    messageHistory->messages.insert(
+        messageHistory->messages.begin(),
         std::make_move_iterator(pageMessages.begin()),
         std::make_move_iterator(pageMessages.end())
     );
-    messageHistory.nextCursor = messagesPage.nextCursor;
+    messageHistory->nextCursor = messagesPage.nextCursor;
+    messageHistory->isLoading = false;
 }
 
 void MessageHistories::Remove(const std::string& conversationId)
 {
     m_messageHistoriesMap.erase(conversationId);
+}
+
+void MessageHistories::StartLoading(const std::string& conversationId)
+{
+    MessageHistory* messageHistory = FindMutable(conversationId);
+    if (messageHistory == nullptr)
+    {
+        return;
+    }
+
+    messageHistory->isLoading = true;
+}
+
+// ***********
+// * PRIVATE *
+// ***********
+MessageHistories::MessageHistory* MessageHistories::FindMutable(const std::string& conversationId)
+{
+    /**
+     * NOTES:
+     *  - Reuses Find() so the lookup logic lives in one place
+     *  - Find() returns a const pointer so const_cast() removes the const to allow modifying the entry
+     *  - Safe because the map itself is not const (only Find() hands it back as const)
+     */
+    MessageHistory* messageHistory = const_cast<MessageHistory*>(Find(conversationId));
+
+    return messageHistory;
 }

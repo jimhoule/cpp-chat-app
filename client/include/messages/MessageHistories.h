@@ -18,9 +18,11 @@ class MessageHistories
 public:
     struct MessageHistory
     {
-        std::vector<MessageView> messages;
+        // NOTE: True while a page request is in flight (first or older) so the same cursor is never sent twice
+        bool isLoading = false;
+        std::vector<MessageView> messages = {};
         // NOTE: Sent back as the cursor when scrolling up (empty means no older messages)
-        std::string nextCursor;
+        std::string nextCursor = "";
     };
 
     // NOTE: Adds empty entry (called right before first page fetch)
@@ -35,9 +37,13 @@ public:
     // NOTE: Ignored without an entry (conversation closed while the page was in flight)
     void MergePage(const std::string& conversationId, const MessagesPageView& messagesPage);
     void Remove(const std::string& conversationId);
+    // NOTE: Called right before an older page fetch (ignored without an entry)
+    void StartLoading(const std::string& conversationId);
 
 private:
     using MessageHistoriesMap = std::unordered_map<std::string, MessageHistory>;
 
     MessageHistoriesMap m_messageHistoriesMap = {};
+
+    MessageHistory* FindMutable(const std::string& conversationId);
 };

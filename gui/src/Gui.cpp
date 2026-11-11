@@ -5,6 +5,9 @@
 #include <imgui/imgui_impl_glfw.h>
 #include <imgui/imgui_impl_opengl3.h>
 
+// NOTE: ImGui leaves a scroll axis unchanged when given a negative value (SetNextWindowScroll)
+constexpr float IMGUI_SCROLL_UNCHANGED = -1.0f;
+
 // **********
 // * PUBLIC *
 // **********
@@ -54,38 +57,77 @@ void Gui::DrawButton(Button& button) const
     ImGui::PushStyleColor(ImGuiCol_Button, ToImVec4(button.bgColor.ToVector4()));
     ImGui::PushStyleColor(ImGuiCol_Text, ToImVec4(button.textColor.ToVector4()));
     ImGui::PushStyleColor(ImGuiCol_Border, ToImVec4(button.border.color.ToVector4()));
-    if (!button.bgColorActive.IsEmpty()) ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ToImVec4(button.bgColorActive.ToVector4()));
-    if (!button.bgColorHovered.IsEmpty()) ImGui::PushStyleColor(ImGuiCol_ButtonActive, ToImVec4(button.bgColorHovered.ToVector4()));
+    if (!button.bgColorActive.IsEmpty())
+    {
+        ImGui::PushStyleColor(ImGuiCol_ButtonActive, ToImVec4(button.bgColorActive.ToVector4()));
+    }
 
-    if (button.isDisabled)  ImGui::BeginDisabled();
+    if (!button.bgColorHovered.IsEmpty())
+    {
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ToImVec4(button.bgColorHovered.ToVector4()));
+    }
+
+    if (button.isDisabled)
+    {
+        ImGui::BeginDisabled();
+    }
 
     ImGui::Button(button.label.c_str(), ImVec2(button.size.x, button.size.y));
-    if (ImGui::IsItemClicked()) button.OnClick();
+    if (ImGui::IsItemClicked())
+    {
+        button.OnClick();
+    }
+
     if (ImGui::IsItemHovered())
     {
         ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-        if (!!button.OnHover) button.OnHover();
+        if (!!button.OnHover)
+        {
+            button.OnHover();
+        }
     }
 
-    if (button.isDisabled)  ImGui::EndDisabled();
+    if (button.isDisabled)
+    {
+        ImGui::EndDisabled();
+    }
 
     ImGui::PopStyleVar(3);
     ImGui::PopStyleColor(3);
-    if (!button.bgColorActive.IsEmpty()) ImGui::PopStyleColor(1);
-    if (!button.bgColorHovered.IsEmpty()) ImGui::PopStyleColor(1);
+    if (!button.bgColorActive.IsEmpty())
+    {
+        ImGui::PopStyleColor(1);
+    }
+
+    if (!button.bgColorHovered.IsEmpty())
+    {
+        ImGui::PopStyleColor(1);
+    }
 }
 
 void Gui::DrawContainer(Container& container) const
 {
     ImGuiChildFlags flags = ImGuiChildFlags_AlwaysUseWindowPadding;
-    if (container.isAutoResizableY) flags |= ImGuiChildFlags_AutoResizeY;
-    if (container.isAutoResizableX) flags |= ImGuiChildFlags_AutoResizeX;
+    if (container.isAutoResizableY)
+    {
+        flags |= ImGuiChildFlags_AutoResizeY;
+    }
+
+    if (container.isAutoResizableX)
+    {
+        flags |= ImGuiChildFlags_AutoResizeX;
+    }
 
     ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, container.border.height);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ToImVec2(container.padding));
     ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, container.cornerRounding);
     ImGui::PushStyleColor(ImGuiCol_ChildBg, ToImVec4(container.bgColor.ToVector4()));
     ImGui::PushStyleColor(ImGuiCol_Border, ToImVec4(container.border.color.ToVector4()));
+
+    if (container.scrollY != UNSET)
+    {
+        ImGui::SetNextWindowScroll(ImVec2(IMGUI_SCROLL_UNCHANGED, container.scrollY));
+    }
 
     if (ImGui::BeginChild(container.id.c_str(), ToImVec2(container.size), flags))
     {
@@ -112,7 +154,10 @@ void Gui::DrawContainer(Container& container) const
             );
         }
 
-        if (isHovered && !!container.OnHover) container.OnHover();
+        if (isHovered && !!container.OnHover)
+        {
+            container.OnHover();
+        }
 
         ContainerState state = {};
         state.isHovered = isHovered;
@@ -122,7 +167,10 @@ void Gui::DrawContainer(Container& container) const
 
     // NOTE: IsItemClicked() refers to the item that was most recently defined. For a child window, the "item" representing the whole child rectangle is defined by the BeginChild() and EndChild() calls
     const bool isClicked = ImGui::IsItemClicked();
-    if (isClicked && !!container.OnClick) container.OnClick();
+    if (isClicked && !!container.OnClick)
+    {
+        container.OnClick();
+    }
 
     ImGui::PopStyleVar(3);
     ImGui::PopStyleColor(2);
@@ -252,7 +300,11 @@ void Gui::DrawDropDownMenu(const DropDownMenu& dropDownMenu) const
         // NOTE: 0 for left mouse button
         const bool isClicked = isHovered && ImGui::IsMouseClicked(0);
 
-        if (isClicked && !!dropDownMenuItem->OnClick) dropDownMenuItem->OnClick();
+        if (isClicked && !!dropDownMenuItem->OnClick)
+        {
+            dropDownMenuItem->OnClick();
+        }
+
         if (isHovered)
         {
             if (!dropDownMenuItem->bgColorHovered.IsEmpty())
@@ -292,7 +344,10 @@ void Gui::DrawDropDownMenu(const DropDownMenu& dropDownMenu) const
                 );
             }
 
-            if (!!dropDownMenuItem->OnHover) dropDownMenuItem->OnHover();
+            if (!!dropDownMenuItem->OnHover)
+            {
+                dropDownMenuItem->OnHover();
+            }
         }
 
         // Sets next drop down menu item y coordinate
@@ -313,11 +368,18 @@ void Gui::DrawImageButton(ImageButton& imageButton) const
     Image imageButtonImage = imageButton.image;
 
     ImGui::InvisibleButton(imageButton.id.c_str(), ToImVec2(imageButton.image.size));
-    if (ImGui::IsItemClicked()) imageButton.OnClick();
+    if (ImGui::IsItemClicked())
+    {
+        imageButton.OnClick();
+    }
+
     if (ImGui::IsItemHovered())
     {
         ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-        if (!imageButton.tintColorHovered.IsEmpty()) imageButtonImage.tintColor = imageButton.tintColorHovered;
+        if (!imageButton.tintColorHovered.IsEmpty())
+        {
+            imageButtonImage.tintColor = imageButton.tintColorHovered;
+        }
     }
 
     ImagePositioned imagePositioned = {};
@@ -330,12 +392,35 @@ void Gui::DrawImageButton(ImageButton& imageButton) const
 void Gui::DrawModal(Modal& modal) const
 {
     ImGuiWindowFlags flags = ImGuiWindowFlags_None;
-    if (!modal.canSaveSettings) flags |= ImGuiWindowFlags_NoSavedSettings;
-    if (!modal.isTitlebarVisible) flags |= ImGuiWindowFlags_NoTitleBar;
-    if (!modal.isScrollbarVisible) flags |= ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
-    if (!modal.isResizable) flags |= ImGuiWindowFlags_NoResize;
-    if (!modal.isCollapsible) flags |= ImGuiWindowFlags_NoCollapse;
-    if (!modal.isMovable) flags |= ImGuiWindowFlags_NoMove;
+    if (!modal.canSaveSettings)
+    {
+        flags |= ImGuiWindowFlags_NoSavedSettings;
+    }
+
+    if (!modal.isTitlebarVisible)
+    {
+        flags |= ImGuiWindowFlags_NoTitleBar;
+    }
+    
+    if (!modal.isScrollbarVisible)
+    {
+        flags |= ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
+    }
+
+    if (!modal.isResizable)
+    {
+        flags |= ImGuiWindowFlags_NoResize;
+    }
+
+    if (!modal.isCollapsible)
+    {
+        flags |= ImGuiWindowFlags_NoCollapse;
+    }
+
+    if (!modal.isMovable)
+    {
+        flags |= ImGuiWindowFlags_NoMove;
+    }
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ToImVec2(modal.padding));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, modal.cornerRounding);
@@ -366,7 +451,7 @@ void Gui::DrawNode(const Node& node) const
 void Gui::DrawText(Text& text) const
 {
     ImGui::PushStyleColor(ImGuiCol_Text, ToImVec4(text.color.ToVector4()));
-    if (!!text.height)
+    if (text.height != UNSET)
     {
         ImGuiIO& io = ImGui::GetIO();
         ImFont* font = io.Fonts->AddFontFromFileTTF("../../assets/Audiowide-Regular.ttf", text.height);
@@ -376,13 +461,16 @@ void Gui::DrawText(Text& text) const
     ImGui::TextUnformatted(text.value.c_str());
 
     ImGui::PopStyleColor(1);
-    if (!!text.height) ImGui::PopFont();
+    if (text.height != UNSET)
+    {
+        ImGui::PopFont();
+    }
 }
 
 void Gui::DrawTextWrapped(Text& text) const
 {
     ImGui::PushStyleColor(ImGuiCol_Text, ToImVec4(text.color.ToVector4()));
-    if (!!text.height)
+    if (text.height != UNSET)
     {
         ImGuiIO& io = ImGui::GetIO();
         ImFont* font = io.Fonts->AddFontFromFileTTF("../../assets/Audiowide-Regular.ttf", text.height);
@@ -392,7 +480,10 @@ void Gui::DrawTextWrapped(Text& text) const
     ImGui::TextWrapped("%s", text.value.c_str());
 
     ImGui::PopStyleColor(1);
-    if (!!text.height) ImGui::PopFont();
+    if (text.height != UNSET)
+    {
+        ImGui::PopFont();
+    }
 }
 
 void Gui::DrawTextInputMultiline(std::string& value, TextInputMultiline& textInputMultiline) const
@@ -407,10 +498,16 @@ void Gui::DrawTextInputMultiline(std::string& value, TextInputMultiline& textInp
     // NOTE: ## prefix tells ImGui to use the string for internal id generation but not to display it as a visible label
     const std::string& id = "##" + textInputMultiline.textInput.id;
     ImGui::InputTextMultiline(id.c_str(), &value, ToImVec2(textInputMultiline.size));
-    if (ImGui::IsItemClicked() && !!textInputMultiline.textInput.OnClick) textInputMultiline.textInput.OnClick();
+    if (ImGui::IsItemClicked() && !!textInputMultiline.textInput.OnClick)
+    {
+        textInputMultiline.textInput.OnClick();
+    }
 
     // Draws placeholder on top of Text input multiline
-    if (!textInputMultiline.textInput.placeholder.text.empty() && value.size() == 0) DrawPlaceholder(textInputMultiline.textInput.placeholder);
+    if (!textInputMultiline.textInput.placeholder.text.empty() && value.size() == 0)
+    {
+        DrawPlaceholder(textInputMultiline.textInput.placeholder);
+    }
 
     ImGui::PopStyleVar(3);
     ImGui::PopStyleColor(3);
@@ -429,10 +526,16 @@ void Gui::DrawTextInputSingleline(std::string& value, TextInputSingleline& textI
     // NOTE: ## prefix tells ImGui to use the string for internal id generation but not to display it as a visible label
     const std::string& id = "##" + textInputSingleline.textInput.id;
     ImGui::InputText(id.c_str(), &value);
-    if (ImGui::IsItemClicked() && !!textInputSingleline.textInput.OnClick) textInputSingleline.textInput.OnClick();
+    if (ImGui::IsItemClicked() && !!textInputSingleline.textInput.OnClick)
+    {
+        textInputSingleline.textInput.OnClick();
+    }
 
     // Draws placeholder on top of Text input singlelie
-    if (!textInputSingleline.textInput.placeholder.text.empty() && value.size() == 0) DrawPlaceholder(textInputSingleline.textInput.placeholder);
+    if (!textInputSingleline.textInput.placeholder.text.empty() && value.size() == 0)
+    {
+        DrawPlaceholder(textInputSingleline.textInput.placeholder);
+    }
 
     ImGui::PopStyleVar(3);
     ImGui::PopStyleColor(3);
@@ -456,19 +559,45 @@ void Gui::DrawWindow(Window& window) const
     bool isOpen = true;
 
     ImGuiWindowFlags flags = ImGuiWindowFlags_None;
-    if (!window.canSaveSettings) flags |= ImGuiWindowFlags_NoSavedSettings;
-    if (!window.isTitlebarVisible) flags |= ImGuiWindowFlags_NoTitleBar;
-    if (!window.isScrollbarVisible) flags |= ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
-    if (!window.isResizable) flags |= ImGuiWindowFlags_NoResize;
-    if (!window.isCollapsible) flags |= ImGuiWindowFlags_NoCollapse;
-    if (!window.isMovable) flags |= ImGuiWindowFlags_NoMove;
+    if (!window.canSaveSettings)
+    {
+        flags |= ImGuiWindowFlags_NoSavedSettings;
+    }
+
+    if (!window.isTitlebarVisible)
+    {
+        flags |= ImGuiWindowFlags_NoTitleBar;
+    }
+
+    if (!window.isScrollbarVisible)
+    {
+        flags |= ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
+    }
+
+    if (!window.isResizable)
+    {
+        flags |= ImGuiWindowFlags_NoResize;
+    }
+
+    if (!window.isCollapsible)
+    {
+        flags |= ImGuiWindowFlags_NoCollapse;
+    }
+
+    if (!window.isMovable)
+    {
+        flags |= ImGuiWindowFlags_NoMove;
+    }
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ToImVec2(window.padding));
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ToImVec4(window.bgColor.ToVector4()));
 
     ImGui::SetNextWindowPos(ToImVec2(window.position));
     ImGui::SetNextWindowSize(ToImVec2(window.size));
-    if (ImGui::Begin(window.name.c_str(), &isOpen, flags)) window.DrawContent();
+    if (ImGui::Begin(window.name.c_str(), &isOpen, flags))
+    {
+         window.DrawContent();
+    }
     ImGui::End();
 
     ImGui::PopStyleVar(1);
@@ -649,7 +778,7 @@ const Vector2 Gui::GetTextSize(const std::string& text) const
 
 const Vector2 Gui::GetTextSize(const Text& text) const
 {
-    if (!!text.height)
+    if (text.height != UNSET)
     {
         ImGuiIO& io = ImGui::GetIO();
         ImFont* font = io.Fonts->AddFontFromFileTTF("../../assets/Audiowide-Regular.ttf", text.height);
@@ -658,7 +787,10 @@ const Vector2 Gui::GetTextSize(const Text& text) const
 
     ImVec2 textSize = ImGui::CalcTextSize(text.value.c_str());
 
-    if (!!text.height) ImGui::PopFont();
+    if (text.height != UNSET)
+    {
+        ImGui::PopFont();
+    }
 
     return ToVector2(textSize);
 }

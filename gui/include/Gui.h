@@ -14,6 +14,9 @@
 class Gui
 {
 public:
+    // NOTE: Field value meaning "not set"
+    static constexpr float UNSET = -1.0f;
+
     // Elements
     struct Border
     {
@@ -54,6 +57,7 @@ public:
         float cornerRounding = 0.0f;
         bool isAutoResizableY = false;
         bool isAutoResizableX = false;
+        float scrollY = UNSET;
 
         std::function<void(const ContainerState&)> DrawContent;
         std::function<void()> OnClick = {};
@@ -93,7 +97,7 @@ public:
     {
         std::string value;
         Rgba color = Rgba(255, 255, 255, 255);
-        float height = NULL;
+        float height = UNSET;
     };
 
     struct Image

@@ -550,10 +550,13 @@ void ChatLayer::OnRender()
 
             // MESSSAGES CONTAINER
             Gui::Container messagesContainer = {};
-            messagesContainer.id = "messagesContainer";
+            // NOTE: One id per conversation so ImGui keeps each conversation's scroll position
+            messagesContainer.id = "messagesContainer" + m_selectedConversationId;
             messagesContainer.size = Vector2(selectedConversationContainerAvailableSpace);
             messagesContainer.cornerRounding = 10.f;
             messagesContainer.bgColor = Rgba(50, 56, 102, 255);
+            // NOTE: Correction measured on the previous frame (Gui::UNSET when none)
+            messagesContainer.scrollY = m_messagesScrollAnchor.ConsumeCorrectedScrollY();
             messagesContainer.DrawContent = [this](const Gui::ContainerState& state) {
                 const Vector2 messagesContainerAvailableSpace = m_gui.GetAvailableSpace();
 
@@ -564,15 +567,25 @@ void ChatLayer::OnRender()
                     return;
                 }
 
-                const std::vector<MessageView>& selectedConversationMessage = messageHistory->messages;
-                for (std::size_t index = 0; index < selectedConversationMessage.size(); index++)
+                /**
+                 * NOTES:
+                 *  - Cursor Y before the first message is drawn (starts below the container padding, not at 0)
+                 *  - The cursor moves down as each message is drawn so GetPositionY() - messagesTopY is how far
+                 *    a message is from the top of the list
+                 *  - Before the merge the anchor was the first message (offset 0) and its offset after the merge is
+                 *    how far the new page pushed it down which is how much the scroll must move to keep it in place
+                 */
+                const float messagesTopY = m_gui.GetPositionY();
+                for (const MessageView& message : messageHistory->messages)
                 {
-                    // MESSAGE CONTAINER
-                    const MessageView& message = selectedConversationMessage[index];
-                    const std::string id = "messageContainer" + std::to_string(index);
+                    const float messageOffsetY = m_gui.GetPositionY() - messagesTopY;
+                    // NOTE: A message's Y is only known right before it is drawn so each one is passed and ScrollAnchor keeps the anchor's Y
+                    m_messagesScrollAnchor.MeasureItem(message.id, messageOffsetY, m_gui.GetScrollPositionY());
 
+                    // MESSAGE CONTAINER
+                    // NOTE: Using message id (not index) so prepending a page does not hand each message another message's ImGui state
                     Gui::Container messageContainer = {};
-                    messageContainer.id = id;
+                    messageContainer.id = "messageContainer" + message.id;
                     messageContainer.size = Vector2(messagesContainerAvailableSpace.x, 0.0f);
                     messageContainer.padding = Vector2(10.0f, 10.0f);
                     // NOTE: Transparent background
@@ -630,10 +643,39 @@ void ChatLayer::OnRender()
                 // Before drawing content, check if we are already at the bottom
                 const bool isAtBottom = m_gui.GetScrollPositionY() >= m_gui.GetMaxScrollPositionY();
                 // Auto-scroll logic: only scroll if the user hasn't moved away from the bottom
-                if (isAtBottom)
+                if (isAtBottom && !m_messagesScrollAnchor.HasAnchor())
                 {
                     // Scrolls to the end
                     m_gui.ScrollToY(1.0f);
+                }
+
+                /**
+                 * NOTES:
+                 *  - Cursor Y after the last message is drawn (below it so it includes the last message height)
+                 *  - Changes while messages are added or get their real height. The ScrollAnchor compares it with 
+                 *    the previous frame to know when the layout has settled
+                 */
+                const float messagesBottomY = m_gui.GetPositionY();
+                m_messagesScrollAnchor.EndFrame(messagesBottomY);
+
+                /**
+                 * NOTES:
+                 *  - Loads next older page before user reaches the top
+                 *  - No scroll direction check (a short history has no scrollbar
+                 *    so scroll stays 0 and must still load to fill the view)
+                 *  - After EndFrame() so IsSettled() covers the frame's layout
+                 */
+                const float olderMessagesLoadingThresholdY = messagesContainerAvailableSpace.y;
+                const bool isNearTop = m_gui.GetScrollPositionY() < olderMessagesLoadingThresholdY;
+                const bool hasOlderMessages = !messageHistory->nextCursor.empty();
+                if (isNearTop && hasOlderMessages && !messageHistory->isLoading && m_messagesScrollAnchor.IsSettled())
+                {
+                    m_messageHistories.StartLoading(m_selectedConversationId);
+
+                    MessagesApi::FindMessagesPageParams findMessagesPageParams = {};
+                    findMessagesPageParams.conversationId = m_selectedConversationId;
+                    findMessagesPageParams.cursor = messageHistory->nextCursor;
+                    m_messagesApi.FindPage(findMessagesPageParams);
                 }
             };
 
@@ -755,6 +797,8 @@ void ChatLayer::HandleConversationClosed(const ConversationClosedEvent& conversa
     if (m_conversations.empty())
     {
         m_selectedConversationId = "";
+        m_messagesScrollAnchor.Reset();
+
         return;
     }
 
@@ -788,6 +832,18 @@ void ChatLayer::HandleMessageCreated(const MessageCreatedEvent& messageCreatedEv
 
 void ChatLayer::HandleMessagesPageFound(const MessagesPageFoundEvent& messagesPageFoundEvent)
 {
+    const bool isSelectedConversation = messagesPageFoundEvent.conversationId == m_selectedConversationId;
+    if (isSelectedConversation)
+    {
+        // NOTE: Only an older page anchors (nextCursor is empty on the first page merge which goes to the bottom instead)
+        const MessageHistories::MessageHistory* messageHistory = m_messageHistories.Find(messagesPageFoundEvent.conversationId);
+        const bool isOlderPage = messageHistory != nullptr && !messageHistory->nextCursor.empty();
+        if (isOlderPage)
+        {
+            m_messagesScrollAnchor.Start(messageHistory->messages.front().id);
+        }
+    }
+
     m_messageHistories.MergePage(messagesPageFoundEvent.conversationId, messagesPageFoundEvent.messagesPage);
 }
 
@@ -853,6 +909,7 @@ void ChatLayer::Reset()
     // Messages
     m_messageHistories.Clear();
     m_messageText.clear();
+    m_messagesScrollAnchor.Reset();
 
     // Conversations
     m_conversations.clear();
@@ -867,6 +924,8 @@ void ChatLayer::Reset()
 void ChatLayer::SelectConversation(const std::string& conversationId)
 {
     m_selectedConversationId = conversationId;
+    // NOTE: A pending correction belongs to the previous conversation
+    m_messagesScrollAnchor.Reset();
 
     // NOTE: Already loading or loaded so nothing to fetch
     const bool hasMessageHistory = m_messageHistories.Has(conversationId);
