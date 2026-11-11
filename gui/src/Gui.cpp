@@ -453,9 +453,8 @@ void Gui::DrawText(Text& text) const
     ImGui::PushStyleColor(ImGuiCol_Text, ToImVec4(text.color.ToVector4()));
     if (text.height != UNSET)
     {
-        ImGuiIO& io = ImGui::GetIO();
-        ImFont* font = io.Fonts->AddFontFromFileTTF("../../assets/Audiowide-Regular.ttf", text.height);
-        ImGui::PushFont(font);
+        // NOTE: nullptr keeps the font loaded in Init() and only changes the size (ImGui 1.92+ caches each size once)
+        ImGui::PushFont(nullptr, text.height);
     }
 
     ImGui::TextUnformatted(text.value.c_str());
@@ -472,9 +471,8 @@ void Gui::DrawTextWrapped(Text& text) const
     ImGui::PushStyleColor(ImGuiCol_Text, ToImVec4(text.color.ToVector4()));
     if (text.height != UNSET)
     {
-        ImGuiIO& io = ImGui::GetIO();
-        ImFont* font = io.Fonts->AddFontFromFileTTF("../../assets/Audiowide-Regular.ttf", text.height);
-        ImGui::PushFont(font);
+        // NOTE: nullptr keeps the font loaded in Init() and only changes the size (ImGui 1.92+ caches each size once)
+        ImGui::PushFont(nullptr, text.height);
     }
 
     ImGui::TextWrapped("%s", text.value.c_str());
@@ -780,9 +778,8 @@ const Vector2 Gui::GetTextSize(const Text& text) const
 {
     if (text.height != UNSET)
     {
-        ImGuiIO& io = ImGui::GetIO();
-        ImFont* font = io.Fonts->AddFontFromFileTTF("../../assets/Audiowide-Regular.ttf", text.height);
-        ImGui::PushFont(font);
+        // NOTE: nullptr keeps the font loaded in Init() and only changes the size (ImGui 1.92+ caches each size once)
+        ImGui::PushFont(nullptr, text.height);
     }
 
     ImVec2 textSize = ImGui::CalcTextSize(text.value.c_str());
