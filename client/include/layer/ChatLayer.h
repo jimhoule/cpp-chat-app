@@ -108,6 +108,7 @@ private:
     void HandleSendMessageButtonClicked();
     // NOTE: Only opens conversation with one user for now (2 users total with the current user added by the server)
     void HandleSearchedUserButtonClicked(const std::string& userId);
+    const UserView* FindConversationUser(const std::string& conversationId, const std::string& userId) const;
     void Reset();
     void SelectConversation(const std::string& conversationId);
     void UpsertConversation(const ConversationView& upsertedConversation);

@@ -612,8 +612,16 @@ void ChatLayer::OnRender()
                         messageDetailsContainer.isAutoResizableY = true;
                         messageDetailsContainer.DrawContent = [this, &message](const Gui::ContainerState& state) {
                             // MESSAGE SENDER FIRSTNAME TEXT
+                            /**
+                             * NOTES:
+                             *  - Messages carry no user info so the sender is always a participant of the selected conversation
+                             *  - No nullptr check because the server only accepts messages from participants and a conversation is
+                             *    never drawn after it is removed
+                             */
+                            const UserView* messageSender = FindConversationUser(m_selectedConversationId, message.senderId);
+                            
                             Gui::Text messageSenderFirstNameText = {};
-                            messageSenderFirstNameText.value = "Firstname of " + message.senderId;
+                            messageSenderFirstNameText.value = messageSender->firstName;
                             m_gui.DrawText(messageSenderFirstNameText);
 
                             // MESSAGE CREATED AT TEXT
@@ -654,6 +662,7 @@ void ChatLayer::OnRender()
                  *  - Cursor Y after the last message is drawn (below it so it includes the last message height)
                  *  - Changes while messages are added or get their real height. The ScrollAnchor compares it with 
                  *    the previous frame to know when the layout has settled
+                 *  - Would break if participant could leave a conversation (groups) but it is not the case right now
                  */
                 const float messagesBottomY = m_gui.GetPositionY();
                 m_messagesScrollAnchor.EndFrame(messagesBottomY);
@@ -894,6 +903,34 @@ void ChatLayer::HandleSearchedUserButtonClicked(const std::string& userId)
     ConversationsApi::OpenConversationParams openConversationParams = {};
     openConversationParams.userIds = userIds;
     m_conversationsApi.Open(openConversationParams);
+}
+
+const UserView* ChatLayer::FindConversationUser(const std::string& conversationId, const std::string& userId) const
+{
+    const ConversationView* foundConversation = nullptr;
+    for (const ConversationView& conversation : m_conversations)
+    {
+        if (conversation.id == conversationId)
+        {
+            foundConversation = &conversation;
+            break;
+        }
+    }
+
+    if (foundConversation == nullptr)
+    {
+        return nullptr;
+    }
+
+    for (const ConversationUserView& foundConversationUser: foundConversation->users)
+    {
+        if (foundConversationUser.user.id == userId)
+        {
+            return &foundConversationUser.user;
+        }
+    }
+
+    return nullptr;
 }
 
 void ChatLayer::Reset()
