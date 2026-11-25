@@ -20,12 +20,41 @@ ConversationsService::ConversationsService(std::unique_ptr<IConversationsReposit
     , m_logger(logger)
 {}
 
+ConversationsService::LastReadMessagePositionResult ConversationsService::AdvanceLastReadMessagePosition(const AdvanceLastReadMessagePositionDto& advanceLastReadMessagePositionDto)
+{
+    LastReadMessagePositionResult lastReadMessagePositionResult = {};
+
+    const std::optional<Conversation> conversation = m_conversationsRepository->AdvanceLastReadMessagePosition(
+        advanceLastReadMessagePositionDto.id,
+        advanceLastReadMessagePositionDto.userId,
+        advanceLastReadMessagePositionDto.messagePosition
+    );
+    if (!conversation.has_value())
+    {
+        lastReadMessagePositionResult.code = ConversationsResultCode::UNKNOWN_CONVERSATION;
+        return lastReadMessagePositionResult;
+    }
+
+    for (const ConversationUser& conversationUser : conversation.value().users)
+    {
+        if (conversationUser.userId == advanceLastReadMessagePositionDto.userId)
+        {
+            lastReadMessagePositionResult.data = conversationUser.lastReadMessagePosition;
+            return lastReadMessagePositionResult;
+        }
+    }
+
+    lastReadMessagePositionResult.code = ConversationsResultCode::UNKNOWN_CONVERSATION;
+
+    return lastReadMessagePositionResult;
+}
+
 ConversationsService::ConversationResult ConversationsService::Close(const CloseConversationDto& closeConversationDto)
 {
     ConversationResult conversationResult = {};
 
     // Closes conversation
-    const std::optional<Conversation> conversation = m_conversationsRepository->UpdateIsOpen(closeConversationDto.conversationId, closeConversationDto.userId, false);
+    const std::optional<Conversation> conversation = m_conversationsRepository->UpdateIsOpen(closeConversationDto.id, closeConversationDto.userId, false);
     if (!conversation.has_value())
     {
         conversationResult.code = ConversationsResultCode::UNKNOWN_CONVERSATION;
@@ -105,7 +134,7 @@ ConversationsService::ConversationResult ConversationsService::OpenForAllUsers(c
 {
     ConversationResult conversationResult = {};
 
-    const std::optional<Conversation> conversation = m_conversationsRepository->FindById(openConversationForAllUsersDto.conversationId);
+    const std::optional<Conversation> conversation = m_conversationsRepository->FindById(openConversationForAllUsersDto.id);
     if (!conversation.has_value())
     {
         conversationResult.code = ConversationsResultCode::UNKNOWN_CONVERSATION;
@@ -135,6 +164,30 @@ ConversationsService::ConversationResult ConversationsService::OpenForAllUsers(c
     conversationResult.data = std::move(conversationView);
 
     return conversationResult;
+}
+
+ConversationsService::ConversationsResult ConversationsService::FindAllOpenByUserId(const FindAllOpenConversationsByUserIdDto& findAllOpenConversationsByUserIdDto)
+{
+    // Fetches conversations
+    const std::vector<Conversation> conversations = m_conversationsRepository->FindAllOpenByUserId(findAllOpenConversationsByUserIdDto.userId);
+
+    // Builds conversation views
+    std::vector<ConversationView> conversationViews = ConvertConversationsToConversationViews(conversations);
+
+    ConversationsResult conversationsResult = {};
+    conversationsResult.data = std::move(conversationViews);
+
+    return conversationsResult;
+}
+
+ConversationsService::LastReadMessagePositionsResult ConversationsService::FindAllOpenLastReadMessagePositionsByUserId(const FindAllOpenLastReadMessagePositionsByUserIdDto& findAllOpenLastReadMessagePositionsByUserIdDto)
+{
+    IConversationsRepository::LastReadMessagePositionsMap lastReadMessagePositionsMap = m_conversationsRepository->FindAllOpenLastReadMessagePositionsByUserId(findAllOpenLastReadMessagePositionsByUserIdDto.userId);
+
+    LastReadMessagePositionsResult lastReadMessagePositionsResult = {};
+    lastReadMessagePositionsResult.data = std::move(lastReadMessagePositionsMap);
+
+    return lastReadMessagePositionsResult;
 }
 
 ConversationsService::ConversationResult ConversationsService::FindById(const FindConversationByIdDto& findConversationByIdDto)
@@ -170,23 +223,25 @@ ConversationsService::ConversationResult ConversationsService::FindByUserIds(con
     return conversationResult;
 }
 
-ConversationsService::ConversationsResult ConversationsService::FindAllOpenByUserId(const FindAllOpenConversationsByUserIdDto& findAllOpenConversationsByUserIdDto)
+ConversationsService::LastReadMessagePositionResult ConversationsService::FindLastReadMessagePositionById(const FindLastReadMessagePositionByIdDto& findLastReadMessagePositionByIdDto)
 {
-    // Fetches conversations
-    const std::vector<Conversation> conversations = m_conversationsRepository->FindAllOpenByUserId(findAllOpenConversationsByUserIdDto.userId);
+    LastReadMessagePositionResult lastReadMessagePositionResult = {};
 
-    // Builds conversation views
-    std::vector<ConversationView> conversationViews = ConvertConversationsToConversationViews(conversations);
+    const std::optional<std::uint64_t> lastReadMessagePosition = m_conversationsRepository->FindLastReadMessagePositionById(findLastReadMessagePositionByIdDto.id, findLastReadMessagePositionByIdDto.userId);
+    if (!lastReadMessagePosition.has_value())
+    {
+        lastReadMessagePositionResult.code = ConversationsResultCode::UNKNOWN_CONVERSATION;
+        return lastReadMessagePositionResult;
+    }
 
-    ConversationsResult conversationsResult = {};
-    conversationsResult.data = std::move(conversationViews);
+    lastReadMessagePositionResult.data = lastReadMessagePosition.value();
 
-    return conversationsResult;
+    return lastReadMessagePositionResult;
 }
 
 bool ConversationsService::IsConversationUser(const IsConversationUserDto& isConversationUserDto)
 {
-    return m_conversationsRepository->IsConversationUser(isConversationUserDto.conversationId, isConversationUserDto.userId);
+    return m_conversationsRepository->IsConversationUser(isConversationUserDto.id, isConversationUserDto.userId);
 }
 
 std::string ConversationsService::ConvertConversationsResultCodeToString(ConversationsResultCode conversationsResultCode)

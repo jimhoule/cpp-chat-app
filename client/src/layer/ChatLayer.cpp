@@ -37,11 +37,14 @@ ChatLayer::ChatLayer(
     , m_loggedOutObserver(*this, &ChatLayer::HandleLoggedOut)
     , m_userOnlineObserver(*this, &ChatLayer::HandleUserOnline)
     , m_allOpenConversationsFoundObserver(*this, &ChatLayer::HandleAllOpenConversationsFound)
+    , m_allOpenMessagesReadStatesFoundObserver(*this, &ChatLayer::HandleAllOpenMessagesReadStatesFound)
     , m_conversationClosedObserver(*this, &ChatLayer::HandleConversationClosed)
     , m_conversationOpenedObserver(*this, &ChatLayer::HandleConversationOpened)
     , m_conversationReopenedObserver(*this, &ChatLayer::HandleConversationReopened)
     , m_messageCreatedObserver(*this, &ChatLayer::HandleMessageCreated)
+    , m_messagesMarkedReadObserver(*this, &ChatLayer::HandleMessagesMarkedRead)
     , m_messagesPageFoundObserver(*this, &ChatLayer::HandleMessagesPageFound)
+    , m_messagesReadStateFoundObserver(*this, &ChatLayer::HandleMessagesReadStateFound)
     , m_usersSearchedObserver(*this, &ChatLayer::HandleUsersSearched)
 {}
 
@@ -53,8 +56,11 @@ void ChatLayer::OnAttach()
     m_conversationsApi.GetConversationClosedSubject().Subscribe(&m_conversationClosedObserver);
     m_conversationsApi.GetConversationOpenedSubject().Subscribe(&m_conversationOpenedObserver);
     m_conversationsApi.GetConversationReopenedSubject().Subscribe(&m_conversationReopenedObserver);
+    m_messagesApi.GetAllOpenMessagesReadStatesFoundSubject().Subscribe(&m_allOpenMessagesReadStatesFoundObserver);
     m_messagesApi.GetMessageCreatedSubject().Subscribe(&m_messageCreatedObserver);
+    m_messagesApi.GetMessagesMarkedReadSubject().Subscribe(&m_messagesMarkedReadObserver);
     m_messagesApi.GetMessagesPageFoundSubject().Subscribe(&m_messagesPageFoundObserver);
+    m_messagesApi.GetMessagesReadStateFoundSubject().Subscribe(&m_messagesReadStateFoundObserver);
     m_usersApi.GetUsersSearchedSubject().Subscribe(&m_usersSearchedObserver);
 
     m_conversationsApi.FindAllOpen();
@@ -78,8 +84,11 @@ void ChatLayer::OnDetach()
     m_conversationsApi.GetConversationClosedSubject().Unsubscribe(&m_conversationClosedObserver);
     m_conversationsApi.GetConversationOpenedSubject().Unsubscribe(&m_conversationOpenedObserver);
     m_conversationsApi.GetConversationReopenedSubject().Unsubscribe(&m_conversationReopenedObserver);
+    m_messagesApi.GetAllOpenMessagesReadStatesFoundSubject().Unsubscribe(&m_allOpenMessagesReadStatesFoundObserver);
     m_messagesApi.GetMessageCreatedSubject().Unsubscribe(&m_messageCreatedObserver);
+    m_messagesApi.GetMessagesMarkedReadSubject().Unsubscribe(&m_messagesMarkedReadObserver);
     m_messagesApi.GetMessagesPageFoundSubject().Unsubscribe(&m_messagesPageFoundObserver);
+    m_messagesApi.GetMessagesReadStateFoundSubject().Unsubscribe(&m_messagesReadStateFoundObserver);
     m_usersApi.GetUsersSearchedSubject().Unsubscribe(&m_usersSearchedObserver);
     
     Reset();
@@ -456,6 +465,9 @@ void ChatLayer::OnRender()
                         };
                         conversationContainer.DrawContent = [this, &conversation, index](const Gui::ContainerState& state) {
                             const Vector2 conversationContainerAvailableSpace = m_gui.GetAvailableSpace();
+                            
+                            const MessagesReadStateView* messagesReadState = m_messagesReadStates.Find(conversation.id);
+                            const bool hasUnreadMessages = messagesReadState != nullptr && messagesReadState->unreadCount > 0;
 
                             // CONVERSATION IMAGE
                             Gui::Image conversationImage = {};
@@ -466,10 +478,20 @@ void ChatLayer::OnRender()
 
                             // CONVERSATION TEXT
                             Gui::Text conversationText = {};
+                            conversationText.color = Rgba(255, 255, 255, 180);
+
+                            // Changes styles when there are unread messages
+                            if (hasUnreadMessages)
+                            {
+                                conversationText.color = Rgba(255, 255, 255, 255);
+                                conversationText.weight = Gui::FontWeight::BOLD;
+                            }
+
                             // Selects name of first user that is not the current user
+                            const std::string& currentUserId = m_authApi.GetCurrentUser()->id;
                             for (const ConversationUserView& conversationUserView : conversation.users)
                             {
-                                if (conversationUserView.user.id != m_authApi.GetCurrentUser()->id)
+                                if (conversationUserView.user.id != currentUserId)
                                 {
                                     conversationText.value = conversationUserView.user.firstName;
                                     break;
@@ -489,41 +511,80 @@ void ChatLayer::OnRender()
                             m_gui.SetPositionX(conversationImage.size.x + 10.0f);
                             m_gui.DrawText(conversationText);
 
-                            // CLOSE CONVERSATION IMAGE BUTTON CONTAINER
-                            if (!state.isHovered)
+                            if (state.isHovered)
+                            {
+                                // CLOSE CONVERSATION IMAGE BUTTON CONTAINER
+                                Gui::Container closeConversationImageButtonContainer = {};
+                                closeConversationImageButtonContainer.id = "closeConversationImageButtonContainer" + conversation.id;
+                                closeConversationImageButtonContainer.size = conversationImage.size;
+                                closeConversationImageButtonContainer.padding = Vector2(5.0f, 5.0f);
+                                // NOTE: Transparent background
+                                closeConversationImageButtonContainer.bgColor = Rgba(0, 0, 0, 0);
+                                closeConversationImageButtonContainer.DrawContent = [this, &conversation, index](const Gui::ContainerState& state) {
+                                    // CLOSE CONVERSATION IMAGE BUTTON
+                                    Gui::Image closeConversationImageButtonImage = {};
+                                    closeConversationImageButtonImage.textureId = m_closableImageTexture.GetId();
+                                    closeConversationImageButtonImage.size = m_gui.GetAvailableSpace();
+                                    closeConversationImageButtonImage.tintColor = Rgba(255, 255, 255, 255);
+                                    closeConversationImageButtonImage.cornerRounding = 0.0f;
+
+                                    Gui::ImageButton closeConversationImageButton = {};
+                                    closeConversationImageButton.id = "closeConversationImageButton" + conversation.id;
+                                    closeConversationImageButton.image = closeConversationImageButtonImage;
+                                    closeConversationImageButton.tintColorHovered = Rgba(200, 200, 0, 255);
+                                    closeConversationImageButton.OnClick = [this, index]() {
+                                        const std::string id = m_conversations[index].id;
+                                        HandleCloseConversationButtonClicked(id);
+                                    };
+
+                                    m_gui.DrawImageButton(closeConversationImageButton);
+                                };
+
+                                m_gui.DisplayInline();
+                                m_gui.SetPositionX(conversationContainerAvailableSpace.x - closeConversationImageButtonContainer.size.x);
+                                m_gui.DrawContainer(closeConversationImageButtonContainer);
+
+                                return;
+                            }
+
+                            if (!hasUnreadMessages)
                             {
                                 return;
                             }
 
-                            Gui::Container closeConversationImageButtonContainer = {};
-                            closeConversationImageButtonContainer.id = "closeConversationImageButtonContainer" + conversation.id;
-                            closeConversationImageButtonContainer.size = conversationImage.size;
-                            closeConversationImageButtonContainer.padding = Vector2(5.0f, 5.0f);
-                            // NOTE: Transparent background
-                            closeConversationImageButtonContainer.bgColor = Rgba(0, 0, 0, 0);
-                            closeConversationImageButtonContainer.DrawContent = [this, &conversation, index](const Gui::ContainerState& state) {
-                                // CLOSE CONVERSATION IMAGE BUTTON
-                                Gui::Image closeConversationImageButtonImage = {};
-                                closeConversationImageButtonImage.textureId = m_closableImageTexture.GetId();
-                                closeConversationImageButtonImage.size = m_gui.GetAvailableSpace();
-                                closeConversationImageButtonImage.tintColor = Rgba(255, 255, 255, 255);
-                                closeConversationImageButtonImage.cornerRounding = 0.0f;
+                            // CONVERSATION UNREAD MESSAGES BADGE
+                            Gui::Container conversationUnreadMessagesBadge = {};
+                            conversationUnreadMessagesBadge.id = "conversationUnreadMessagesBadge" + conversation.id;
+                            conversationUnreadMessagesBadge.size = Vector2(std::floor(conversationContainerAvailableSpace.y * 0.75f), std::floor(conversationContainerAvailableSpace.y * 0.75f));
+                            conversationUnreadMessagesBadge.bgColor = Rgba(255, 0, 0, 255);
+                            conversationUnreadMessagesBadge.cornerRounding = conversationUnreadMessagesBadge.size.y * 0.5f;
+                            conversationUnreadMessagesBadge.DrawContent = [this, messagesReadState](const Gui::ContainerState& state) {
+                                const Vector2 conversationUnreadMessagesBadgeAvailableSpace = m_gui.GetAvailableSpace();
 
-                                Gui::ImageButton closeConversationImageButton = {};
-                                closeConversationImageButton.id = "closeConversationImageButton" + conversation.id;
-                                closeConversationImageButton.image = closeConversationImageButtonImage;
-                                closeConversationImageButton.tintColorHovered = Rgba(200, 200, 0, 255);
-                                closeConversationImageButton.OnClick = [this, index]() {
-                                    const std::string id = m_conversations[index].id;
-                                    HandleCloseConversationButtonClicked(id);
-                                };
+                                // CONVERSATION UNREAD MESSAGES BADGE TEXT
+                                Gui::Text conversationUnreadMessagesBadgeText = {};
+                                conversationUnreadMessagesBadgeText.color = Rgba(255, 255, 255, 255);
+                                conversationUnreadMessagesBadgeText.height = conversationUnreadMessagesBadgeAvailableSpace.y * 0.75f;
+                                conversationUnreadMessagesBadgeText.value = std::to_string(messagesReadState->unreadCount);
+                                conversationUnreadMessagesBadgeText.weight = Gui::FontWeight::BOLD;
 
-                                m_gui.DrawImageButton(closeConversationImageButton);
+                                const Vector2 conversationUnreadMessagesBadgeTextSize = m_gui.GetTextSize(conversationUnreadMessagesBadgeText);
+                                
+                                m_gui.AlignCenter(conversationUnreadMessagesBadgeTextSize);
+                                /**
+                                 * NOTES:
+                                 *  - ImGui rounds the font's ascent up (ImCeil in imgui_draw.cpp) so text sits up to 1px low
+                                 *  - Lifted to look centered
+                                 */
+                                m_gui.SetPositionY(m_gui.GetPositionY() - 1.0f);
+                                m_gui.DrawText(conversationUnreadMessagesBadgeText);
                             };
 
                             m_gui.DisplayInline();
-                            m_gui.SetPositionX(conversationContainerAvailableSpace.x - closeConversationImageButtonContainer.size.x);
-                            m_gui.DrawContainer(closeConversationImageButtonContainer);
+                            m_gui.AlignCenterY(conversationUnreadMessagesBadge.size.y);
+                            // NOTE: Leaves half a badge of margin on the right
+                            m_gui.SetPositionX(conversationContainerAvailableSpace.x - (conversationUnreadMessagesBadge.size.x * 1.5f));
+                            m_gui.DrawContainer(conversationUnreadMessagesBadge);
                         };
 
                         m_gui.DrawContainer(conversationContainer);
@@ -576,8 +637,52 @@ void ChatLayer::OnRender()
                  *    how far the new page pushed it down which is how much the scroll must move to keep it in place
                  */
                 const float messagesTopY = m_gui.GetPositionY();
+                const std::string& currentUserId = m_authApi.GetCurrentUser()->id;
                 for (const MessageView& message : messageHistory->messages)
                 {
+                    const bool isFirstUnread = m_messagesFirstUnreadMatcher.Match(message, currentUserId);
+                    if (isFirstUnread)
+                    {
+                        // MESSAGE UNREAD DIVIDER CONTAINER
+                        Gui::Container messageUnreadDividerContainer = {};
+                        messageUnreadDividerContainer.id = "messageUnreadDividerContainer";
+                        messageUnreadDividerContainer.size = Vector2(messagesContainerAvailableSpace.x, 0.0f);
+                        // NOTE: Transparent background
+                        messageUnreadDividerContainer.bgColor = Rgba(0, 0, 0, 0);
+                        messageUnreadDividerContainer.isAutoResizableY = true;
+                        messageUnreadDividerContainer.DrawContent = [this](const Gui::ContainerState& state) {
+                            const Vector2 messageUnreadDividerContainerAvailableSpace = m_gui.GetAvailableSpace();
+                            const float messageUnreadDividerContainerTopY = m_gui.GetPositionY();
+
+                            // MESSAGE UNREAD DIVIDER TEXT
+                            Gui::Text messageUnreadDividerText = {};
+                            // NOTE: Leading spaces is the gap between the line and the text
+                            messageUnreadDividerText.value = "   New";
+                            messageUnreadDividerText.color = Rgba(255, 0, 0, 255);
+                            messageUnreadDividerText.weight = Gui::FontWeight::BOLD;
+
+                            const Vector2 messageUnreadDividerTextSize = m_gui.GetTextSize(messageUnreadDividerText);
+                            m_gui.SetPosition(Vector2(messageUnreadDividerContainerAvailableSpace.x - messageUnreadDividerTextSize.x, messageUnreadDividerContainerTopY));
+                            m_gui.DrawText(messageUnreadDividerText);
+
+                            // MESSAGE UNREAD DIVIDER
+                            Gui::Divider messageUnreadDivider = {};
+                            messageUnreadDivider.color = Rgba(255, 0, 0, 255);
+                            messageUnreadDivider.height = 3.0f;
+                            messageUnreadDivider.width = messageUnreadDividerContainerAvailableSpace.x - messageUnreadDividerTextSize.x;
+
+                            /**
+                             * NOTES:
+                             *  - Line is vertically centered on the text
+                             *  - Not using AlignCenterY() because an auto resized container has no height on its first frame
+                             */
+                            m_gui.SetPositionY(messageUnreadDividerContainerTopY + messageUnreadDividerTextSize.y * 0.5f);
+                            m_gui.DrawDivider(messageUnreadDivider);
+                        };
+
+                        m_gui.DrawContainer(messageUnreadDividerContainer);
+                    }
+
                     const float messageOffsetY = m_gui.GetPositionY() - messagesTopY;
                     // NOTE: A message's Y is only known right before it is drawn so each one is passed and ScrollAnchor keeps the anchor's Y
                     m_messagesScrollAnchor.MeasureItem(message.id, messageOffsetY, m_gui.GetScrollPositionY());
@@ -606,7 +711,7 @@ void ChatLayer::OnRender()
                         Gui::Container messageDetailsContainer = {};
                         messageDetailsContainer.id = "messageDetailsContainer";
                         messageDetailsContainer.size = Vector2(messageContainerAvailableSpace.x - messageSenderImage.size.x, 0.0f);
-                        messageDetailsContainer.padding = Vector2(m_gui.GetParentContainerPaddingSize().x / 1.5f, 0.0f);
+                        messageDetailsContainer.padding = Vector2(m_gui.GetParentContainerPaddingSize().x * 0.65f, 0.0f);
                         // NOTE: Transparent background
                         messageDetailsContainer.bgColor = Rgba(0, 0, 0, 0);
                         messageDetailsContainer.isAutoResizableY = true;
@@ -666,6 +771,7 @@ void ChatLayer::OnRender()
                  */
                 const float messagesBottomY = m_gui.GetPositionY();
                 m_messagesScrollAnchor.EndFrame(messagesBottomY);
+                m_messagesFirstUnreadMatcher.EndFrame();
 
                 /**
                  * NOTES:
@@ -784,15 +890,34 @@ void ChatLayer::OnUpdate()
 void ChatLayer::HandleAllOpenConversationsFound(const AllOpenConversationsFoundEvent& allOpenConversationsFoundEvent)
 {
     m_conversations = allOpenConversationsFoundEvent.conversations;
+
+    m_messagesApi.FindAllOpenReadStates();
+}
+
+void ChatLayer::HandleAllOpenMessagesReadStatesFound(const AllOpenMessagesReadStatesFoundEvent& allOpenMessagesReadStatesFoundEvent)
+{
+    m_messagesReadStates.SetAll(allOpenMessagesReadStatesFoundEvent.messagesReadStates);
+
+    /**
+     * NOTES:
+     *  - Nothing is selected at login so this is usually ignored (Find("") returns nullptr)
+     *  - Sidebar rows are shown before read states arrive so the user can select a conversation in between
+     *  - That selection (SelectConversation()) had no read state to capture yet so it is captured here
+     *  - Ignored if a read position was already captured
+     */
+    const MessagesReadStateView* messagesReadState = m_messagesReadStates.Find(m_selectedConversationId);
+    m_messagesFirstUnreadMatcher.Capture(messagesReadState);
 }
 
 void ChatLayer::HandleConversationClosed(const ConversationClosedEvent& conversationClosedEvent)
 {
+    const ConversationView& closedConversation = conversationClosedEvent.conversation;
+
     // Removes conversation
     for (std::size_t index = 0; index < m_conversations.size(); index++)
     {
         const ConversationView& conversation = m_conversations[index];
-        if (conversation.id == conversationClosedEvent.conversation.id)
+        if (conversation.id == closedConversation.id)
         {
             m_conversations.erase(m_conversations.begin() + index);
             break;
@@ -800,19 +925,22 @@ void ChatLayer::HandleConversationClosed(const ConversationClosedEvent& conversa
     }
 
     // Removes message history
-    m_messageHistories.Remove(conversationClosedEvent.conversation.id);
+    m_messageHistories.Remove(closedConversation.id);
+    // Removes read state
+    m_messagesReadStates.Remove(closedConversation.id);
 
     // Checks if list is now empty
     if (m_conversations.empty())
     {
         m_selectedConversationId = "";
+        m_messagesFirstUnreadMatcher.Reset();
         m_messagesScrollAnchor.Reset();
 
         return;
     }
 
     // Selects first conversation if deleted conversation is the selected one
-    if (m_selectedConversationId == conversationClosedEvent.conversation.id)
+    if (m_selectedConversationId == closedConversation.id)
     {
         SelectConversation(m_conversations[0].id);
     }
@@ -822,6 +950,7 @@ void ChatLayer::HandleConversationOpened(const ConversationOpenedEvent& conversa
 {
     const ConversationView& conversation = conversationOpenedEvent.conversation;
 
+    FindMessagesReadState(conversation.id);
     UpsertConversation(conversation);
     // NOTE: Client asked to open it so it gets the focus
     SelectConversation(conversation.id);
@@ -829,31 +958,85 @@ void ChatLayer::HandleConversationOpened(const ConversationOpenedEvent& conversa
 
 void ChatLayer::HandleConversationReopened(const ConversationReopenedEvent& conversationReopenedEvent)
 {
+    const ConversationView& conversation = conversationReopenedEvent.conversation;
+
+    FindMessagesReadState(conversation.id);
     // NOTE: Reopened by someone else's message so it is added without taking the focus
-    UpsertConversation(conversationReopenedEvent.conversation);
+    UpsertConversation(conversation);
 }
 
 void ChatLayer::HandleMessageCreated(const MessageCreatedEvent& messageCreatedEvent)
 {
+    const MessageView& message = messageCreatedEvent.message;
+
     // NOTE: A message in a conversation a user had closed comes after CONVERSATION_REOPENED so the conversation is already open again
-    m_messageHistories.AppendLiveMessage(messageCreatedEvent.message);
+    m_messageHistories.AppendLiveMessage(message);
+
+    const bool isConversationDisplayed = IsConversationDisplayed(message.conversationId);
+    const bool isMessageSender = message.senderId == m_authApi.GetCurrentUser()->id;
+    const bool isUnread = !isConversationDisplayed && !isMessageSender;
+    m_messagesReadStates.ApplyLiveMessage(message, isUnread);
+
+    if (isConversationDisplayed && !isMessageSender)
+    {
+        MarkMessagesRead(message.conversationId);
+    }
+}
+
+void ChatLayer::HandleMessagesMarkedRead(const MessagesMarkedReadEvent& messagesMarkedReadEvent)
+{
+    m_messagesReadStates.Set(messagesMarkedReadEvent.messagesReadState);
 }
 
 void ChatLayer::HandleMessagesPageFound(const MessagesPageFoundEvent& messagesPageFoundEvent)
 {
-    const bool isSelectedConversation = messagesPageFoundEvent.conversationId == m_selectedConversationId;
-    if (isSelectedConversation)
+    // NOTE: No history means the conversation was closed while the page was in flight
+    const MessageHistories::MessageHistory* messageHistory = m_messageHistories.Find(messagesPageFoundEvent.conversationId);
+    if (messageHistory == nullptr)
     {
-        // NOTE: Only an older page anchors (nextCursor is empty on the first page merge which goes to the bottom instead)
-        const MessageHistories::MessageHistory* messageHistory = m_messageHistories.Find(messagesPageFoundEvent.conversationId);
-        const bool isOlderPage = messageHistory != nullptr && !messageHistory->nextCursor.empty();
-        if (isOlderPage)
-        {
-            m_messagesScrollAnchor.Start(messageHistory->messages.front().id);
-        }
+        return;
+    }
+
+    const bool isSelectedConversation = messagesPageFoundEvent.conversationId == m_selectedConversationId;
+    // NOTE: Read before MergePage() overwrites nextCursor (empty before the first page merge and set after it)
+    const bool isFirstPage = messageHistory->nextCursor.empty();
+
+    // NOTE: Only an older page anchors (the first page merge goes to the bottom instead)
+    if (isSelectedConversation && !isFirstPage)
+    {
+        m_messagesScrollAnchor.Start(messageHistory->messages.front().id);
     }
 
     m_messageHistories.MergePage(messagesPageFoundEvent.conversationId, messagesPageFoundEvent.messagesPage);
+
+    // NOTE: Only the first page shows the newest messages
+    if (isSelectedConversation && isFirstPage)
+    {
+        MarkMessagesRead(messagesPageFoundEvent.conversationId);
+    }
+}
+
+void ChatLayer::HandleMessagesReadStateFound(const MessagesReadStateFoundEvent& messagesReadStateFoundEvent)
+{
+    const MessagesReadStateView& messagesReadState = messagesReadStateFoundEvent.messagesReadState;
+
+    m_messagesReadStates.Set(messagesReadState);
+
+    // NOTE: Only the selected conversation's read position is captured
+    if (messagesReadState.conversationId != m_selectedConversationId)
+    {
+        return;
+    }
+
+    /**
+     * NOTES:
+     *  - An opened conversation is selected right away so its read state arrives after the selection and is captured here
+     *  - A reopened conversation is not selected but its sidebar row is shown before its read state arrives so the user can 
+     *    select it in between
+     *  - Ignored if a read position was already captured
+     *  - Safe to pass the read state address (&messagesReadState) because Capture() copies the position and does not keep the pointer
+     */
+    m_messagesFirstUnreadMatcher.Capture(&messagesReadState);
 }
 
 void ChatLayer::HandleLoggedOut(const LoggedOutEvent& loggedOutEvent)
@@ -875,7 +1058,7 @@ void ChatLayer::HandleUsersSearched(const UsersSearchedEvent& usersSearchedEvent
 void ChatLayer::HandleCloseConversationButtonClicked(const std::string& conversationId)
 {
     ConversationsApi::CloseConversationParams closeConversationParams = {};
-    closeConversationParams.conversationId = conversationId;
+    closeConversationParams.id = conversationId;
     m_conversationsApi.Close(closeConversationParams);
 }
 
@@ -933,6 +1116,36 @@ const UserView* ChatLayer::FindConversationUser(const std::string& conversationI
     return nullptr;
 }
 
+void ChatLayer::FindMessagesReadState(const std::string& conversationId)
+{
+    MessagesApi::FindMessagesReadStateParams findMessagesReadStateParams = {};
+    findMessagesReadStateParams.conversationId = conversationId;
+    m_messagesApi.FindReadState(findMessagesReadStateParams);
+}
+
+bool ChatLayer::IsConversationDisplayed(const std::string& conversationId) const
+{
+    const bool hasMessageHistory = m_messageHistories.Has(conversationId);
+
+    return conversationId == m_selectedConversationId && hasMessageHistory;
+}
+
+void ChatLayer::MarkMessagesRead(const std::string& conversationId)
+{
+    // NOTE: No history or no messages means nothing is on the screen to mark read
+    const MessageHistories::MessageHistory* messageHistory = m_messageHistories.Find(conversationId);
+    if (messageHistory == nullptr || messageHistory->messages.empty())
+    {
+        return;
+    }
+
+    MessagesApi::MarkMessagesReadParams markMessagesReadParams = {};
+    markMessagesReadParams.conversationId = conversationId;
+    // NOTE: History is oldest first so the newest displayed is the last one
+    markMessagesReadParams.messageId = messageHistory->messages.back().id;
+    m_messagesApi.MarkRead(markMessagesReadParams);
+}
+
 void ChatLayer::Reset()
 {
     // Settings
@@ -944,8 +1157,10 @@ void ChatLayer::Reset()
     m_searchUsersDebouncer.Reset();
 
     // Messages
-    m_messageHistories.Clear();
     m_messageText.clear();
+    m_messageHistories.Clear();
+    m_messagesFirstUnreadMatcher.Reset();
+    m_messagesReadStates.Clear();
     m_messagesScrollAnchor.Reset();
 
     // Conversations
@@ -963,11 +1178,16 @@ void ChatLayer::SelectConversation(const std::string& conversationId)
     m_selectedConversationId = conversationId;
     // NOTE: A pending correction belongs to the previous conversation
     m_messagesScrollAnchor.Reset();
+    m_messagesFirstUnreadMatcher.Reset();
+    // NOTE: Captured before MarkMessagesRead() moves the read position
+    const MessagesReadStateView* messagesReadState = m_messagesReadStates.Find(conversationId);
+    m_messagesFirstUnreadMatcher.Capture(messagesReadState);
 
     // NOTE: Already loading or loaded so nothing to fetch
     const bool hasMessageHistory = m_messageHistories.Has(conversationId);
     if (hasMessageHistory)
     {
+        MarkMessagesRead(conversationId);
         return;
     }
 

@@ -5,6 +5,7 @@
 #include "results/ServiceResult.h"
 #include "views/ConversationView.h"
 #include "views/MessagesPageView.h"
+#include "views/MessagesReadStateView.h"
 #include "views/MessageView.h"
 
 #include <optional>
@@ -24,7 +25,8 @@ public:
         OK,
         NOT_CONVERSATION_USER,
         TEXT_EMPTY,
-        TEXT_TOO_LONG
+        TEXT_TOO_LONG,
+        UNKNOWN_MESSAGE
     };
 
     struct CreateMessageData
@@ -36,6 +38,8 @@ public:
     };
 
     using CreateMessageResult = ServiceResult<MessagesResultCode, std::optional<CreateMessageData>>;
+    using MessagesReadStateResult = ServiceResult<MessagesResultCode, std::optional<MessagesReadStateView>>;
+    using MessagesReadStatesResult = ServiceResult<MessagesResultCode, std::vector<MessagesReadStateView>>;
     using MessagesPageResult = ServiceResult<MessagesResultCode, MessagesPageView>;
 
     struct CreateMessageDto
@@ -43,6 +47,11 @@ public:
         std::string conversationId;
         std::string senderId;
         std::string text;
+    };
+
+    struct FindAllOpenMessagesReadStatesByUserIdDto
+    {
+        std::string userId;
     };
 
     struct FindMessagesPageByConversationIdDto
@@ -53,10 +62,33 @@ public:
         std::string cursor;
     };
 
+    struct FindMessagesReadStateByConversationIdDto
+    {
+        std::string conversationId;
+        std::string userId;
+    };
+
+    struct MarkMessagesReadDto
+    {
+        std::string conversationId;
+        std::string userId;
+        // NOTE: The newest message id on the client's screen (every message up to this one is marked read)
+        std::string messageId;
+    };
+
     MessagesService(std::unique_ptr<IMessagesRepository> messagesRepository, ConversationsService& conversationsService, UuidService& uuidService, Logger& logger);
 
     CreateMessageResult Create(const CreateMessageDto& createMessageDto);
+    MessagesReadStatesResult FindAllOpenReadStatesByUserId(const FindAllOpenMessagesReadStatesByUserIdDto& findAllOpenMessagesReadStatesByUserIdDto);
     MessagesPageResult FindPageByConversationId(const FindMessagesPageByConversationIdDto& findMessagesPageByConversationIdDto);
+    /**
+     * NOTES:
+     *  - Read state of one conversation
+     *  - Used when conversation becomes opened or reopened after login since 
+     *    read states are only sent once at login 
+     */
+    MessagesReadStateResult FindReadStateByConversationId(const FindMessagesReadStateByConversationIdDto& findMessagesReadStateByConversationIdDto);
+    MessagesReadStateResult MarkRead(const MarkMessagesReadDto& markMessagesReadDto);
     std::string ConvertMessagesResultCodeToString(MessagesResultCode messagesResultCode);
 
 private:

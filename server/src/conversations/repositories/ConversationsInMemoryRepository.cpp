@@ -9,11 +9,73 @@ ConversationsInMemoryRepository::ConversationsInMemoryRepository(Logger& logger)
     : m_logger(logger)
 {}
 
+std::optional<Conversation> ConversationsInMemoryRepository::AdvanceLastReadMessagePosition(
+    const std::string& id,
+    const std::string& userId,
+    std::uint64_t messagePosition
+)
+{
+    return UpdateConversationUser(
+        id,
+        userId,
+        [messagePosition](ConversationUser& conversationUser) {
+            if (messagePosition > conversationUser.lastReadMessagePosition)
+            {
+                conversationUser.lastReadMessagePosition = messagePosition;
+            }
+        }
+    );
+}
+
 Conversation ConversationsInMemoryRepository::Create(const Conversation& conversation)
 {
     m_conversations.push_back(conversation);
 
     return conversation;
+}
+
+std::vector<Conversation> ConversationsInMemoryRepository::FindAllOpenByUserId(const std::string& userId)
+{
+    std::vector<Conversation> openConversations = {};
+    for (Conversation& conversation : m_conversations)
+    {
+        const ConversationUser* conversationUser = FindConversationUserPointer(conversation, userId);
+        if (conversationUser == nullptr)
+        {
+            continue;
+        }
+
+        if (!conversationUser->isOpen)
+        {
+            continue;
+        }
+
+        openConversations.push_back(conversation);
+    }
+
+    return openConversations;
+}
+
+ConversationsInMemoryRepository::LastReadMessagePositionsMap ConversationsInMemoryRepository::FindAllOpenLastReadMessagePositionsByUserId(const std::string& userId)
+{
+    LastReadMessagePositionsMap lastReadMessagePositionsMap = {};
+    for (Conversation& conversation : m_conversations)
+    {
+        const ConversationUser* conversationUser = FindConversationUserPointer(conversation, userId);
+        if (conversationUser == nullptr)
+        {
+            continue;
+        }
+
+        if (!conversationUser->isOpen)
+        {
+            continue;
+        }
+
+        lastReadMessagePositionsMap[conversation.id] = conversationUser->lastReadMessagePosition;
+    }
+
+    return lastReadMessagePositionsMap;
 }
 
 std::optional<Conversation> ConversationsInMemoryRepository::FindById(const std::string& id)
@@ -62,31 +124,26 @@ std::optional<Conversation> ConversationsInMemoryRepository::FindByUserIds(const
     return std::nullopt;
 }
 
-std::vector<Conversation> ConversationsInMemoryRepository::FindAllOpenByUserId(const std::string& userId)
+std::optional<std::uint64_t> ConversationsInMemoryRepository::FindLastReadMessagePositionById(const std::string& id, const std::string& userId)
 {
-    std::vector<Conversation> openConversations = {};
-    for (Conversation& conversation : m_conversations)
+    Conversation* conversation = FindConversationPointer(id);
+    if (conversation == nullptr)
     {
-        const ConversationUser* conversationUser = FindConversationUserPointer(conversation, userId);
-        if (conversationUser == nullptr)
-        {
-            continue;
-        }
-
-        if (!conversationUser->isOpen)
-        {
-            continue;
-        }
-
-        openConversations.push_back(conversation);
+        return std::nullopt;
     }
 
-    return openConversations;
+    ConversationUser* conversationUser = FindConversationUserPointer(*conversation, userId);
+    if (conversationUser == nullptr)
+    {
+        return std::nullopt;
+    }
+
+    return conversationUser->lastReadMessagePosition;
 }
 
-bool ConversationsInMemoryRepository::IsConversationUser(const std::string& conversationId, const std::string& userId)
+bool ConversationsInMemoryRepository::IsConversationUser(const std::string& id, const std::string& userId)
 {
-    Conversation* conversation = FindConversationPointer(conversationId);
+    Conversation* conversation = FindConversationPointer(id);
     if (conversation == nullptr)
     {
         return false;
@@ -97,37 +154,25 @@ bool ConversationsInMemoryRepository::IsConversationUser(const std::string& conv
     return conversationUser != nullptr;
 }
 
-std::optional<Conversation> ConversationsInMemoryRepository::UpdateIsOpen(const std::string& conversationId, const std::string& userId, bool isOpen)
+std::optional<Conversation> ConversationsInMemoryRepository::UpdateIsOpen(const std::string& id, const std::string& userId, bool isOpen)
 {
-    Conversation* conversation = FindConversationPointer(conversationId);
-    if (conversation == nullptr)
-    {
-        m_logger.Error("Conversation " + conversationId + " not found");
-        return std::nullopt;
-    }
-
-    ConversationUser* conversationUser = FindConversationUserPointer(*conversation, userId);
-    if (conversationUser == nullptr)
-    {
-        m_logger.Error("User " + userId + " is not in conversation " + conversationId);
-        return std::nullopt;
-    }
-
-    // NOTE: conversationUser points into m_conversations, so this updates the stored conversation
-    conversationUser->isOpen = isOpen;
-
-    // NOTE: Copies on purpose, callers outside this repository must not hold a pointer into m_conversations
-    return *conversation;
+    return UpdateConversationUser(
+        id,
+        userId,
+        [isOpen](ConversationUser& conversationUser) {
+            conversationUser.isOpen = isOpen;
+        }
+    );
 }
 
 // ***********
 // * PRIVATE *
 // ***********
-Conversation* ConversationsInMemoryRepository::FindConversationPointer(const std::string& conversationId)
+Conversation* ConversationsInMemoryRepository::FindConversationPointer(const std::string& id)
 {
     for (Conversation& conversation : m_conversations)
     {
-        if (conversation.id == conversationId)
+        if (conversation.id == id)
         {
             return &conversation;
         }
@@ -147,4 +192,31 @@ Conversation* ConversationsInMemoryRepository::FindConversationPointer(const std
     }
 
     return nullptr;
+}
+
+std::optional<Conversation> ConversationsInMemoryRepository::UpdateConversationUser(
+    const std::string& id,
+    const std::string& userId,
+    const std::function<void(ConversationUser&)>& update
+)
+{
+    Conversation* conversation = FindConversationPointer(id);
+    if (conversation == nullptr)
+    {
+        m_logger.Error("Conversation " + id + " not found");
+        return std::nullopt;
+    }
+
+    ConversationUser* conversationUser = FindConversationUserPointer(*conversation, userId);
+    if (conversationUser == nullptr)
+    {
+        m_logger.Error("User " + userId + " is not in conversation " + id);
+        return std::nullopt;
+    }
+
+    // NOTE: conversationUser points into m_conversations, so this updates the stored conversation
+    update(*conversationUser);
+
+    // NOTE: Copies on purpose, callers outside this repository must not hold a pointer into m_conversations
+    return *conversation;
 }

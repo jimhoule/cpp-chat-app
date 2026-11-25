@@ -100,6 +100,17 @@ std::time_t Json::GetTime(const std::string& key) const
     return fieldJson.get<std::time_t>();
 }
 
+std::uint64_t Json::GetUint64(const std::string& key) const
+{
+    const nlohmann::json& fieldJson = GetField(key);
+    if (!fieldJson.is_number_unsigned())
+    {
+        throw JsonException("Field '" + key + "' is not an unsigned integer");
+    }
+
+    return fieldJson.get<std::uint64_t>();
+}
+
 bool Json::IsNull(const std::string& key) const
 {
     const nlohmann::json& fieldJson = GetField(key);
@@ -174,6 +185,11 @@ void Json::Set(const std::string& key, const std::vector<std::string>& stringVal
 {
     // NOTE: nlohmann converts a vector of strings to a json array, an empty vector writes []
     m_json[key] = stringValues;
+}
+
+void Json::Set(const std::string& key, std::uint64_t uint64Value)
+{
+    m_json[key] = uint64Value;
 }
 
 void Json::SetNull(const std::string& key)

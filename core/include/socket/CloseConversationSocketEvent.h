@@ -8,11 +8,11 @@
 struct CloseConversationSocketEventPayload
 {
     CloseConversationSocketEventPayload() = default;
-    CloseConversationSocketEventPayload(const std::string& conversationId)
-        : conversationId(conversationId)
+    CloseConversationSocketEventPayload(const std::string& id)
+        : id(id)
     {}
 
-    std::string conversationId;
+    std::string id;
 };
 
 struct CloseConversationSocketEvent : public SocketEvent<CloseConversationSocketEventPayload>

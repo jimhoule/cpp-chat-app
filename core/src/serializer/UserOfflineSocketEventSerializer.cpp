@@ -8,7 +8,7 @@
 std::string UserOfflineSocketEventSerializer::Serialize(const UserOfflineSocketEvent& userOfflineSocketEvent)
 {
     Json payloadJson = {};
-    payloadJson.Set("userId", userOfflineSocketEvent.payload.userId);
+    payloadJson.Set("id", userOfflineSocketEvent.payload.id);
 
     Json json = {};
     json.SetEnum<SocketEventName>("name", userOfflineSocketEvent.name);

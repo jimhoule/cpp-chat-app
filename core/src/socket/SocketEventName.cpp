@@ -70,11 +70,29 @@ std::string ConvertSocketEventNameToString(SocketEventName socketEventName)
         case SocketEventName::MESSAGE_CREATED:
             return "MESSAGE CREATED";
 
+        case SocketEventName::FIND_ALL_OPEN_MESSAGES_READ_STATES_BY_USER_ID:
+            return "FIND ALL OPEN MESSAGES READ STATES BY USER ID";
+
+        case SocketEventName::ALL_OPEN_MESSAGES_READ_STATES_FOUND_BY_USER_ID:
+            return "ALL OPEN MESSAGES READ STATES FOUND BY USER ID";
+
         case SocketEventName::FIND_MESSAGES_PAGE_BY_CONVERSATION_ID:
             return "FIND MESSAGES PAGE BY CONVERSATION ID";
 
         case SocketEventName::MESSAGES_PAGE_FOUND_BY_CONVERSATION_ID:
             return "MESSAGES PAGE FOUND BY CONVERSATION ID";
+
+        case SocketEventName::FIND_MESSAGES_READ_STATE_BY_CONVERSATION_ID:
+            return "FIND MESSAGES READ STATE BY CONVERSATION ID";
+
+        case SocketEventName::MESSAGES_READ_STATE_FOUND_BY_CONVERSATION_ID:
+            return "MESSAGES READ STATE FOUND BY CONVERSATION ID";
+
+        case SocketEventName::MARK_MESSAGES_READ:
+            return "MARK MESSAGES READ";
+
+        case SocketEventName::MESSAGES_MARKED_READ:
+            return "MESSAGES MARKED READ";
 
 
         // Users

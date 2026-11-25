@@ -31,6 +31,8 @@ make start_all_local                          # tmux: server + two clients, sepa
 
 Build types are constrained to `Debug` and `Release` in the top-level `CMakeLists.txt`; anything else is a configure error. The build type is baked into the client binary and decides where it stores data, so Debug and Release never share a session.
 
+Source files are collected with `file(GLOB ...)`, which CMake evaluates only when it configures. After adding a `.cpp` file, re-run `make build_debug` (or `cmake ..` in `build/`) before building, otherwise the link fails with "Undefined symbols".
+
 ## Socket protocol
 
 Both sides speak one JSON shape over a raw TCP socket:
@@ -43,7 +45,7 @@ TCP is a byte stream, not a message stream: one `read()` can return half an even
 
 `SocketEventName` travels as a **string**, not an enum position, so inserting a value in the middle can't silently change the meaning of the ones after it. Every event has a typed payload struct in `core/include/socket/`, with a serializer and/or a deserializer in the neighbouring directories — each side only builds the direction it uses, so the pairs are deliberately asymmetric.
 
-Events are named as command/result pairs: `LOGIN`/`LOGGEDIN`, `REGISTER`/`REGISTERED`, `AUTHENTICATE`/`AUTHENTICATED`, `LOGOUT`/`LOGGEDOUT`, `OPEN_CONVERSATION`/`CONVERSATION_OPENED`, `CLOSE_CONVERSATION`/`CONVERSATION_CLOSED`, `FIND_ALL_OPEN_CONVERSATIONS_BY_USER_ID`/`ALL_OPEN_CONVERSATIONS_FOUND_BY_USER_ID`, `FIND_MESSAGES_PAGE_BY_CONVERSATION_ID`/`MESSAGES_PAGE_FOUND_BY_CONVERSATION_ID`, `SEARCH_USERS`/`USERS_SEARCHED`. Broadcasts are their own names: `USER_ONLINE`, `USER_OFFLINE`, `MESSAGE_CREATED`.
+Events are named as command/result pairs: `LOGIN`/`LOGGEDIN`, `REGISTER`/`REGISTERED`, `AUTHENTICATE`/`AUTHENTICATED`, `LOGOUT`/`LOGGEDOUT`, `OPEN_CONVERSATION`/`CONVERSATION_OPENED`, `CLOSE_CONVERSATION`/`CONVERSATION_CLOSED`, `FIND_ALL_OPEN_CONVERSATIONS_BY_USER_ID`/`ALL_OPEN_CONVERSATIONS_FOUND_BY_USER_ID`, `FIND_MESSAGES_PAGE_BY_CONVERSATION_ID`/`MESSAGES_PAGE_FOUND_BY_CONVERSATION_ID`, `FIND_ALL_OPEN_MESSAGES_READ_STATES_BY_USER_ID`/`ALL_OPEN_MESSAGES_READ_STATES_FOUND_BY_USER_ID`, `FIND_MESSAGES_READ_STATE_BY_CONVERSATION_ID`/`MESSAGES_READ_STATE_FOUND_BY_CONVERSATION_ID`, `MARK_MESSAGES_READ`/`MESSAGES_MARKED_READ`, `SEARCH_USERS`/`USERS_SEARCHED`. `MESSAGES_MARKED_READ` goes to every socket of the user, not only the one that asked, so their other devices update their badges. Broadcasts are their own names: `USER_ONLINE`, `USER_OFFLINE`, `MESSAGE_CREATED`.
 
 Failures come back as a single `ERROR` event carrying a `SocketErrorCode` and the `failedEventName` of the request that failed, so the client can tell which request it answers.
 
@@ -61,6 +63,17 @@ SocketServer  →  route (middlewares + handler)  →  Service  →  Repository
 - **Repositories** are behind interfaces (`ISessionsRepository`, `IUsersRepository`, …) with in-memory implementations today, so storage can be swapped without touching services.
 - **Middlewares** run before a handler and stop the route by throwing. `RequireAuthentication` rejects unauthenticated sockets and populates `context.user`.
 - **`HandleErrors`** is the single error sink: it catches `ExpectedException` (client at fault), `JsonException` (malformed payload) and anything else (server at fault), logs at the right level, and replies with an `ERROR` event.
+
+**Naming.** Every Find and Count method in a repository or service ends in `By<Key>`, where `Key` is the name of its main parameter. Other parameters stay out of the name: `MessagesService::FindPageByConversationId` takes `{ conversationId, userId, cursor }`. A module calls its own entity's id `id`, so it writes `ById` (`ConversationsService::FindById`, `FindLastReadMessagePositionById(id, userId)`). It calls another module's entity `<entity>Id` and writes `By<Entity>Id` (`MessagesService::FindReadStateByConversationId`). Other verbs take no `By` (`AdvanceLastReadMessagePosition`, `IsConversationUser`, `UpdateIsOpen`, `MarkRead`). Each `Dto` is named after its method and ends in `Dto`.
+
+Parameters follow the same idea. The id of the entity a method acts on is `id`, whatever else is passed with it. Here the entity is the module's own entity, or the one named by the Dto, socket payload or client `Params`: `CloseConversationDto { id, userId }`, `IsConversationUser(id, userId)`, sessions' `Delete { id }`, `CloseConversationSocketEventPayload { id }`, `UserOfflineSocketEventPayload { id }`. The name and the class already say which entity it is. There are three exceptions:
+- `By<Key>` names the field (`FindMessagesPageByConversationIdSocketEventPayload { conversationId, cursor }`).
+- Another entity's id stays `<entity>Id` (`conversationId` in `MessagesService` and `CreateMessageSocketEventPayload`). This includes payloads whose event doesn't name the entity, such as `sessionId` in `AUTHENTICATE`, `LOGGEDIN`, `LOGOUT` and `REGISTERED`.
+- An id with another role keeps a descriptive name, even for the entity the method acts on. Examples are `beforeMessageId` in `FindByConversationIdBefore`, and `messageId` in `MarkMessagesRead`, which means "read up to this message".
+
+JSON keys follow the field names.
+
+Client Api classes drop `By` everywhere: methods (`FindAllOpen()`, `FindPage(...)`), `Params` (`FindMessagesPageParams`), events (`MessagesPageFoundEvent`) and subjects. Their `Params` follow the same `id` rule (`CloseConversationParams { id }`).
 
 Services never call their own public methods — shared logic goes into a private helper instead. `SessionsService::IsExpired` and `GenerateExpirationTime` are examples. Calling *another* service's public methods is fine, and returns views.
 
@@ -85,9 +98,13 @@ Services never call their own public methods — shared logic goes into a privat
 - **`SocketClient`** allows several handlers per event name. Each handler is registered with an owner (the API's `this`), and `Off` removes only that owner's handler. Handlers receive a `SocketClient::EventContext`, the same shape as the server's (only `serializedPayload` today), so new per-event data can be added without changing every handler's signature.
 - **Stores** are local persistence. `SessionStore` is the only one so far.
 - **`MessageHistories`** (`client/messages/`) holds the loaded messages, next cursor and loading flag of each conversation, keyed by conversation id. It has no GUI or network dependency: `ChatLayer` decides when to fetch and calls `Has` / `Add` / `AppendLiveMessage` / `StartLoading` / `MergePage` / `Remove` / `Find`, so the history rules live in one place.
+- **`MessagesReadStates`** (`client/messages/`) holds the read state of each open conversation, keyed by conversation id, with the same shape and no GUI or network dependency. `SetAll` (login) and `Set` (one conversation) store what the server sends. `ApplyLiveMessage(message, isUnread)` applies a `MESSAGE_CREATED` message: it raises `latestMessagePosition` and adds 1 to the count only if `ChatLayer` says the message is unread. It stores no message, which is why it isn't called `AppendLiveMessage` like the `MessageHistories` method. `Find` returns `nullptr` when there's no read state yet. `Remove` and `Clear` are called on close and logout.
+- **`MessagesFirstUnreadMatcher`** (`client/messages/`) finds where the "new messages" divider goes: the first message after the read position captured when the conversation was selected, not sent by the user. It's called per message inside `ChatLayer`'s draw loop (`Match`, then `EndFrame`), so the messages aren't walked twice. See "On the client" under Read state.
 - **`ScrollAnchor`** (`gui/`) keeps a scrolling list on the same item when older items are prepended. The layer owns one per list and calls it during the draw: `ConsumeCorrectedScrollY` before the container, `MeasureItem` for each item, `EndFrame` at the end, and `Start` before merging an older page. `IsSettled` tells the load trigger when the scroll position can be trusted, and `HasAnchor` tells the auto-scroll to stay out of the way. ChatLayer keeps the loading decisions. `ScrollAnchor` only knows about ImGui frame timing.
 
-Layers follow one shape: call an API method, subscribe to the matching subject, navigate when it fires.
+**UI sizes derived from another value are always multiplied.** When a layer makes a size or position smaller or bigger than another value, it writes `value * 0.75f`, never `value / 1.33f`. The factor then reads directly as the percentage (75% of the value), and every derived size in a layer reads the same way. Example: the unread badge is `conversationContainerAvailableSpace.y * 0.75f`, not `/ 1.33f`.
+
+Layers follow one shape: call an API method, subscribe to the matching subject, navigate when it fires. Subjects live only on the Api classes and fire on server events. State classes such as `MessageHistories` have none, so a follow-up to a server event (for example marking messages read once the first history page is merged) runs in the layer's handler for that event, right after it updates the state.
 
 ## Auth and sessions
 
@@ -119,6 +136,171 @@ On disk, as JSON, one file per build type:
 `LOCAL_DATA_DIRECTORY` overrides the directory, which is what lets `make start_all_local` run two clients as two different users on one machine.
 
 The file is written with mode `0600` — the default would let every account on the machine read a credential that is enough to authenticate as the user.
+
+## Read state (mark-as-read, unread counts)
+
+Status: the server side is built: storage, message positions, the repository counting, `MarkRead`, the read states at login, the read state of one conversation, and their routes. On the client, `MessagesApi` sends the login request, the one-conversation request and `MarkRead`, and `ChatLayer` keeps every read state in `MessagesReadStates` (login, marks, opens, reopens, live messages, close and logout). It also sends the mark-read requests (below). The sidebar badges and the divider are built. See `NEXT_STEPS.txt`.
+
+### The four values
+
+| Value | Where | Meaning |
+|---|---|---|
+| `Message.id` | every message | A UUID that identifies the message. Used for history cursors, dedup and lookups, and it's what the client sends when marking as read. |
+| `Message.position` | every message | The message's send order: 1 for the first message stored on the server, then 2, 3, ... It's global across all conversations and assigned by the repository in `Create` (a counter in memory, a `seq` column in Postgres). It's only compared, never interpreted. |
+| `lastReadMessagePosition` | `ConversationUser`, one per user per conversation | The position of the last message this user has read here. `0` means they have read nothing yet. |
+| `latestMessagePosition` | read state sent to the client | The position of the newest message in the conversation, whoever sent it. `0` means the conversation has no messages. |
+
+`0` is never a real position, because positions start at 1. That's why it can safely mean "nothing read" and "no messages".
+
+**Unread** = messages in the conversation with a position **greater than** `lastReadMessagePosition`, not sent by the user themselves.
+
+### Worked example
+
+Two conversations share the server. Alice and Bob talk in conversation A. Something else happens in conversation B.
+
+| position | conversation | sender |
+|---|---|---|
+| 1 | A | Alice |
+| 2 | B | ... |
+| 3 | A | Bob |
+| 4 | A | Bob |
+| 5 | B | ... |
+| 6 | A | Alice |
+| 7 | A | Bob |
+
+Alice's `lastReadMessagePosition` in A is `3`, so she has read up to Bob's message 3.
+
+- Messages in A after 3: 4 (Bob), 6 (Alice), 7 (Bob).
+- 6 is Alice's own, so it doesn't count.
+- **Alice's unread count in A = 2** (messages 4 and 7). **`latestMessagePosition` = 7**.
+
+### Marking as read: `MarkRead`, step by step
+
+The client sends `MARK_MESSAGES_READ` with the **id** of the newest message it is **displaying**. That isn't necessarily the newest one on the server: a message that arrived but isn't on screen yet must stay unread.
+
+It's sent whenever new messages become visible in the selected conversation:
+
+- **When a conversation is opened for the first time**, once its first history page is merged (`ChatLayer::HandleMessagesPageFound`, right after `MergePage`)
+- **When the user switches back to a conversation that's already loaded** (`SelectConversation`)
+- **When a new message arrives in the conversation being viewed** (`MESSAGE_CREATED`), unless the user sent it (own messages are never counted)
+
+All three go through two private `ChatLayer` helpers. `IsConversationDisplayed(conversationId)` is true when the conversation is selected and its history is loaded. `MarkMessagesRead(conversationId)` sends the id of the last message in the history, which is the newest one shown, because the history is kept oldest first. It sends nothing when the history is empty. Older pages don't trigger a mark (they go above what's already shown), and neither does a page that arrives after the user switched to another conversation.
+
+Window focus isn't checked yet, so a message drawn while the app is in the background counts as read. Scroll position isn't checked either: opening a conversation scrolls to the bottom, so its newest messages count as seen.
+
+Say Alice's screen shows up to message 6, and she sends message 6's id.
+
+1. **`FindById(id of 6)`** → message 6, with its position `6`. The service then checks that the message belongs to A. If no message has that id, or it's in another conversation, the answer is `UNKNOWN_MESSAGE`. The conversation check matters: without it, a message from another conversation with a higher position would move A's read position past messages Alice never saw.
+2. **`AdvanceLastReadMessagePosition(A, Alice, 6)`** → the stored value is `3`, and 6 > 3, so it becomes `6`. It returns what's stored now: `6`. If Alice isn't in A, the answer is `NOT_CONVERSATION_USER`.
+3. **`CountByConversationIdAfter(A, afterPosition = 6, excluded = Alice)`** → messages in A after 6: only 7 (Bob). **count = 1, `latestMessagePosition` = 7.**
+4. The server sends `MESSAGES_MARKED_READ` with `{ conversationId: A, lastReadMessagePosition: 6, latestMessagePosition: 7, unreadCount: 1 }` to **all** of Alice's sockets, so her other devices update too.
+
+Note that the count is **1, not 0**. Message 7 reached the server but wasn't on Alice's screen, so it's still unread. That's why the client never sets the count to 0 itself and always takes the state the server sends.
+
+**What happens to message 7 next.** It only stays unread for a moment:
+
+1. `MESSAGE_CREATED` for message 7 reaches Alice's client, a moment after the reply above or even before it.
+2. The client shows it, because Alice is looking at conversation A. It does **not** add 1 to the badge, because live messages in the selected, loaded conversation are excluded.
+3. Showing it is the third trigger (a new message arrives in the conversation being viewed), so the client sends `MARK_MESSAGES_READ` with message 7's id.
+4. The server runs the same steps: `FindById` → message 7 (position `7`), `AdvanceLastReadMessagePosition` moves 6 → `7`, and `CountByConversationIdAfter(7)` finds nothing. It replies `{ A, lastReadMessagePosition: 7, latestMessagePosition: 7, unreadCount: 0 }`, and the badge goes to 0.
+
+So the count goes 1 → 0 within moments, and it only ever counts what Alice really hasn't seen. **A message counts as read once it has been displayed, never just because it reached the server.**
+
+**A late or duplicate mark.** If a request to mark message 4 arrives after that (an old request, or another device), step 2 sees 4 is not greater than 6 and changes nothing. It still returns `6`, steps 3 and 4 run the same way, and the answer is `OK`. The request can be repeated safely, and the position never moves back.
+
+### Why the compare happens inside the write
+
+If the service read the position, compared it, then wrote it, two requests running at the same time could do this:
+
+1. Request X (mark 7) reads `3`.
+2. Request Y (mark 5) reads `3`.
+3. X writes `7`.
+4. Y writes `5`. **The position has moved backwards.**
+
+`AdvanceLastReadMessagePosition` does "write only if greater" as **one** storage operation: one `UPDATE ... WHERE last_read_message_position < $new` in Postgres, and one method under one lock in memory. Nothing can run between the check and the write. This is why the position is stored, rather than the message id: an id would need its order looked up in another table first, and that brings back the read, compare, write race.
+
+### How `CountByConversationIdAfter` walks the messages (in memory)
+
+`m_messages` holds every conversation's messages in position order. `CountByConversationIdAfter(A, afterPosition = 3, excluded = Alice)` walks it **backwards, newest first**, so it can stop early:
+
+| message seen | what happens |
+|---|---|
+| 7 (A, Bob) | first message of A seen, so `latestMessagePosition = 7`. 7 > 3, Bob ≠ Alice → **count 1** |
+| 6 (A, Alice) | 6 > 3, but it's Alice's own → not counted |
+| 5 (B) | other conversation → skipped |
+| 4 (A, Bob) | 4 > 3, Bob → **count 2** |
+| 3 (A, Bob) | 3 ≤ 3, already read, and everything older is too → **stop** |
+
+Result: count = 2, `latestMessagePosition` = 7. The `latestMessagePosition == 0` check in the loop means "nothing from this conversation has been seen yet". Because the walk is backwards, the first match is the newest message, and it's stored only once.
+
+Cost: the walk covers only the messages since the read position, so it's tiny for someone who is caught up. `FindById` also walks backwards, because the message being marked is almost always among the newest.
+
+### At login
+
+The client asks `FIND_ALL_OPEN_MESSAGES_READ_STATES_BY_USER_ID` once the conversation list arrives. The server reads every open conversation's stored position (one call) and counts all of them in one batch (one call). That's two round trips, however many conversations there are, and it happens once per login, not per message.
+
+The batch count is `CountByConversationIdsAfter`, the login version of `CountByConversationIdAfter`. `CountByConversationIdAfter` counts one conversation, and calling it in a loop would mean one scan (later one Postgres query) per conversation. The batch method takes every conversation with its read position and returns one `MessagesCount` per conversation from a single pass:
+
+```
+in:  { c1 → 3, c2 → 0, c5 → 12 }                     conversationId → lastReadMessagePosition
+out: { c1 → {count 2, latest 7}, c2 → {count 1, latest 4}, c5 → {count 0, latest 12} }
+```
+
+Each message follows the same rules as in `CountByConversationIdAfter`, applied to its own conversation. A conversation not in the input is skipped. The first message seen for a conversation sets its `latestMessagePosition`. A position at or below that conversation's read position is already read. A sender other than the user counts 1. In memory, the walk stops once a position is **below** the smallest read position, because from there everything older is read in every conversation. It stops below it, not at it: the message at the smallest read position can be the newest message of its conversation (a read position is always a message of that conversation, since `MarkRead` checks it). If c1 has read up to 3 and message 3 is its newest, stopping at 3 would leave c1's `latestMessagePosition` at 0. Visiting 3 sets it to 3, and the walk stops at 2. Unlike `CountByConversationIdAfter`, a read message doesn't end the walk (other conversations may still have unread messages further back), and every input conversation starts at `{count 0, latest 0}`, so a conversation without messages still gets an entry.
+
+`FindAllOpenReadStatesByUserId` chains the two calls: positions from `ConversationsService`, then `CountByConversationIdsAfter`, then one `MessagesReadStateView` per conversation. The server replies with `ALL_OPEN_MESSAGES_READ_STATES_FOUND_BY_USER_ID`, a list of those views in no particular order (the client looks each one up by `conversationId`). The names mirror the conversation list (`FIND_ALL_OPEN_CONVERSATIONS_BY_USER_ID`), because both cover exactly the same set: one entry per open conversation. The JSON converters for `MessagesReadStateView` live in `MessageJson`, since JSON files are grouped by module, like `ConversationJson`, which holds both `ConversationView` and `ConversationUserView`.
+
+The positions don't come from the conversation views, which deliberately leave them out so other participants can't see who read what. `ConversationsService` has a separate storage-only method, `FindAllOpenLastReadMessagePositionsByUserId`, that reads them from the stored records without building any view. It returns a map of conversationId → `lastReadMessagePosition`, which goes straight into the batch count.
+
+That method has its **own repository method** with the same name, rather than reusing the repository's `FindAllOpenByUserId` and picking the positions out in the service. Both are one round trip in Postgres. The difference is what each round trip carries:
+
+| | Reusing `FindAllOpenByUserId` | Dedicated method |
+|---|---|---|
+| Query | `conversation_users` joined to `conversations`, joined again to `conversation_users` to load every participant | `SELECT conversation_id, last_read_message_position FROM conversation_users WHERE user_id = $1 AND is_open` |
+| Rows (20 open conversations × 5 people) | 100, one per participant, every column | 20, one per conversation, two columns |
+| Server work | builds 20 full `Conversation` objects, keeps 20 numbers | fills a map of 20 pairs |
+| Grows with | participants | conversations |
+
+With an index on `conversation_users (user_id)`, Postgres goes straight to the user's rows, and it can answer from the index alone if the index includes the two columns. In memory, the gain is negligible. The rule behind the choice: a repository method returns what the caller needs, not a bigger object for the caller to trim.
+
+**Compared with Slack** (from its public API shapes, its internals aren't public). Slack also stores `last_read` per user per channel, on the membership. Its older API put the caller's own `last_read` and `unread_count` on each channel object in the list (one call). Its newer web client splits this into `client.boot` (the channel list) and `client.counts` (per channel `last_read`, `latest`, `has_unreads`, `mention_count`), so the costlier counts don't delay the list. We follow the newer split:
+
+| | Slack (newer) | This app |
+|---|---|---|
+| Conversation list | `client.boot` | `FIND_ALL_OPEN_CONVERSATIONS_BY_USER_ID` |
+| Read state / counts | `client.counts` | `FIND_ALL_OPEN_MESSAGES_READ_STATES_BY_USER_ID` |
+| Where `last_read` is stored | channel membership | `ConversationUser` |
+| Who computes counts | server | server |
+
+Putting the caller's position on `ConversationView` (Slack's older way) was rejected. It would save one repository read per login, but `ConversationView` is also sent to other participants, so it would need a different view per recipient, and one mistake would leak read positions. The cost of the split is that the conversations repository is read twice per login (list, then positions): one cheap extra query per login, never per message.
+
+Cost: in Postgres the count is one `GROUP BY` query on the `(conversation_id, seq)` index. Each conversation jumps straight to its messages after its read position, so only unread rows are read. The in-memory store has no such index, so its batch scan goes back to the oldest read position among the user's conversations. One conversation where nothing has been read means scanning every stored message once per login. That's a limitation of the temporary store, not of the design. A simpler in-memory version without the early stop (reading the whole list every time) was considered and gives the same result; the early stop was kept. The one slow case left in Postgres is a conversation with a huge number of unread messages. If that ever matters, counts can be cached or capped ("99+") inside the repository without changing any interface.
+
+**Two calls, not one query.** Postgres could compute positions and counts in a single round trip: a query on `conversation_users` for the user's open conversations, with two `LATERAL` subqueries on `messages` per conversation (the newest `seq`, and `COUNT(*)` of rows after the read position not sent by the user), both using the `(conversation_id, seq)` index. It isn't used because it crosses module ownership: `conversation_users` belongs to the conversations module and `messages` to the messages module, and each repository only touches its own tables. Keeping two calls costs one extra round trip per login. If login latency ever matters, a dedicated read-state query can replace the two calls below `FindAllOpenReadStatesByUserId` without changing its signature.
+
+### On the client
+
+- **`MessagesApi`** sends `FindAllOpenReadStates()`, `FindReadState({ conversationId })` and `MarkRead({ conversationId, messageId })`, and exposes three subjects: `AllOpenMessagesReadStatesFound` (the list at login), `MessagesReadStateFound` (one conversation, to the asking socket) and `MessagesMarkedRead` (one read state, received by every device of the user).
+- **The stored state is set** by every read state the server sends. `MessagesReadStates::SetAll` sets the whole list at login. `Set` adds or overwrites one conversation on `MESSAGES_MARKED_READ` and on the one-conversation reply. Nothing else writes the count, so the server's value always wins, and a mark that was ignored needs no special handling. The methods are named `Set` rather than `Replace` because an entry may not exist yet (the same meaning as `Json::Set`).
+- **Conversations that open after login** (opened by the user, or reopened by an incoming message) have no read state yet, because read states arrive once at login. When `CONVERSATION_OPENED` or `CONVERSATION_REOPENED` arrives, the client asks the server for that one conversation's read state with `FIND_MESSAGES_READ_STATE_BY_CONVERSATION_ID`. The server answers `MESSAGES_READ_STATE_FOUND_BY_CONVERSATION_ID` to the asking socket only (`MessagesService::FindReadStateByConversationId`: the user's position from `ConversationsService::FindLastReadMessagePositionById`, which also checks that the user is in the conversation, then one `CountByConversationIdAfter`). Both sides are built: `ChatLayer` sends the request from its `CONVERSATION_OPENED` and `CONVERSATION_REOPENED` handlers. The client never invents one: a read position of 0 would put the divider above messages the user already read. Two alternatives were rejected:
+  - **Putting the read state in those events.** A read state is per user, but `CONVERSATION_REOPENED` is serialized once and sent to every reopened user, so it would need a different payload and a count query per recipient inside message creation.
+  - **Refetching every read state.** That re-reads all open conversations to update one badge.
+
+  The request is sent from the client's handler for the event, never at the same time as it, so the conversation is visible for one round trip **without a badge**. Login works the same way (the list first, then the read states). The sidebar rule is: no read state for a conversation means no badge and no highlighted name, so nothing is ever shown wrong, only briefly missing. Any `MESSAGE_CREATED` that arrives around the request is counted exactly once whatever the order. Before the reply there's no entry, so the message is ignored and the reply's count includes it. After the reply, the double-count guard applies.
+- **A live message (`MESSAGE_CREATED`) adds 1** to the unread count only if `message.position > latestMessagePosition`, and then `latestMessagePosition` is raised. With several threads or servers, a read state that already counted message 7 can arrive **before** the `MESSAGE_CREATED` for 7. Without this check, 7 would be counted twice. Own messages and the selected, loaded conversation don't add 1. `ChatLayer` decides that (`isUnread`) because it knows the current user and the selection; the class only applies the position check. In `ChatLayer::HandleMessageCreated` the message is appended to the history first, then applied to the read state, then marked read if it's on screen. The order doesn't change the result, it follows what happens. The same check decides both: a message from someone else in the conversation on screen isn't counted and is marked read right away.
+- **The sidebar badge:** a conversation with `unreadCount > 0` gets a bold, white name and a red rounded badge with the count on the right of its row. No read state, or a count of 0, draws the row as usual: regular weight, grey name, no badge. This follows Slack, where an unread name is both bold and brighter and read names are dimmed grey. Bold alone would leave both the same color, and the color is what makes unread rows stand out. Slack only shows the count badge for mentions on channels, but every DM message counts as a mention, so an unread DM gets the badge too. All conversations here are DMs and mentions are deferred, so every unread conversation gets the badge. The close button already sits on the right of the row but only appears on hover, so the badge shows when the row isn't hovered and the close button when it is, the same swap Slack does between the badge and the row actions. The row ends with early returns: hovered draws the close button and stops, no unread messages stops, otherwise the badge is drawn. `hasUnreadMessages` folds in the `nullptr` check, because the row is drawn every frame and reaches the moment before the read state arrives (a missing check crashed the client on open and reopen). The badge is one red container, a circle (`cornerRounding` at half its size) sized from the row, with the count drawn bold and centered inside it. The count is lifted 1 px after centering: ImGui rounds the font's ascent up to a whole pixel, so text sits up to 1 px low, and Lato leaves slightly more room above digits than below. Read names are white at about 70% opacity rather than a flat grey, so they dim correctly on both the normal and the selected row color.
+- **The "new messages" divider:** when a conversation is selected, the client saves its `lastReadMessagePosition` **before** marking as read moves it. The red line is drawn before the first loaded message with a higher position. In the example, Alice opens A with a saved position of 3, so the line goes above message 4. It stays there while A is selected, even after the server moves her position to 6. The rule lives in `MessagesFirstUnreadMatcher` (`client/messages/`), with no GUI or network dependency. `ChatLayer` calls `Reset` then `Capture` when a conversation is selected, and `Capture` again when a read state arrives late. `Capture` ignores `nullptr` and keeps the first value, so a later reply never moves the line. A read state arrives after its conversation was selected in three cases:
+  - **The user opened a conversation from search.** `HandleConversationOpened` selects it right away, so its read state always arrives after the selection. `HandleMessagesReadStateFound` returns early if the reply isn't for the selected conversation, then passes the event's read state to `Capture`. Passing its address is safe because `Capture` copies the position and never keeps the pointer.
+  - **The user clicked a reopened conversation before its read state arrived.** A reopened conversation is added without taking the focus. Its sidebar row shows before its read state arrives, so the user can click it in between. The same handler covers this case.
+  - **The user clicked a row right after login.** Nothing is selected at login, so the `Capture` in `HandleAllOpenMessagesReadStatesFound` is usually ignored (`Find("")` returns `nullptr`). But the sidebar rows show as soon as the conversations arrive, before the read states, so the user can click one in between. That handler keeps `Find(m_selectedConversationId)` because its event is a list. While drawing, `ChatLayer` calls `Match(message, currentUserId)` for each message inside its existing draw loop, the same way it calls `ScrollAnchor`. `Match` returns true only for the first message after the captured position that the user didn't send, and `EndFrame` resets that for the next frame. The captured position is a `std::optional`: "not known yet" draws no line, while `0` means nothing has been read. **How the divider is drawn:**
+  - **The row:** an auto-resized, transparent row container drawn just before the message, so the scroll anchor measures that message below the divider.
+  - **The text:** red bold `" New"` (the badge's red), right aligned. Its leading space is the gap before the line: `GetTextSize` measures it, and it scales with the font.
+  - **The line:** a red `Gui::Divider` whose `width` stops it at the text. It's placed at the top plus half the text height, which centers it on the text.
+  - **Why not `AlignCenterY`:** it centers in the container's available height, and an auto-resized container has no height on its first frame. The line would jump every time a conversation with unread messages is opened.
+  - **`Gui::Divider::width`:** added for this. If it's left unset, `DrawDivider` keeps the full window width, so the search modal divider looks the same.
+  - **Height:** `DrawDivider` only draws a line and takes no space, so the row's height is the text's height.
+
+One edge case is known and not fixed. Suppose there are more unread messages than one page. The divider then sits above the oldest loaded message and moves into the older page when that page arrives. The scroll correction overshoots by one divider height, so the view jumps by that much. `NEXT_STEPS.txt` has the planned fix.
 
 ## Design decisions
 
@@ -156,13 +338,21 @@ The file is written with mode `0600` — the default would let every account on 
 
 **Older pages load near the top, and the view stays on the same message.** When the messages view is within one container height of the top, the client sends the history's `nextCursor`. A per-conversation `isLoading` flag in the history entry blocks sending the same cursor again while a page is in flight, so no debounce is needed, and there is no scroll-direction check, so a short history with no scrollbar keeps loading until it fills the view. Prepending a page would otherwise push the view down, so a `ScrollAnchor` (gui library, owned by ChatLayer) anchors on the message that was first before the merge, measures how far it moved, and corrects the scroll through `Gui::Container::scrollY`, which applies `SetNextWindowScroll` before the container begins. The measurement waits one frame, because ImGui gives a child window no height on the frame it first appears. Message containers use the message id as their ImGui id (not the list index), so a prepended page doesn't take over another message's stored size. Only older pages anchor. The first page goes to the bottom through the existing auto-scroll. The trigger also waits until the layout has settled, meaning the bottom of the list hasn't moved since the previous frame. Until then the scroll position is stale, and a check right after the first page arrived would request a second page the user never scrolled to. `ScrollAnchor` is its own class rather than a `Gui` element because it keeps state across frames, while `Gui` elements are rebuilt every frame. The messages container id includes the conversation id, so each conversation keeps its own scroll position during a session.
 
-**Gui element settings are struct fields, and "not set" is `Gui::UNSET`.** Elements are plain structs rebuilt every frame (`Container`, `Text`, ...), so an optional setting like `Container::scrollY` or `Text::height` is a field that the wrapper applies only when it is not `Gui::UNSET` (`-1.0f`). That way every other element keeps ImGui's default behavior. It is a sentinel rather than `std::optional`, like the rest of the wrapper, and it is not `NULL`, which is a null pointer constant and equal to `0`, a valid scroll position. `-1.0f` must never be a real value for a field that uses it. ImGui's own "leave this scroll axis unchanged" value is a separate private constant in `Gui.cpp` (`IMGUI_SCROLL_UNCHANGED`), because it belongs to ImGui's API and must not change if `UNSET` does. A set `Text::height` pushes the one font loaded in `Gui::Init` at that size (`PushFont(nullptr, height)`). Since ImGui 1.92 a font is not tied to one size, and ImGui builds and caches each size the first time it is drawn, so there is no font per size to load.
+**Gui element settings are struct fields, and "not set" is `Gui::UNSET`.** Elements are plain structs rebuilt every frame (`Container`, `Text`, ...), so an optional setting like `Container::scrollY` or `Text::height` is a field that the wrapper applies only when it is not `Gui::UNSET` (`-1.0f`). That way every other element keeps ImGui's default behavior. It is a sentinel rather than `std::optional`, like the rest of the wrapper, and it is not `NULL`, which is a null pointer constant and equal to `0`, a valid scroll position. `-1.0f` must never be a real value for a field that uses it. ImGui's own "leave this scroll axis unchanged" value is a separate private constant in `Gui.cpp` (`IMGUI_SCROLL_UNCHANGED`), because it belongs to ImGui's API and must not change if `UNSET` does. Every `Container` needs a non-empty `id` that is unique among its siblings: it becomes the ImGui child window id, and ImGui asserts on an empty id at the root of a window. Since ImGui 1.92 a font is not tied to one size, and ImGui builds and caches each size the first time it is drawn, so there is no font per size to load.
+
+**Fonts: Lato Regular and Bold, one push per text.** ImGui has no bold style, text is drawn with the current font, so bold means a second font file. The app uses Lato, the font of Slack's chat UI, because it has a Bold weight (the previous font, Audiowide, only came in Regular). It is free under the SIL Open Font License, which is why `assets/Lato-OFL.txt` ships next to `Lato-Regular.ttf` and `Lato-Bold.ttf`. `Gui::Init` loads Regular first, which makes it ImGui's default, then Bold, keeping a pointer to it (`m_boldFont`; the font itself is owned by ImGui's atlas). `Text::weight` (`Gui::FontWeight::REGULAR` or `BOLD`) is the only thing a caller sets. The private `Gui::PushTextFont(text)` makes one `PushFont(font, height)`: the bold font or `nullptr` (keep the current one), and `text.height` or `0.0f` (keep the current size). It always pushes, even when nothing changes (that push is valid and does nothing), so `DrawText`, `DrawTextWrapped` and `GetTextSize` always pop with `PopFont()`. `GetTextSize` uses it too, so bold text is measured with the bold font. The one-argument `PushFont(font)` must not be used: it still compiles as an obsolete compatibility function but resets the size to the font's default, ignoring `text.height`. The pops stay explicit rather than in an RAII guard, matching every other push and pop in `Gui`, and ImGui asserts in debug builds if a stack is left unbalanced at the end of a frame. Pushing a font for every text every frame is normal immediate-mode use and costs a stack entry and a cached lookup. Synthetic bold through ImGui's FreeType loader was rejected because it adds FreeType as a dependency.
 
 **Length prefix framing, not a delimiter.** It is the usual choice for C++ servers and binary protocols, the size is known before reading, and it keeps working if JSON is ever replaced by a binary format, where a delimiter byte could appear inside the payload. `Framer` takes and returns `std::string` as a byte container (binary-safe when built with an explicit size), so a binary serializer would need no `Framer` change. `Framer` throws and the socket class logs and closes, so `Framer` needs no logger.
 
 **Both sides drain the socket on every read.** Client sockets on the server are edge-triggered (`EPOLLET`), so epoll does not notify again for bytes left in the socket: `ReadClientSocket` reads until `EAGAIN`. The client does the same in `Read()`, called by its once-per-render-frame `Update()`, otherwise a large payload would take many render frames to arrive. All complete frames are extracted first, then dispatched in order.
 
 **Both sides keep a write buffer, neither waits on `send()`.** A non-blocking `send()` can take only part of a frame, and dropping the rest would corrupt the framed stream. Each `Connection` keeps the unsent bytes in `writeBuffer` and `SendWriteBuffer` sends what it can. On the server, client sockets are registered for `EPOLLOUT` too, and epoll reports when a full socket has room again. On the client, `Update()` retries once per render frame. The client does not block until the socket has room, since that would freeze the render loop. On macOS `send()` during a non-blocking connect returns `ENOTCONN`, so the client keeps the bytes and retries, the same as for `EAGAIN`. The server never closes inside `SendTo`, because `SendAll` loops over `m_connectionsMap`: on a send error it drops the buffer and lets epoll's `EPOLLERR` / `EPOLLHUP` close the socket. SIGPIPE is disabled (`MSG_NOSIGNAL` on Linux, `SO_NOSIGPIPE` on macOS) so a peer that is gone returns an error instead of killing the process.
+
+**Logic lives on the server, the client stays thin.** Rules and decisions such as validation, membership, paging, which conversations reopen, and what counts as unread are made on the server. The client keeps only its own UI state (loaded history, selection, scroll) and shows what the server sends. When it has to compare anything, it compares opaque values the server gave it and never applies a business rule.
+
+**The server is designed for several instances and threads, even before it has them.** Every check followed by a write is one repository method: one conditional statement in Postgres, and one critical section in memory once the repositories get a mutex. It is never two service calls, because another request could run in between. A repository method locks only its own data and never calls another repository while holding the lock, so locks are never nested. One stored value is preferred over two that must stay consistent. Server calls are kept few, because each one becomes a Postgres round trip: batch lookups instead of one per item, services don't build data they then throw away, and repository methods return what the caller needs rather than a bigger object for the caller to trim.
+
+**Read position is a message position, not a message id.** (Full walkthrough with an example in "Read state" above.) Each message keeps its UUID as its identity and gets a `position`: a send-order number assigned by the repository (a counter in memory, a `seq` identity column in Postgres). It is opaque and only ever compared. Each user stores `lastReadMessagePosition` per conversation, `0` meaning nothing read. Marking as read is a compare-and-set (`AdvanceLastReadMessagePosition`) that only moves forward, so concurrent marks can never move it back, and a late or duplicate mark is a no-op that still answers `OK`. Unread counts are computed (messages after the position from other senders), never stored, and the server always sends back the full read state rather than letting the client reset its count. Read states carry `latestMessagePosition` and messages carry their `position`, so a live message that is already included in a read state is not counted twice. Storing an id would need its order looked up elsewhere, which turns the update into read, compare, then write, and that is a race once there are several threads or instances. Storing both an id and a position would create a pair that could disagree. This follows Slack's model, where `last_read` is a timestamp and therefore ordered.
 
 **Stores are per build type.** A Debug and a Release build are different binaries with different baked-in constants, so they can't collide on one session file.
 
@@ -174,6 +364,7 @@ The file is written with mode `0600` — the default would let every account on 
 - The write buffers have no cap: a peer that never reads makes them grow without limit.
 - Group conversations exist on the server (up to 9 users) but the client can only start one-on-one conversations, one search result at a time. If participants can ever leave, the client's sender lookup needs a null check (a former participant's old messages would point to a missing user).
 - Expired and orphaned sessions are never deleted from the repository.
+- The in-memory repositories have no locks (plain vectors). Each one needs a mutex before the server goes multithreaded.
 - Presence is login-based and wrong with several devices: logging out on one sends `USER_OFFLINE` while another is still connected, and closing the app sends nothing. Planned: presence based on authenticated connections (online when a user's first socket is bound to them at login, offline when their last one is unbound), not on raw TCP connections, which exist before login.
 
 See `NEXT_STEPS.txt`.

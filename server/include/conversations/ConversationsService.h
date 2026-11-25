@@ -7,6 +7,7 @@
 #include "views/ConversationView.h"
 #include "views/UserView.h"
 
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <string>
@@ -32,10 +33,19 @@ public:
 
     using ConversationResult = ServiceResult<ConversationsResultCode, std::optional<ConversationView>>;
     using ConversationsResult = ServiceResult<ConversationsResultCode, std::vector<ConversationView>>;
+    using LastReadMessagePositionResult = ServiceResult<ConversationsResultCode, std::uint64_t>;
+    using LastReadMessagePositionsResult = ServiceResult<ConversationsResultCode, IConversationsRepository::LastReadMessagePositionsMap>;
+
+    struct AdvanceLastReadMessagePositionDto
+    {
+        std::string id;
+        std::string userId;
+        std::uint64_t messagePosition;
+    };
 
     struct CloseConversationDto
     {
-        std::string conversationId;
+        std::string id;
         std::string userId;
     };
 
@@ -48,7 +58,17 @@ public:
 
     struct OpenConversationForAllUsersDto
     {
-        std::string conversationId;
+        std::string id;
+    };
+
+    struct FindAllOpenConversationsByUserIdDto
+    {
+        std::string userId;
+    };
+
+    struct FindAllOpenLastReadMessagePositionsByUserIdDto
+    {
+        std::string userId;
     };
 
     struct FindConversationByIdDto
@@ -63,19 +83,21 @@ public:
         std::vector<std::string> userIds;
     };
 
-    struct FindAllOpenConversationsByUserIdDto
+    struct FindLastReadMessagePositionByIdDto
     {
+        std::string id;
         std::string userId;
     };
 
     struct IsConversationUserDto
     {
-        std::string conversationId;
+        std::string id;
         std::string userId;
     };
 
     ConversationsService(std::unique_ptr<IConversationsRepository> conversationsRepository, UsersService& usersService, UuidService& uuidService, Logger& logger);
 
+    LastReadMessagePositionResult AdvanceLastReadMessagePosition(const AdvanceLastReadMessagePositionDto& advanceLastReadMessagePositionDto);
     ConversationResult Close(const CloseConversationDto& closeConversationDto);
     /**
      * NOTES:
@@ -90,10 +112,24 @@ public:
      *  - Returns conversation with every user open whether or not anything changed
      */
     ConversationResult OpenForAllUsers(const OpenConversationForAllUsersDto& openConversationForAllUsersDto);
+    ConversationsResult FindAllOpenByUserId(const FindAllOpenConversationsByUserIdDto& findAllOpenConversationsByUserIdDto);
+    /**
+     * NOTES:
+     *  - Returns the user's lastReadMessagePosition for every open conversation
+     *  - Used at login to build read states
+     *  - It does not build any views (ConversationUserView leaves positions out so other participants can't
+     *    see who read what)
+     */
+    LastReadMessagePositionsResult FindAllOpenLastReadMessagePositionsByUserId(const FindAllOpenLastReadMessagePositionsByUserIdDto& findAllOpenLastReadMessagePositionsByUserIdDto);
     ConversationResult FindById(const FindConversationByIdDto& findConversationByIdDto);
     // NOTE: Never creates anything, this is the lookup the client uses while picking the users of a new conversation
     ConversationResult FindByUserIds(const FindConversationByUserIdsDto& findConversationByUserIdsDto);
-    ConversationsResult FindAllOpenByUserId(const FindAllOpenConversationsByUserIdDto& findAllOpenConversationsByUserIdDto);
+    /**
+     * NOTES:
+     *  - Returns the user's lastReadMessagePosition in this conversation (no view)
+     *  - UNKNOWN_CONVERSATION if the conversation is not found or the user is not in it
+     */
+    LastReadMessagePositionResult FindLastReadMessagePositionById(const FindLastReadMessagePositionByIdDto& findLastReadMessagePositionByIdDto);
     bool IsConversationUser(const IsConversationUserDto& isConversationUserDto);
     std::string ConvertConversationsResultCodeToString(ConversationsResultCode conversationsResultCode);
 

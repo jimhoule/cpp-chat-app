@@ -2,6 +2,7 @@
 
 #include "json/JsonException.h"
 
+#include <cstdint>
 #include <ctime>
 #include <nlohmann/json.hpp>
 #include <string>
@@ -27,6 +28,8 @@ public:
     // NOTE: Throws JsonException if the field is not an array or if any of its values is not a string
     std::vector<std::string> GetStringArray(const std::string& key) const;
     std::time_t GetTime(const std::string& key) const;
+    // NOTE: Throws JsonException if the field is not an unsigned integer (negative numbers and floats are rejected)
+    std::uint64_t GetUint64(const std::string& key) const;
     bool IsNull(const std::string& key) const;
 
     template<typename TEnum>
@@ -53,6 +56,7 @@ public:
     // NOTE: An empty vector writes an empty array, never null
     void Set(const std::string& key, const std::vector<Json>& jsonValues);
     void Set(const std::string& key, const std::vector<std::string>& stringValues);
+    void Set(const std::string& key, std::uint64_t uint64Value);
     void SetNull(const std::string& key);
 
     template<typename TEnum>

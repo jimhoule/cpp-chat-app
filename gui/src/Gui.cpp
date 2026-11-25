@@ -11,19 +11,20 @@ constexpr float IMGUI_SCROLL_UNCHANGED = -1.0f;
 // **********
 // * PUBLIC *
 // **********
-void Gui::Init(GLFWwindow* glfwWindow) const
+void Gui::Init(GLFWwindow* glfwWindow)
 {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
-    (void)io;
-    io.Fonts->AddFontFromFileTTF("../../assets/Audiowide-Regular.ttf");
+    io.Fonts->AddFontFromFileTTF("../../assets/Lato-Regular.ttf");
 
-    // Setup Dear ImGui style
-    ImGuiStyle& style = ImGui::GetStyle();
+    // Stores bold font in member variable to apply dynamically when needed
+    m_boldFont = io.Fonts->AddFontFromFileTTF("../../assets/Lato-Bold.ttf");
+
+    // Sets up Dear ImGui style
     ImGui::StyleColorsDark();
 
-    // Setup Platform/Renderer backends
+    // Sets up Platform/Renderer backends
     ImGui_ImplGlfw_InitForOpenGL(glfwWindow, true);
     ImGui_ImplOpenGL3_Init("#version 150");
 }
@@ -178,9 +179,11 @@ void Gui::DrawContainer(Container& container) const
 
 void Gui::DrawDivider(const Divider& divider) const
 {
+    const float width = divider.width != UNSET ? divider.width : ImGui::GetWindowWidth();
+    
     ImDrawList* windowDrawList = ImGui::GetWindowDrawList();
     ImVec2 lineStartPosition = ImGui::GetCursorScreenPos();
-    ImVec2 lineEndPosition = ImVec2(lineStartPosition.x + ImGui::GetWindowWidth(), lineStartPosition.y);
+    ImVec2 lineEndPosition = ImVec2(lineStartPosition.x + width, lineStartPosition.y);
     ImU32 color = IM_COL32(
         divider.color.r,
         divider.color.g,
@@ -451,37 +454,25 @@ void Gui::DrawNode(const Node& node) const
 void Gui::DrawText(Text& text) const
 {
     ImGui::PushStyleColor(ImGuiCol_Text, ToImVec4(text.color.ToVector4()));
-    if (text.height != UNSET)
-    {
-        // NOTE: nullptr keeps the font loaded in Init() and only changes the size (ImGui 1.92+ caches each size once)
-        ImGui::PushFont(nullptr, text.height);
-    }
+    PushTextFont(text);
 
     ImGui::TextUnformatted(text.value.c_str());
 
     ImGui::PopStyleColor(1);
-    if (text.height != UNSET)
-    {
-        ImGui::PopFont();
-    }
+    // NOTE: Must always pop when using PushTextFont()
+    ImGui::PopFont();
 }
 
 void Gui::DrawTextWrapped(Text& text) const
 {
     ImGui::PushStyleColor(ImGuiCol_Text, ToImVec4(text.color.ToVector4()));
-    if (text.height != UNSET)
-    {
-        // NOTE: nullptr keeps the font loaded in Init() and only changes the size (ImGui 1.92+ caches each size once)
-        ImGui::PushFont(nullptr, text.height);
-    }
+    PushTextFont(text);
 
     ImGui::TextWrapped("%s", text.value.c_str());
 
     ImGui::PopStyleColor(1);
-    if (text.height != UNSET)
-    {
-        ImGui::PopFont();
-    }
+    // NOTE: Must always pop when using PushTextFont()
+    ImGui::PopFont();
 }
 
 void Gui::DrawTextInputMultiline(std::string& value, TextInputMultiline& textInputMultiline) const
@@ -776,18 +767,12 @@ const Vector2 Gui::GetTextSize(const std::string& text) const
 
 const Vector2 Gui::GetTextSize(const Text& text) const
 {
-    if (text.height != UNSET)
-    {
-        // NOTE: nullptr keeps the font loaded in Init() and only changes the size (ImGui 1.92+ caches each size once)
-        ImGui::PushFont(nullptr, text.height);
-    }
+    PushTextFont(text);
 
     ImVec2 textSize = ImGui::CalcTextSize(text.value.c_str());
 
-    if (text.height != UNSET)
-    {
-        ImGui::PopFont();
-    }
+    // NOTE: Must always pop when using PushTextFont()
+    ImGui::PopFont();
 
     return ToVector2(textSize);
 }
@@ -853,6 +838,20 @@ void Gui::DrawPlaceholder(const Placeholder& placeholder) const
     );
 
     foregroundDrawList->AddText(placeholderPosition, placeholderColor, placeholder.text.c_str());
+}
+
+void Gui::PushTextFont(const Text& text) const
+{
+    /**
+     * NOTES:
+     *  - nullptr keeps the current font (regular font loaded first in Init())
+     *  - 0.0f keeps the current size
+     *  - Pushing both unchanged is valid so the push is unconditional and the caller always pops
+     *  - ImGui 1.92+ caches each font and size once
+     */
+    ImFont* font = text.weight == FontWeight::BOLD ? m_boldFont : nullptr;
+    const float height = text.height != UNSET ? text.height : 0.0f;
+    ImGui::PushFont(font, height);
 }
 
 const Vector2 Gui::ToVector2(const ImVec2& imguiVec2) const

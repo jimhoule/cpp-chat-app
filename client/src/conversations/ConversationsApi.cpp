@@ -89,7 +89,7 @@ void ConversationsApi::FindAllOpen()
 void ConversationsApi::Close(const CloseConversationParams& closeConversationParams)
 {
     // Serializes close conversation socket event
-    const CloseConversationSocketEventPayload closeConversationSocketEventPayload(closeConversationParams.conversationId);
+    const CloseConversationSocketEventPayload closeConversationSocketEventPayload(closeConversationParams.id);
     const CloseConversationSocketEvent closeConversationSocketEvent(closeConversationSocketEventPayload);
     const std::string serializedCloseConversationSocketEvent = m_closeConversationSocketEventSerializer.Serialize(closeConversationSocketEvent);
 

@@ -73,7 +73,7 @@ SocketServer::EventHandler ConversationsHandler::GetCloseConversationHandler()
         ConversationsService::CloseConversationDto closeConversationDto = {};
         // NOTE: User id comes from the authenticated context, never from the payload
         closeConversationDto.userId = context.user->id;
-        closeConversationDto.conversationId = closeConversationSocketEventPayload.conversationId;
+        closeConversationDto.id = closeConversationSocketEventPayload.id;
         const ConversationsService::ConversationResult conversationResult = m_conversationsService.Close(closeConversationDto);
         if (conversationResult.code != ConversationsService::ConversationsResultCode::OK)
         {

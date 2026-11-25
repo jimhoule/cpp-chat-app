@@ -129,7 +129,5 @@ MessageHistories::MessageHistory* MessageHistories::FindMutable(const std::strin
      *  - Find() returns a const pointer so const_cast() removes the const to allow modifying the entry
      *  - Safe because the map itself is not const (only Find() hands it back as const)
      */
-    MessageHistory* messageHistory = const_cast<MessageHistory*>(Find(conversationId));
-
-    return messageHistory;
+    return const_cast<MessageHistory*>(Find(conversationId));
 }

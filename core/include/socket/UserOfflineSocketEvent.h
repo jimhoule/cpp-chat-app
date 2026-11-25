@@ -7,10 +7,10 @@
 struct UserOfflineSocketEventPayload
 {
     UserOfflineSocketEventPayload() = default;
-    UserOfflineSocketEventPayload(const std::string& userId) : userId(userId)
+    UserOfflineSocketEventPayload(const std::string& id) : id(id)
     {}
 
-    std::string userId;
+    std::string id;
 };
 
 struct UserOfflineSocketEvent : public SocketEvent<UserOfflineSocketEventPayload>

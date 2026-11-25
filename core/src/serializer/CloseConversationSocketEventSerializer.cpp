@@ -8,7 +8,7 @@
 std::string CloseConversationSocketEventSerializer::Serialize(const CloseConversationSocketEvent& closeConversationSocketEvent)
 {
     Json payloadJson = {};
-    payloadJson.Set("conversationId", closeConversationSocketEvent.payload.conversationId);
+    payloadJson.Set("id", closeConversationSocketEvent.payload.id);
 
     Json json = {};
     json.SetEnum<SocketEventName>("name", closeConversationSocketEvent.name);

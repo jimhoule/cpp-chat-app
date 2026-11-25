@@ -17,6 +17,12 @@ public:
     // NOTE: Field value meaning "not set"
     static constexpr float UNSET = -1.0f;
 
+    enum class FontWeight
+    {
+        BOLD,
+        REGULAR
+    };
+
     // Elements
     struct Border
     {
@@ -68,6 +74,7 @@ public:
     {
         Rgba color;
         float height = 1.0f;
+        float width = UNSET;
     };
 
     struct DropDownMenuItem
@@ -98,6 +105,7 @@ public:
         std::string value;
         Rgba color = Rgba(255, 255, 255, 255);
         float height = UNSET;
+        FontWeight weight = FontWeight::REGULAR;
     };
 
     struct Image
@@ -230,7 +238,7 @@ public:
 
     Gui() = default;
 
-    void Init(GLFWwindow* glfwWindow) const;
+    void Init(GLFWwindow* glfwWindow);
     void Destroy() const;
     void Render() const;
     void Clear() const;
@@ -343,6 +351,7 @@ public:
     float GetDeltaTime() const;
 
 private:
+    ImFont* m_boldFont = nullptr;
     // NOTE: Keeps track of all open modals
     std::map<std::string, bool> m_openModalIds = {};
 
@@ -354,6 +363,8 @@ private:
 
     void DrawImagePositioned(const ImagePositioned& imagePositioned) const;
     void DrawPlaceholder(const Placeholder& placeholder) const;
+    // NOTE: Pushes the text's font with its height (one ImGui font push and the caller always pops it with PopFont())
+    void PushTextFont(const Text& text) const;
     const Vector2 ToVector2(const ImVec2& vector2) const;
     const Vector4 ToVector4(const ImVec4& vector4) const;
     const ImVec2 ToImVec2(const Vector2& vector2) const;

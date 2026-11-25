@@ -10,7 +10,7 @@ UserOfflineSocketEventPayload UserOfflineSocketEventPayloadDeserializer::Deseria
     const Json json = Json::Parse(jsonString);
 
     UserOfflineSocketEventPayload userOfflineSocketEventPayload = {};
-    userOfflineSocketEventPayload.userId = json.GetString("userId");
+    userOfflineSocketEventPayload.id = json.GetString("id");
 
     return userOfflineSocketEventPayload;
 }

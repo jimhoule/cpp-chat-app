@@ -6,6 +6,7 @@
 #include "views/ConversationUserView.h"
 
 #include <cstddef>
+#include <cstdint>
 #include <utility>
 
 constexpr std::size_t MAX_MESSAGE_TEXT_LENGTH = 4000;
@@ -82,13 +83,50 @@ MessagesService::CreateMessageResult MessagesService::Create(const CreateMessage
 
     // Reopens conversation for users who had closed it
     ConversationsService::OpenConversationForAllUsersDto openConversationForAllUsersDto = {};
-    openConversationForAllUsersDto.conversationId = message.conversationId;
+    openConversationForAllUsersDto.id = message.conversationId;
     ConversationsService::ConversationResult openedConversationResult = m_conversationsService.OpenForAllUsers(openConversationForAllUsersDto);
 
     createMessageData.conversation = std::move(openedConversationResult.data.value());
     createMessageResult.data = std::move(createMessageData);
 
     return createMessageResult;
+}
+
+MessagesService::MessagesReadStatesResult MessagesService::FindAllOpenReadStatesByUserId(const FindAllOpenMessagesReadStatesByUserIdDto& findAllOpenMessagesReadStatesByUserIdDto)
+{
+    // Finds where user stopped reading in every open conversation
+    ConversationsService::FindAllOpenLastReadMessagePositionsByUserIdDto findAllOpenLastReadMessagePositionsByUserIdDto = {};
+    findAllOpenLastReadMessagePositionsByUserIdDto.userId = findAllOpenMessagesReadStatesByUserIdDto.userId;
+    const ConversationsService::LastReadMessagePositionsResult lastReadMessagePositionsResult = m_conversationsService.FindAllOpenLastReadMessagePositionsByUserId(findAllOpenLastReadMessagePositionsByUserIdDto);
+
+    const IConversationsRepository::LastReadMessagePositionsMap& lastReadMessagePositionsMap = lastReadMessagePositionsResult.data;
+
+    // Counts unread messages after each position and finds newest message of each conversation (one pass for all conversations)
+    const IMessagesRepository::MessagesCountsMap messagesCountsMap = m_messagesRepository->CountByConversationIdsAfter(
+        lastReadMessagePositionsMap,
+        findAllOpenMessagesReadStatesByUserIdDto.userId
+    );
+
+    // Builds one read state per conversation (messagesCountsMap has an entry for every conversation)
+    std::vector<MessagesReadStateView> messagesReadStateViews = {};
+    messagesReadStateViews.reserve(lastReadMessagePositionsMap.size());
+    for (const IConversationsRepository::LastReadMessagePositionsMap::value_type& lastReadMessagePositionPair : lastReadMessagePositionsMap)
+    {
+        const IMessagesRepository::MessagesCount& messagesCount = messagesCountsMap.at(lastReadMessagePositionPair.first);
+
+        MessagesReadStateView messagesReadStateView = {};
+        messagesReadStateView.conversationId = lastReadMessagePositionPair.first;
+        messagesReadStateView.lastReadMessagePosition = lastReadMessagePositionPair.second;
+        messagesReadStateView.latestMessagePosition = messagesCount.latestMessagePosition;
+        messagesReadStateView.unreadCount = messagesCount.count;
+
+        messagesReadStateViews.push_back(std::move(messagesReadStateView));
+    }
+
+    MessagesReadStatesResult messagesReadStatesResult = {};
+    messagesReadStatesResult.data = std::move(messagesReadStateViews);
+
+    return messagesReadStatesResult;
 }
 
 MessagesService::MessagesPageResult MessagesService::FindPageByConversationId(const FindMessagesPageByConversationIdDto& findMessagesPageByConversationIdDto)
@@ -136,6 +174,85 @@ MessagesService::MessagesPageResult MessagesService::FindPageByConversationId(co
     return messagesPageResult;
 }
 
+MessagesService::MessagesReadStateResult MessagesService::FindReadStateByConversationId(const FindMessagesReadStateByConversationIdDto& findMessagesReadStateByConversationIdDto)
+{
+    MessagesReadStateResult messagesReadStateResult = {};
+
+    // Finds where uset stopped reading (also makes sure user is in the conversation)
+    ConversationsService::FindLastReadMessagePositionByIdDto findLastReadMessagePositionByIdDto = {};
+    findLastReadMessagePositionByIdDto.id = findMessagesReadStateByConversationIdDto.conversationId;
+    findLastReadMessagePositionByIdDto.userId = findMessagesReadStateByConversationIdDto.userId;
+    const ConversationsService::LastReadMessagePositionResult lastReadMessagePositionResult = m_conversationsService.FindLastReadMessagePositionById(findLastReadMessagePositionByIdDto);
+    if (lastReadMessagePositionResult.code == ConversationsService::ConversationsResultCode::UNKNOWN_CONVERSATION)
+    {
+        messagesReadStateResult.code = MessagesResultCode::NOT_CONVERSATION_USER;
+        return messagesReadStateResult;
+    }
+
+    const std::uint64_t lastReadMessagePosition = lastReadMessagePositionResult.data;
+
+    // Counts unread messages after the last read message position (newest message on client's screen) and finds the newest message of the conversation (newest message on the server)
+    const IMessagesRepository::MessagesCount messagesCount = m_messagesRepository->CountByConversationIdAfter(
+        findMessagesReadStateByConversationIdDto.conversationId,
+        findMessagesReadStateByConversationIdDto.userId,
+        lastReadMessagePosition
+    );
+
+    MessagesReadStateView messagesReadStateView = {};
+    messagesReadStateView.conversationId = findMessagesReadStateByConversationIdDto.conversationId;
+    messagesReadStateView.lastReadMessagePosition = lastReadMessagePosition;
+    messagesReadStateView.latestMessagePosition = messagesCount.latestMessagePosition;
+    messagesReadStateView.unreadCount = messagesCount.count;
+
+    messagesReadStateResult.data = std::move(messagesReadStateView);
+
+    return messagesReadStateResult;
+}
+
+MessagesService::MessagesReadStateResult MessagesService::MarkRead(const MarkMessagesReadDto& markMessagesReadDto)
+{
+    MessagesReadStateResult messagesReadStateResult = {};
+
+    // Finds newest message on client's screen (newest message) and make sure it belongs to the conversation
+    const std::optional<Message> message = m_messagesRepository->FindById(markMessagesReadDto.messageId);
+    if (!message.has_value() || message.value().conversationId != markMessagesReadDto.conversationId)
+    {
+        messagesReadStateResult.code = MessagesResultCode::UNKNOWN_MESSAGE;
+        return messagesReadStateResult;
+    }
+
+    // Advances position of last read message (updates lastReadMessagePosition of conversation user if current message position is bigger)
+    ConversationsService::AdvanceLastReadMessagePositionDto advanceLastReadMessagePositionDto = {};
+    advanceLastReadMessagePositionDto.id = markMessagesReadDto.conversationId;
+    advanceLastReadMessagePositionDto.userId = markMessagesReadDto.userId;
+    advanceLastReadMessagePositionDto.messagePosition = message.value().position;
+    const ConversationsService::LastReadMessagePositionResult lastReadMessagePositionResult = m_conversationsService.AdvanceLastReadMessagePosition(advanceLastReadMessagePositionDto);
+    if (lastReadMessagePositionResult.code == ConversationsService::ConversationsResultCode::UNKNOWN_CONVERSATION)
+    {
+        messagesReadStateResult.code = MessagesResultCode::NOT_CONVERSATION_USER;
+        return messagesReadStateResult;
+    }
+
+    const std::uint64_t lastReadMessagePosition = lastReadMessagePositionResult.data;
+
+    // Counts unread messages after the last read message position (newest message on client's screen) and finds the newest message of the conversation (newest message on the server)
+    const IMessagesRepository::MessagesCount messagesCount = m_messagesRepository->CountByConversationIdAfter(
+        markMessagesReadDto.conversationId,
+        markMessagesReadDto.userId,
+        lastReadMessagePosition
+    );
+
+    MessagesReadStateView messagesReadStateView = {};
+    messagesReadStateView.conversationId = markMessagesReadDto.conversationId;
+    messagesReadStateView.lastReadMessagePosition = lastReadMessagePosition;
+    messagesReadStateView.latestMessagePosition = messagesCount.latestMessagePosition;
+    messagesReadStateView.unreadCount = messagesCount.count;
+
+    messagesReadStateResult.data = std::move(messagesReadStateView);
+
+    return messagesReadStateResult;
+}
+
 std::string MessagesService::ConvertMessagesResultCodeToString(MessagesResultCode messagesResultCode)
 {
     switch (messagesResultCode)
@@ -152,6 +269,9 @@ std::string MessagesService::ConvertMessagesResultCodeToString(MessagesResultCod
         case MessagesResultCode::TEXT_TOO_LONG:
             return "TEXT TOO LONG";
 
+        case MessagesResultCode::UNKNOWN_MESSAGE:
+            return "UNKNOWN MESSAGE";
+
         // NOTE: Handles cases where the enum value might be out of range
         default:
             return "Unknown messages result code";
@@ -166,6 +286,7 @@ MessageView MessagesService::ConvertMessageToMessageView(const Message& message)
     MessageView messageView = {};
     messageView.id = message.id;
     messageView.conversationId = message.conversationId;
+    messageView.position = message.position;
     messageView.senderId = message.senderId;
     messageView.text = message.text;
     messageView.createdAt = message.createdAt;
@@ -177,7 +298,7 @@ bool MessagesService::IsConversationUser(const std::string& conversationId, cons
 {
     // NOTE: Only a user of the conversation can post in it
     ConversationsService::IsConversationUserDto isConversationUserDto = {};
-    isConversationUserDto.conversationId = conversationId;
+    isConversationUserDto.id = conversationId;
     isConversationUserDto.userId = userId;
     const bool isConversationUser = m_conversationsService.IsConversationUser(isConversationUserDto);
 

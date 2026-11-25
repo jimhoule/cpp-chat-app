@@ -10,7 +10,7 @@ CloseConversationSocketEventPayload CloseConversationSocketEventPayloadDeseriali
     const Json json = Json::Parse(jsonString);
 
     CloseConversationSocketEventPayload closeConversationSocketEventPayload = {};
-    closeConversationSocketEventPayload.conversationId = json.GetString("conversationId");
+    closeConversationSocketEventPayload.id = json.GetString("id");
 
     return closeConversationSocketEventPayload;
 }

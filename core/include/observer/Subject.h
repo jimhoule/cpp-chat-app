@@ -49,7 +49,7 @@ public:
 
     void Notify(const TEvent& event) override
     {
-        // Snapshots the size so an observer attaching from insinde OnNotify is not called for the event alrady in flight
+        // Snapshots the size so an observer attaching from inside OnNotify is not called for the event already in flight
         const std::size_t observersSize = m_observers.size();
         m_notifyDepth++;
 

@@ -20,9 +20,24 @@ MessagesModule::MessagesModule(SocketServer& socketServer, ConversationsService&
         m_messagesHandler.GetCreateMessageHandler()
     );
     socketServer.On(
+        SocketEventName::FIND_ALL_OPEN_MESSAGES_READ_STATES_BY_USER_ID,
+        { RequireAuthentication(socketServer) },
+        m_messagesHandler.GetFindAllOpenMessagesReadStatesByUserIdHandler()
+    );
+    socketServer.On(
         SocketEventName::FIND_MESSAGES_PAGE_BY_CONVERSATION_ID,
         { RequireAuthentication(socketServer) },
         m_messagesHandler.GetFindMessagesPageByConversationIdHandler()
+    );
+    socketServer.On(
+        SocketEventName::FIND_MESSAGES_READ_STATE_BY_CONVERSATION_ID,
+        { RequireAuthentication(socketServer) },
+        m_messagesHandler.GetFindMessagesReadStateByConversationIdHandler()
+    );
+    socketServer.On(
+        SocketEventName::MARK_MESSAGES_READ,
+        { RequireAuthentication(socketServer) },
+        m_messagesHandler.GetMarkMessagesReadHandler()
     );
 }
 

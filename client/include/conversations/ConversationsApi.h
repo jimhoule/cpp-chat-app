@@ -26,7 +26,7 @@ class ConversationsApi
 public:
     struct CloseConversationParams
     {
-        std::string conversationId;
+        std::string id;
     };
 
     struct OpenConversationParams

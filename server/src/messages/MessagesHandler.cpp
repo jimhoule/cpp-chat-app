@@ -13,10 +13,37 @@ MessagesHandler::MessagesHandler(SocketServer& socketServer, MessagesService& me
     , m_logger(logger)
 {}
 
+SocketServer::EventHandler MessagesHandler::GetFindAllOpenMessagesReadStatesByUserIdHandler()
+{
+    return [this](const SocketServer::EventContext& context) {
+        // Fetches all open messages read states
+        MessagesService::FindAllOpenMessagesReadStatesByUserIdDto findAllOpenMessagesReadStatesByUserIdDto = {};
+        findAllOpenMessagesReadStatesByUserIdDto.userId = context.user->id;
+        const MessagesService::MessagesReadStatesResult messagesReadStatesResult = m_messagesService.FindAllOpenReadStatesByUserId(findAllOpenMessagesReadStatesByUserIdDto);
+        if (messagesReadStatesResult.code != MessagesService::MessagesResultCode::OK)
+        {
+            const std::string messagesResultCodeString = m_messagesService.ConvertMessagesResultCodeToString(messagesReadStatesResult.code);
+            const SocketErrorCode socketErrorCode = ConvertMessagesResultCodeToSocketErrorCode(messagesReadStatesResult.code);
+            throw ExpectedException(
+                socketErrorCode,
+                "Find all open messages read states failed for user " + context.user->id + ", " + messagesResultCodeString
+            );
+        }
+
+        // Serializes all open messages read states found by user id socket event
+        const AllOpenMessagesReadStatesFoundByUserIdSocketEventPayload allOpenMessagesReadStatesFoundByUserIdSocketEventPayload(messagesReadStatesResult.data);
+        const AllOpenMessagesReadStatesFoundByUserIdSocketEvent allOpenMessagesReadStatesFoundByUserIdSocketEvent(allOpenMessagesReadStatesFoundByUserIdSocketEventPayload);
+        const std::string serializedAllOpenMessagesReadStatesFoundByUserIdSocketEvent = m_allOpenMessagesReadStatesFoundByUserIdSocketEventSerializer.Serialize(allOpenMessagesReadStatesFoundByUserIdSocketEvent);
+
+        // Sends serialized all open messages read states found by user id socket event
+        m_socketServer.SendTo(context.clientSocket, serializedAllOpenMessagesReadStatesFoundByUserIdSocketEvent);
+    };
+}
+
 SocketServer::EventHandler MessagesHandler::GetFindMessagesPageByConversationIdHandler()
 {
     return [this](const SocketServer::EventContext& context) {
-        // Gets find messages page by coonversation id socket event payload
+        // Gets find messages page by conversation id socket event payload
         const FindMessagesPageByConversationIdSocketEventPayload findMessagesPageByConversationIdSocketEventPayload = m_findMessagesPageByConversationIdSocketEventPayloadDeserializer.Deserialize(context.serializedPayload);
 
         // Fetches messages page
@@ -24,7 +51,6 @@ SocketServer::EventHandler MessagesHandler::GetFindMessagesPageByConversationIdH
         findMessagesPageByConversationIdDto.conversationId = findMessagesPageByConversationIdSocketEventPayload.conversationId;
         findMessagesPageByConversationIdDto.cursor = findMessagesPageByConversationIdSocketEventPayload.cursor;
         findMessagesPageByConversationIdDto.userId = context.user->id;
-
         const MessagesService::MessagesPageResult messagesPageResult = m_messagesService.FindPageByConversationId(findMessagesPageByConversationIdDto);
         if (messagesPageResult.code != MessagesService::MessagesResultCode::OK)
         {
@@ -32,7 +58,7 @@ SocketServer::EventHandler MessagesHandler::GetFindMessagesPageByConversationIdH
             const SocketErrorCode socketErrorCode = ConvertMessagesResultCodeToSocketErrorCode(messagesPageResult.code);
             throw ExpectedException(
                 socketErrorCode, 
-                "Fetch messages page failed for user " + context.user->id + ", " + messagesResultCodeString
+                "Find messages page failed for user " + context.user->id + ", " + messagesResultCodeString
             );
         }
 
@@ -46,6 +72,37 @@ SocketServer::EventHandler MessagesHandler::GetFindMessagesPageByConversationIdH
 
         // Sends messages page found by conversation id socket event
         m_socketServer.SendTo(context.clientSocket, serializedMessagesPageFoundByConversationIdSocketEvent);
+    };
+}
+
+SocketServer::EventHandler MessagesHandler::GetFindMessagesReadStateByConversationIdHandler()
+{
+    return [this](const SocketServer::EventContext& context) {
+        // Gets find messages read state by conversation id socket event payload
+        const FindMessagesReadStateByConversationIdSocketEventPayload findMessagesReadStateByConversationIdSocketEventPayload = m_findMessagesReadStateByConversationIdSocketEventPayloadDeserializer.Deserialize(context.serializedPayload);
+
+        // Fetches messages read state 
+        MessagesService::FindMessagesReadStateByConversationIdDto findMessagesReadStateByConversationIdDto = {};
+        findMessagesReadStateByConversationIdDto.conversationId = findMessagesReadStateByConversationIdSocketEventPayload.conversationId;
+        findMessagesReadStateByConversationIdDto.userId = context.user->id;
+        const MessagesService::MessagesReadStateResult messagesReadStateResult = m_messagesService.FindReadStateByConversationId(findMessagesReadStateByConversationIdDto);
+        if (messagesReadStateResult.code != MessagesService::MessagesResultCode::OK)
+        {
+            const std::string messagesResultCodeString = m_messagesService.ConvertMessagesResultCodeToString(messagesReadStateResult.code);
+            const SocketErrorCode socketErrorCode = ConvertMessagesResultCodeToSocketErrorCode(messagesReadStateResult.code);
+            throw ExpectedException(
+                socketErrorCode, 
+                "Find messages read state failed for user " + context.user->id + ", " + messagesResultCodeString
+            );
+        }
+
+        // Serializes messages read state found by conversation id socket event
+        const MessagesReadStateFoundByConversationIdSocketEventPayload messagesReadStateFoundByConversationIdSocketEventPayload(messagesReadStateResult.data.value());
+        const MessagesReadStateFoundByConversationIdSocketEvent messagesReadStateFoundByConversationIdSocketEvent(messagesReadStateFoundByConversationIdSocketEventPayload);
+        const std::string serializedMessagesReadStateFoundByConversationIdSocketEvent = m_messagesReadStateFoundByConversationIdSocketEventSerializer.Serialize(messagesReadStateFoundByConversationIdSocketEvent);
+
+        // Sends messages read state found by conversation id socket event
+        m_socketServer.SendTo(context.clientSocket, serializedMessagesReadStateFoundByConversationIdSocketEvent);
     };
 }
 
@@ -97,6 +154,42 @@ SocketServer::EventHandler MessagesHandler::GetCreateMessageHandler()
     };
 }
 
+SocketServer::EventHandler MessagesHandler::GetMarkMessagesReadHandler()
+{
+    return [this](const SocketServer::EventContext& context) {
+        // Gets mark messages read socket event payload
+        const MarkMessagesReadSocketEventPayload markMessagesReadSocketEventPayload = m_markMessagesReadSocketEventPayloadDeserializer.Deserialize(context.serializedPayload);
+
+        // Marks messages as read
+        MessagesService::MarkMessagesReadDto markMessagesReadDto = {};
+        markMessagesReadDto.conversationId = markMessagesReadSocketEventPayload.conversationId;
+        markMessagesReadDto.messageId = markMessagesReadSocketEventPayload.messageId;
+        markMessagesReadDto.userId = context.user->id;
+        const MessagesService::MessagesReadStateResult messagesReadStateResult = m_messagesService.MarkRead(markMessagesReadDto);
+        if (messagesReadStateResult.code != MessagesService::MessagesResultCode::OK)
+        {
+            const std::string messagesResultCodeString = m_messagesService.ConvertMessagesResultCodeToString(messagesReadStateResult.code);
+            const SocketErrorCode socketErrorCode = ConvertMessagesResultCodeToSocketErrorCode(messagesReadStateResult.code);
+            throw ExpectedException(
+                socketErrorCode, 
+                "Mark messages read failed for user " + context.user->id + ", " + messagesResultCodeString
+            );
+        }
+
+        // Serializes messages marked read socket event
+        const MessagesMarkedReadSocketEventPayload messagesMarkedReadSocketEventPayload(messagesReadStateResult.data.value());
+        const MessagesMarkedReadSocketEvent messagesMarkedReadSocketEvent(messagesMarkedReadSocketEventPayload);
+        const std::string serializedMessagesMarkedReadSocketEvent = m_messagesMarkedReadSocketEventSerializer.Serialize(messagesMarkedReadSocketEvent);
+
+        /**
+         * NOTES:
+         *  - Sends messages marked read socket event 
+         *  - Sends to all sockets of the user so their devices update their badge too
+         */
+        m_socketServer.SendTo(context.user->id, serializedMessagesMarkedReadSocketEvent);
+    };
+}
+
 // ***********
 // * PRIVATE *
 // ***********
@@ -108,8 +201,9 @@ SocketErrorCode MessagesHandler::ConvertMessagesResultCodeToSocketErrorCode(Mess
         case MessagesService::MessagesResultCode::TEXT_TOO_LONG:
             return SocketErrorCode::INVALID_PAYLOAD;
 
-            // NOTE: NOT_CONVERSATION_USER looks just like an unknown conversation to a client
+        // NOTE: NOT_CONVERSATION_USER and UNKNOWN_MESSAGE look just like an unknown conversation to a client
         case MessagesService::MessagesResultCode::NOT_CONVERSATION_USER:
+        case MessagesService::MessagesResultCode::UNKNOWN_MESSAGE:
             return SocketErrorCode::NOT_FOUND;
 
         // NOTE: Handles cases where the enum value might be out of range
