@@ -3,7 +3,6 @@
 #include "deserializer/SocketEventDeserializer.h"
 #include "socket/Framer.h"
 #include "socket/SocketEventName.h"
-#include "views/UserView.h"
 
 #include <arpa/inet.h>
 #include <exception>
@@ -25,7 +24,7 @@ public:
         int clientSocket = -1;
         std::string serializedPayload = "";
         // NOTE: Set by the authentication middleware, stays null on routes that do not require it
-        const UserView* user = nullptr;
+        const std::string* userId = nullptr;
     };
 
     struct EventErrorContext
@@ -43,9 +42,9 @@ public:
 
     SocketServer(unsigned int port, Logger& logger);
 
-    void BindConnectionUser(int clientSocket, const UserView& user);
+    void BindConnectionUser(int clientSocket, const std::string& userId);
     void Close();
-    const UserView* GetConnectionUser(int clientSocket);
+    const std::string* GetConnectionUserId(int clientSocket);
     void Init();
     void Listen();
 
@@ -92,7 +91,7 @@ private:
     struct Connection
     {
         int clientSocket = -1;
-        std::optional<UserView> user = std::nullopt;
+        std::optional<std::string> userId = std::nullopt;
         Framer framer = {};
         /**
          * NOTES:

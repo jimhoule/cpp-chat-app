@@ -21,7 +21,7 @@ void MessagesHandler::HandleCreateMessage(const SocketServer::EventContext& cont
     // Creates message
     MessagesService::CreateMessageDto createMessageDto = {};
     createMessageDto.conversationId = createMessageSocketEventPayload.conversationId;
-    createMessageDto.senderId = context.user->id;
+    createMessageDto.senderId = *context.userId;
     createMessageDto.text = createMessageSocketEventPayload.text;
     const MessagesService::CreateMessageResult createMessageResult = m_messagesService.Create(createMessageDto);
     if (createMessageResult.code != MessagesService::MessagesResultCode::OK)
@@ -30,7 +30,7 @@ void MessagesHandler::HandleCreateMessage(const SocketServer::EventContext& cont
         const SocketErrorCode socketErrorCode = ConvertMessagesResultCodeToSocketErrorCode(createMessageResult.code);
         throw ExpectedException(
             socketErrorCode, 
-            "Create message failed for user " + context.user->id + ", " + messagesResultCodeString
+            "Create message failed for user " + *context.userId + ", " + messagesResultCodeString
         );
     }
 
@@ -63,7 +63,7 @@ void MessagesHandler::HandleFindAllOpenMessagesReadStatesByUserId(const SocketSe
 {
     // Fetches all open messages read states
     MessagesService::FindAllOpenMessagesReadStatesByUserIdDto findAllOpenMessagesReadStatesByUserIdDto = {};
-    findAllOpenMessagesReadStatesByUserIdDto.userId = context.user->id;
+    findAllOpenMessagesReadStatesByUserIdDto.userId = *context.userId;
     const MessagesService::MessagesReadStatesResult messagesReadStatesResult = m_messagesService.FindAllOpenReadStatesByUserId(findAllOpenMessagesReadStatesByUserIdDto);
     if (messagesReadStatesResult.code != MessagesService::MessagesResultCode::OK)
     {
@@ -71,7 +71,7 @@ void MessagesHandler::HandleFindAllOpenMessagesReadStatesByUserId(const SocketSe
         const SocketErrorCode socketErrorCode = ConvertMessagesResultCodeToSocketErrorCode(messagesReadStatesResult.code);
         throw ExpectedException(
             socketErrorCode,
-            "Find all open messages read states failed for user " + context.user->id + ", " + messagesResultCodeString
+            "Find all open messages read states failed for user " + *context.userId + ", " + messagesResultCodeString
         );
     }
 
@@ -93,7 +93,7 @@ void MessagesHandler::HandleFindMessagesPageByConversationId(const SocketServer:
     MessagesService::FindMessagesPageByConversationIdDto findMessagesPageByConversationIdDto = {};
     findMessagesPageByConversationIdDto.conversationId = findMessagesPageByConversationIdSocketEventPayload.conversationId;
     findMessagesPageByConversationIdDto.cursor = findMessagesPageByConversationIdSocketEventPayload.cursor;
-    findMessagesPageByConversationIdDto.userId = context.user->id;
+    findMessagesPageByConversationIdDto.userId = *context.userId;
     const MessagesService::MessagesPageResult messagesPageResult = m_messagesService.FindPageByConversationId(findMessagesPageByConversationIdDto);
     if (messagesPageResult.code != MessagesService::MessagesResultCode::OK)
     {
@@ -101,7 +101,7 @@ void MessagesHandler::HandleFindMessagesPageByConversationId(const SocketServer:
         const SocketErrorCode socketErrorCode = ConvertMessagesResultCodeToSocketErrorCode(messagesPageResult.code);
         throw ExpectedException(
             socketErrorCode, 
-            "Find messages page failed for user " + context.user->id + ", " + messagesResultCodeString
+            "Find messages page failed for user " + *context.userId + ", " + messagesResultCodeString
         );
     }
 
@@ -125,7 +125,7 @@ void MessagesHandler::HandleFindMessagesReadStateByConversationId(const SocketSe
     // Fetches messages read state 
     MessagesService::FindMessagesReadStateByConversationIdDto findMessagesReadStateByConversationIdDto = {};
     findMessagesReadStateByConversationIdDto.conversationId = findMessagesReadStateByConversationIdSocketEventPayload.conversationId;
-    findMessagesReadStateByConversationIdDto.userId = context.user->id;
+    findMessagesReadStateByConversationIdDto.userId = *context.userId;
     const MessagesService::MessagesReadStateResult messagesReadStateResult = m_messagesService.FindReadStateByConversationId(findMessagesReadStateByConversationIdDto);
     if (messagesReadStateResult.code != MessagesService::MessagesResultCode::OK)
     {
@@ -133,7 +133,7 @@ void MessagesHandler::HandleFindMessagesReadStateByConversationId(const SocketSe
         const SocketErrorCode socketErrorCode = ConvertMessagesResultCodeToSocketErrorCode(messagesReadStateResult.code);
         throw ExpectedException(
             socketErrorCode, 
-            "Find messages read state failed for user " + context.user->id + ", " + messagesResultCodeString
+            "Find messages read state failed for user " + *context.userId + ", " + messagesResultCodeString
         );
     }
 
@@ -155,7 +155,7 @@ void MessagesHandler::HandleMarkMessagesRead(const SocketServer::EventContext& c
     MessagesService::MarkMessagesReadDto markMessagesReadDto = {};
     markMessagesReadDto.conversationId = markMessagesReadSocketEventPayload.conversationId;
     markMessagesReadDto.messageId = markMessagesReadSocketEventPayload.messageId;
-    markMessagesReadDto.userId = context.user->id;
+    markMessagesReadDto.userId = *context.userId;
     const MessagesService::MessagesReadStateResult messagesReadStateResult = m_messagesService.MarkRead(markMessagesReadDto);
     if (messagesReadStateResult.code != MessagesService::MessagesResultCode::OK)
     {
@@ -163,7 +163,7 @@ void MessagesHandler::HandleMarkMessagesRead(const SocketServer::EventContext& c
         const SocketErrorCode socketErrorCode = ConvertMessagesResultCodeToSocketErrorCode(messagesReadStateResult.code);
         throw ExpectedException(
             socketErrorCode, 
-            "Mark messages read failed for user " + context.user->id + ", " + messagesResultCodeString
+            "Mark messages read failed for user " + *context.userId + ", " + messagesResultCodeString
         );
     }
 
@@ -177,7 +177,7 @@ void MessagesHandler::HandleMarkMessagesRead(const SocketServer::EventContext& c
      *  - Sends messages marked read socket event 
      *  - Sends to all sockets of the user so their devices update their badge too
      */
-    m_socketServer.SendTo(context.user->id, serializedMessagesMarkedReadSocketEvent);
+    m_socketServer.SendTo(*context.userId, serializedMessagesMarkedReadSocketEvent);
 }
 
 // ***********

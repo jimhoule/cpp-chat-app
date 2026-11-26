@@ -58,11 +58,11 @@ Composition happens in `server/src/main.cpp`. Each **module** owns its loggers, 
 SocketServer  →  route (middlewares + handler)  →  Service  →  Repository
 ```
 
-- **Handlers** receive an `EventContext` (client socket, `serializedPayload`, and `user` once authenticated), deserialize the payload, call a service, serialize the result, send it. They never contain domain rules.
+- **Handlers** receive an `EventContext` (client socket, `serializedPayload`, and `userId` once authenticated), deserialize the payload, call a service, serialize the result, send it. They never contain domain rules.
 - **Services** own the domain rules and take `Dto` structs as input, returning a `ServiceResult<Code, Data>` — a result code plus an optional payload. They never throw for expected failures.
 - **Views** are what services return: `Dto` in, `View` out. Repositories return models (`User`, `Conversation`, `Message`), every public service method returns views (`UserView`, `ConversationView`, `MessageView`), so handlers and serializers never see a password. Each view has its JSON conversion in `core/json` (`UserJson`, `ConversationJson`, `MessageJson`), shared by every serializer and deserializer that carries it.
 - **Repositories** are behind interfaces (`ISessionsRepository`, `IUsersRepository`, …) with in-memory implementations today, so storage can be swapped without touching services.
-- **Middlewares** run before a handler and stop the route by throwing. `RequireAuthentication` rejects unauthenticated sockets and populates `context.user`.
+- **Middlewares** run before a handler and stop the route by throwing. `RequireAuthentication` rejects unauthenticated sockets and sets `context.userId`.
 - **Handler binding.** Handlers are bound as an object and a method, the way the client's `Observer` binds `(*this, &ChatLayer::HandleX)`. A module registers `socketServer.On(SocketEventName::SEARCH_USERS, { RequireAuthentication(socketServer) }, m_usersHandler, &UsersHandler::HandleSearchUsers)`.
   - **How:** two `On` templates (with and without middlewares) wrap the object and method into an `EventHandler` and pass it to the private `AddRoute`. Routing, middlewares and dispatch didn't change. There is no public `std::function` overload, so every route is a named method.
   - **Why:** handlers are plain public `Handle*` methods. Stack traces name them, tests can call them directly, and the naming matches the client.
@@ -87,12 +87,14 @@ Services never call their own public methods — shared logic goes into a privat
 
 `SocketServer` keeps two indexes that must agree:
 
-- `m_connectionsMap` — socket → `Connection` (which holds an optional `UserView`, the socket's `Framer` and its write buffer)
+- `m_connectionsMap` — socket → `Connection` (which holds an optional user id, the socket's `Framer` and its write buffer)
 - `m_userClientSocketsMap` — user id → sockets, for fan-out to someone on several devices
 
 `BindConnectionUser` and `UnbindConnectionUser` are the only things allowed to touch them, and `BindConnectionUser` unbinds first. That makes rebinding safe, which matters because one TCP connection can be bound to several users over its life — the client keeps a single connection for the whole app run, so logging out and back in as someone else reuses the same socket.
 
 `UnbindConnectionUser` is idempotent, so the logout handler, `CloseClientSocket` and `BindConnectionUser` can all call it without checking first.
+
+A connection stores only the user's id, not a `UserView`. Every handler only needs the id, and a copy of the user taken at login would go stale on a rename. Code that needs the full user fetches it through `UsersService`. `GetConnectionUserId` returns `nullptr` for a socket that isn't authenticated.
 
 ## Client
 

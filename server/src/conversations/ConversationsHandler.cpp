@@ -17,7 +17,7 @@ void ConversationsHandler::HandleCloseConversation(const SocketServer::EventCont
 
     ConversationsService::CloseConversationDto closeConversationDto = {};
     // NOTE: User id comes from the authenticated context, never from the payload
-    closeConversationDto.userId = context.user->id;
+    closeConversationDto.userId = *context.userId;
     closeConversationDto.id = closeConversationSocketEventPayload.id;
     const ConversationsService::ConversationResult conversationResult = m_conversationsService.Close(closeConversationDto);
     if (conversationResult.code != ConversationsService::ConversationsResultCode::OK)
@@ -26,7 +26,7 @@ void ConversationsHandler::HandleCloseConversation(const SocketServer::EventCont
         const SocketErrorCode socketErrorCode = ConvertConversationsResultCodeToSocketErrorCode(conversationResult.code);
         throw ExpectedException(
             socketErrorCode,
-            "Close conversation for user " + context.user->id + ", " + conversationsResultCodeString
+            "Close conversation for user " + *context.userId + ", " + conversationsResultCodeString
         );
     }
 
@@ -41,7 +41,7 @@ void ConversationsHandler::HandleFindAllOpenConversationsByUserId(const SocketSe
 {
     // NOTE: The user id comes from the authenticated context, never from the payload
     ConversationsService::FindAllOpenConversationsByUserIdDto findAllOpenConversationsByUserIdDto = {};
-    findAllOpenConversationsByUserIdDto.userId = context.user->id;
+    findAllOpenConversationsByUserIdDto.userId = *context.userId;
     const ConversationsService::ConversationsResult conversationsResult = m_conversationsService.FindAllOpenByUserId(findAllOpenConversationsByUserIdDto);
     if (conversationsResult.code != ConversationsService::ConversationsResultCode::OK)
     {
@@ -49,7 +49,7 @@ void ConversationsHandler::HandleFindAllOpenConversationsByUserId(const SocketSe
         const SocketErrorCode socketErrorCode = ConvertConversationsResultCodeToSocketErrorCode(conversationsResult.code);
         throw ExpectedException(
             socketErrorCode,
-            "Find all open conversations failed for user " + context.user->id + ", " + conversationsResultCodeString
+            "Find all open conversations failed for user " + *context.userId + ", " + conversationsResultCodeString
         );
     }
 
@@ -66,7 +66,7 @@ void ConversationsHandler::HandleFindConversationByUserIds(const SocketServer::E
 
     ConversationsService::FindConversationByUserIdsDto findConversationByUserIdsDto = {};
     // NOTE: The initiator comes from the authenticated context, never from the payload
-    findConversationByUserIdsDto.initiatorUserId = context.user->id;
+    findConversationByUserIdsDto.initiatorUserId = *context.userId;
     findConversationByUserIdsDto.userIds = findConversationByUserIdsSocketEventPayload.userIds;
     const ConversationsService::ConversationResult conversationResult = m_conversationsService.FindByUserIds(findConversationByUserIdsDto);
     if (conversationResult.code != ConversationsService::ConversationsResultCode::OK)
@@ -75,7 +75,7 @@ void ConversationsHandler::HandleFindConversationByUserIds(const SocketServer::E
         const SocketErrorCode socketErrorCode = ConvertConversationsResultCodeToSocketErrorCode(conversationResult.code);
         throw ExpectedException(
             socketErrorCode,
-            "Find conversation by user ids failed for user " + context.user->id + ", " + conversationsResultCodeString
+            "Find conversation by user ids failed for user " + *context.userId + ", " + conversationsResultCodeString
         );
     }
 
@@ -93,7 +93,7 @@ void ConversationsHandler::HandleOpenConversation(const SocketServer::EventConte
 
     ConversationsService::OpenConversationDto openConversationDto = {};
     // NOTE: The initiator comes from the authenticated context, never from the payload
-    openConversationDto.initiatorUserId = context.user->id;
+    openConversationDto.initiatorUserId = *context.userId;
     openConversationDto.userIds = openConversationSocketEventPayload.userIds;
     const ConversationsService::ConversationResult conversationResult = m_conversationsService.Open(openConversationDto);
     if (conversationResult.code != ConversationsService::ConversationsResultCode::OK)
@@ -102,7 +102,7 @@ void ConversationsHandler::HandleOpenConversation(const SocketServer::EventConte
         const SocketErrorCode socketErrorCode = ConvertConversationsResultCodeToSocketErrorCode(conversationResult.code);
         throw ExpectedException(
             socketErrorCode,
-            "Open conversation failed for user " + context.user->id + ", " + conversationsResultCodeString
+            "Open conversation failed for user " + *context.userId + ", " + conversationsResultCodeString
         );
     }
 

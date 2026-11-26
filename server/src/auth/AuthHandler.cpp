@@ -79,7 +79,7 @@ void AuthHandler::HandleLogout(const SocketServer::EventContext& context)
     // Logs out
     AuthService::LogoutDto logoutDto = {};
     logoutDto.sessionId = logoutSocketEventPayload.sessionId;
-    logoutDto.userId = context.user->id;
+    logoutDto.userId = *context.userId;
     AuthService::AuthResult authResult = m_authService.Logout(logoutDto);
     if (authResult.code != AuthService::AuthResultCode::OK)
     {
@@ -97,7 +97,7 @@ void AuthHandler::HandleLogout(const SocketServer::EventContext& context)
     m_socketServer.SendTo(context.clientSocket, serializedLoggedoutSocketEvent);
 
     // Sends user offline socket event to others
-    SendUserOfflineSocketEvent(context.clientSocket, context.user->id);
+    SendUserOfflineSocketEvent(context.clientSocket, *context.userId);
 }
 
 void AuthHandler::HandleRegister(const SocketServer::EventContext& context)
@@ -154,7 +154,7 @@ void AuthHandler::SendUserOfflineSocketEvent(int clientSocket, const std::string
 void AuthHandler::SendUserOnlineSocketEvent(int clientSocket, const UserView& user)
 {
     // Binds user to server
-    m_socketServer.BindConnectionUser(clientSocket, user);
+    m_socketServer.BindConnectionUser(clientSocket, user.id);
 
     // Serializes user online socket event
     const UserOnlineSocketEventPayload userOnlineSocketEventPayload(user);

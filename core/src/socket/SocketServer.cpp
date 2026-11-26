@@ -25,7 +25,7 @@ SocketServer::SocketServer(unsigned int Port, Logger& logger)
 	, m_logger(logger)
 {}
 
-void SocketServer::BindConnectionUser(int clientSocket, const UserView& user)
+void SocketServer::BindConnectionUser(int clientSocket, const std::string& userId)
 {
 	std::unordered_map<int, Connection>::iterator connectionsMapIterator = m_connectionsMap.find(clientSocket);
 	if (connectionsMapIterator == m_connectionsMap.end())
@@ -41,9 +41,9 @@ void SocketServer::BindConnectionUser(int clientSocket, const UserView& user)
 	 */
 	UnbindConnectionUser(clientSocket);
 
-	connectionsMapIterator->second.user = user;
+	connectionsMapIterator->second.userId = userId;
 	// NOTE: If key does not exist, this line creates it inside the map with an empty vector
-	m_userClientSocketsMap[user.id].push_back(clientSocket);
+	m_userClientSocketsMap[userId].push_back(clientSocket);
 }
 
 void SocketServer::Close()
@@ -51,7 +51,7 @@ void SocketServer::Close()
 	close(m_socket);
 }
 
-const UserView* SocketServer::GetConnectionUser(int clientSocket)
+const std::string* SocketServer::GetConnectionUserId(int clientSocket)
 {
 	std::unordered_map<int, Connection>::iterator connectionsMapIterator = m_connectionsMap.find(clientSocket);
 	if (connectionsMapIterator == m_connectionsMap.end())
@@ -60,13 +60,13 @@ const UserView* SocketServer::GetConnectionUser(int clientSocket)
 		return nullptr;
 	}
 
-	if (!connectionsMapIterator->second.user.has_value())
+	if (!connectionsMapIterator->second.userId.has_value())
 	{
 		m_logger.Error("Socket connection user not authenticated");
 		return nullptr;
 	}
 
-	return &connectionsMapIterator->second.user.value();
+	return &connectionsMapIterator->second.userId.value();
 }
 
 void SocketServer::Init()
@@ -235,7 +235,7 @@ void SocketServer::SendAllExcept(int exceptionClientSocket, const std::string& s
 	for (const std::pair<const int, Connection>& pair : m_connectionsMap)
     {
 		// If connection has no user, it means the client is not authenticated yet
-		if (!pair.second.user.has_value())
+		if (!pair.second.userId.has_value())
 		{
 			continue;
 		}
@@ -256,7 +256,7 @@ void SocketServer::SendAllExcept(const std::unordered_set<int>& exceptionClientS
 	for (const std::pair<const int, Connection>& pair : m_connectionsMap)
     {
 		// If connection has no user, it means the client is not authenticated yet
-		if (!pair.second.user.has_value())
+		if (!pair.second.userId.has_value())
 		{
 			continue;
 		}
@@ -324,13 +324,13 @@ void SocketServer::UnbindConnectionUser(int clientSocket)
 	Connection& connection = connectionsMapIterator->second;
 
 	// NOTE: A connection with no user is not bound so there is nothing to unbind
-	if (!connection.user.has_value())
+	if (!connection.userId.has_value())
 	{
 		return;
 	}
 
 	// Finds user's sockets
-	std::unordered_map<std::string, std::vector<int>>::iterator userClientSocketsMapIterator = m_userClientSocketsMap.find(connection.user.value().id);
+	std::unordered_map<std::string, std::vector<int>>::iterator userClientSocketsMapIterator = m_userClientSocketsMap.find(connection.userId.value());
 	if (userClientSocketsMapIterator != m_userClientSocketsMap.end())
 	{
 		// Removes socket from user's sockets
@@ -346,7 +346,7 @@ void SocketServer::UnbindConnectionUser(int clientSocket)
 	}
 
 	// Removes user from connection
-	connection.user = std::nullopt;
+	connection.userId.reset();
 }
 
 void SocketServer::Use(const EventMiddleware& middleware)
