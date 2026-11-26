@@ -20,7 +20,6 @@ struct EventContext
         std::string serializedPayload = "";
     };
 
-    using EventHandler = std::function<void(const EventContext&)>;
     // NOTE: The pointer to a TOwner method that handles a socket event (ex: &UsersApi::HandleUsersSearched)
     template<typename TOwner>
     using EventHandlerMethod = void (TOwner::*)(const EventContext&);
@@ -31,7 +30,10 @@ struct EventContext
     void Close();
     void Connect(int serverPort, const std::string &serverIpAddress);
     void Off(SocketEventName socketEventName, EventHandlerOwner owner);
-    
+    void Send(const std::string &serializedSocketEvent);
+    void Update();
+
+    // NOTE: Owner by pointer because it is also the key Off() removes by (each Api passes this)
     template<typename TOwner>
     void On(SocketEventName socketEventName, TOwner* owner, EventHandlerMethod<TOwner> method)
     {
@@ -55,9 +57,6 @@ struct EventContext
         AddHandler(socketEventName, owner, handler);
     }
 
-    void Send(const std::string &serializedSocketEvent);
-    void Update();
-
 private:
     struct Connection
     {
@@ -66,6 +65,8 @@ private:
         // NOTE: Bytes waiting to be sent (SendWriteBuffer() sends them on the next frame)
         std::string writeBuffer = "";
     };
+
+    using EventHandler = std::function<void(const EventContext&)>;
 
     struct EventHandlerEntry
     {

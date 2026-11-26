@@ -94,6 +94,12 @@ Services never call their own public methods — shared logic goes into a privat
 
 `UnbindConnectionUser` is idempotent, so the logout handler, `CloseClientSocket` and `BindConnectionUser` can all call it without checking first.
 
+**Presence hooks.** `OnUserBound(owner, &X::HandleUserBound)` and `OnUserUnbound(owner, &X::HandleUserUnbound)` add a listener, never replace one, so any module can listen (presence now, server metrics later). Each event has its own context struct, `UserBoundContext` / `UserUnboundContext`, holding the user id, so one can gain fields without touching the other.
+- **Bound** fires only for a user's **first** socket. A second device fires nothing, and re-authenticating as the same user on the same socket returns early, so there's no offline → online flicker.
+- **Unbound** fires only when a user's **last** socket is unbound. The listeners run after both indexes are updated, so a listener sees the user gone from `m_userClientSocketsMap`, and a `SendAll` from it skips the closing socket.
+- The hooks fire on bind / unbind, not on TCP connect: a raw connection exists before login and has no user.
+- Listeners must not throw: unbind also runs from `CloseClientSocket`, outside any route.
+
 A connection stores only the user's id, not a `UserView`. Every handler only needs the id, and a copy of the user taken at login would go stale on a rename. Code that needs the full user fetches it through `UsersService`. `GetConnectionUserId` returns `nullptr` for a socket that isn't authenticated.
 
 ## Client
@@ -405,6 +411,6 @@ Once the chat is done, the repo gets a fourth app: `dashboard/`, a standalone in
 - Group conversations exist on the server (up to 9 users) but the client can only start one-on-one conversations, one search result at a time. If participants can ever leave, the client's sender lookup needs a null check (a former participant's old messages would point to a missing user).
 - Expired and orphaned sessions are never deleted from the repository.
 - The in-memory repositories have no locks (plain vectors). Each one needs a mutex before the server goes multithreaded.
-- Presence is login-based and wrong with several devices: logging out on one sends `USER_OFFLINE` while another is still connected, and closing the app sends nothing. Planned: presence based on authenticated connections (online when a user's first socket is bound to them at login, offline when their last one is unbound), not on raw TCP connections, which exist before login. `SocketServer` will expose `OnUserBound` / `OnUserUnbound` listener lists. A `UsersPresenceNotifier` in the users module will send the presence events. It's not a handler, because no client request triggers it. It's given `SocketServer` to send, and `UsersModule` binds its `HandleUserBound` / `HandleUserUnbound` methods next to its route, the same way handlers are wired.
+- Presence is login-based and wrong with several devices: logging out on one sends `USER_OFFLINE` while another is still connected, and closing the app sends nothing. Planned: presence based on authenticated connections (online when a user's first socket is bound to them at login, offline when their last one is unbound), not on raw TCP connections, which exist before login. `SocketServer` now has the `OnUserBound` / `OnUserUnbound` hooks (see Connections), with nothing listening yet. A `UsersPresenceNotifier` in the users module will send the presence events. It's not a handler, because no client request triggers it. It's given `SocketServer` to send, and `UsersModule` binds its `HandleUserBound` / `HandleUserUnbound` methods next to its route, the same way handlers are wired.
 
 See `NEXT_STEPS.txt`.

@@ -27,23 +27,48 @@ SocketServer::SocketServer(unsigned int Port, Logger& logger)
 
 void SocketServer::BindConnectionUser(int clientSocket, const std::string& userId)
 {
-	std::unordered_map<int, Connection>::iterator connectionsMapIterator = m_connectionsMap.find(clientSocket);
+	ConnectionsMap::iterator connectionsMapIterator = m_connectionsMap.find(clientSocket);
 	if (connectionsMapIterator == m_connectionsMap.end())
 	{
 		m_logger.Error("Socket connection not found");
 		return;
 	}
 
+	Connection& connection = connectionsMapIterator->second;
+
+	// NOTE: Reauthenticating as the same user changes nothing so returning early avoids an offline -> online flicker
+	if (connection.userId.has_value() && connection.userId.value() == userId)
+	{
+		return;
+	}
+
 	/**
 	 * NOTES:
 	 * 	- Detaches connection from user it was bound to, if any, so it is never listed under two users
-	 * 	- For the case for reauthentication
+	 * 	- Only touches this socket so the user's other sockets (other devices) stay bound
 	 */
 	UnbindConnectionUser(clientSocket);
 
-	connectionsMapIterator->second.userId = userId;
-	// NOTE: If key does not exist, this line creates it inside the map with an empty vector
-	m_userClientSocketsMap[userId].push_back(clientSocket);
+	connection.userId = userId;
+
+	// NOTE: If key does not exist this line creates it inside the map with an empty vector
+	std::vector<int>& userClientSockets = m_userClientSocketsMap[userId];
+	const bool isFirstClientSocket = userClientSockets.empty();
+	userClientSockets.push_back(clientSocket);
+
+	// NOTE: Only the user's first socket makes them online so other devices are already covered
+	if (!isFirstClientSocket)
+	{
+		return;
+	}
+
+	// Calls all user bound listener
+	UserBoundContext context = {};
+	context.userId = userId;
+	for (const UserBoundListener& listener : m_userBoundListeners)
+	{
+		listener(context);
+	}
 }
 
 void SocketServer::Close()
@@ -53,7 +78,7 @@ void SocketServer::Close()
 
 const std::string* SocketServer::GetConnectionUserId(int clientSocket)
 {
-	std::unordered_map<int, Connection>::iterator connectionsMapIterator = m_connectionsMap.find(clientSocket);
+	ConnectionsMap::iterator connectionsMapIterator = m_connectionsMap.find(clientSocket);
 	if (connectionsMapIterator == m_connectionsMap.end())
 	{
 		m_logger.Error("Socket connection user not found");
@@ -274,7 +299,7 @@ void SocketServer::SendAllExcept(const std::unordered_set<int>& exceptionClientS
 
 void SocketServer::SendTo(int clientSocket, const std::string& serializedSocketEvent)
 {
-	std::unordered_map<int, Connection>::iterator connectionsMapIterator = m_connectionsMap.find(clientSocket);
+	ConnectionsMap::iterator connectionsMapIterator = m_connectionsMap.find(clientSocket);
 	if (connectionsMapIterator == m_connectionsMap.end())
 	{
 		m_logger.Error("Socket connection not found for client socket " + std::to_string(clientSocket));
@@ -294,7 +319,7 @@ void SocketServer::SendTo(int clientSocket, const std::string& serializedSocketE
 void SocketServer::SendTo(const std::string& userId, const std::string& serializedSocketEvent)
 {
 	// NOTE: User has no socket (offline) so there is nothing to send
-	std::unordered_map<std::string, std::vector<int>>::iterator userClientSocketsMapIterator = m_userClientSocketsMap.find(userId);
+	UserClientSocketsMap::iterator userClientSocketsMapIterator = m_userClientSocketsMap.find(userId);
 	if (userClientSocketsMapIterator == m_userClientSocketsMap.end())
 	{
 		return;
@@ -314,7 +339,7 @@ void SocketServer::SendTo(const std::vector<int>& clientSockets, const std::stri
 void SocketServer::UnbindConnectionUser(int clientSocket)
 {
 	// Finds connection
-	std::unordered_map<int, Connection>::iterator connectionsMapIterator = m_connectionsMap.find(clientSocket);
+	ConnectionsMap::iterator connectionsMapIterator = m_connectionsMap.find(clientSocket);
 	if (connectionsMapIterator == m_connectionsMap.end())
 	{
 		m_logger.Warning("No socket connections found");
@@ -329,24 +354,39 @@ void SocketServer::UnbindConnectionUser(int clientSocket)
 		return;
 	}
 
-	// Finds user's sockets
-	std::unordered_map<std::string, std::vector<int>>::iterator userClientSocketsMapIterator = m_userClientSocketsMap.find(connection.userId.value());
-	if (userClientSocketsMapIterator != m_userClientSocketsMap.end())
-	{
-		// Removes socket from user's sockets
-		std::vector<int>& userClientSockets = userClientSocketsMapIterator->second;
-		userClientSockets.erase(std::remove(userClientSockets.begin(), userClientSockets.end(), clientSocket), userClientSockets.end());
-
-		// If after removing socket user does not have sockets anymore
-		if (userClientSockets.empty())
-		{
-			// Removes sockets vector from map
-			m_userClientSocketsMap.erase(userClientSocketsMapIterator);
-		}
-	}
+	// Constructs user unbound listener context before removing user id
+	UserUnboundContext context = {};
+	context.userId = *connection.userId;
 
 	// Removes user from connection
 	connection.userId.reset();
+
+	// Finds user's sockets
+	UserClientSocketsMap::iterator userClientSocketsMapIterator = m_userClientSocketsMap.find(context.userId);
+	if (userClientSocketsMapIterator == m_userClientSocketsMap.end())
+	{
+		m_logger.Error("Bound user has no sockets listed, indexes out of sync");
+		return;
+	}
+
+	// Removes socket from user's sockets
+	std::vector<int>& userClientSockets = userClientSocketsMapIterator->second;
+	userClientSockets.erase(std::remove(userClientSockets.begin(), userClientSockets.end(), clientSocket), userClientSockets.end());
+
+	// NOTE: User still has other sockets (other devices) so they stay online
+	if (!userClientSockets.empty())
+	{
+		return;
+	}
+
+	// Removes sockets vector from map
+	m_userClientSocketsMap.erase(userClientSocketsMapIterator);
+
+	// Calls all user unbound listeners
+	for (const UserUnboundListener& listener : m_userUnboundListeners)
+	{
+		listener(context);
+	}
 }
 
 void SocketServer::Use(const EventMiddleware& middleware)
@@ -385,6 +425,28 @@ void SocketServer::AddRoute(SocketEventName socketEventName, const std::vector<E
 	route.handler = handler;
 
 	m_routesMap.insert(std::pair(socketEventName, route));
+}
+
+void SocketServer::AddUserBoundListener(const UserBoundListener& listener)
+{
+	if (!listener)
+	{
+		m_logger.Error("Null user bound listener. It will be ignored");
+		return;
+	}
+
+	m_userBoundListeners.push_back(listener);
+}
+
+void SocketServer::AddUserUnboundListener(const UserUnboundListener& listener)
+{
+	if (!listener)
+	{
+		m_logger.Error("Null user unbound listener. It will be ignored");
+		return;
+	}
+
+	m_userUnboundListeners.push_back(listener);
 }
 
 void SocketServer::CloseClientSocket(int clientSocket)
@@ -466,7 +528,7 @@ void SocketServer::ExecuteRoute(const EventRoute& route, EventContext& context)
 void SocketServer::ReadClientSocket(int clientSocket)
 {
 	// Finds connection
-	std::unordered_map<int, Connection>::iterator connectionsMapIterator = m_connectionsMap.find(clientSocket);
+	ConnectionsMap::iterator connectionsMapIterator = m_connectionsMap.find(clientSocket);
 	if (connectionsMapIterator == m_connectionsMap.end())
 	{
 		m_logger.Warning("No socket connections found");
@@ -595,7 +657,7 @@ void SocketServer::SetNonBlockingSocket(int socket)
 void SocketServer::WriteClientSocket(int clientSocket)
 {
 	// Finds connection
-	std::unordered_map<int, Connection>::iterator connectionsMapIterator = m_connectionsMap.find(clientSocket);
+	ConnectionsMap::iterator connectionsMapIterator = m_connectionsMap.find(clientSocket);
 	if (connectionsMapIterator == m_connectionsMap.end())
 	{
 		return;

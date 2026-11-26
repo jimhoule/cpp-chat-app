@@ -33,12 +33,27 @@ public:
         SocketEventName eventName = SocketEventName::ERROR;
     };
 
+    struct UserBoundContext
+    {
+        std::string userId = "";
+    };
+
+    struct UserUnboundContext
+    {
+        std::string userId = "";
+    };
+
     using EventErrorHandler = std::function<void(const std::exception&, EventErrorContext&)>;
-    using EventHandler = std::function<void(const EventContext&)>;
     // NOTE: Pointer to a TOwner method that handles a socket event (ex: &UsersHandler::HandleSearchUsers)
     template<typename TOwner>
     using EventHandlerMethod = void (TOwner::*)(const EventContext&);
     using EventMiddleware = std::function<void(EventContext&)>;
+    // NOTE: Pointer to a TOwner method called when a user's first socket is bound (ex: &UsersPresenceNotifier::HandleUserBound)
+    template<typename TOwner>
+    using UserBoundListenerMethod = void (TOwner::*)(const UserBoundContext&);
+    // NOTE: Pointer to a TOwner method called when a user's last socket is unbound (ex: &UsersPresenceNotifier::HandleUserUnbound)
+    template<typename TOwner>
+    using UserUnboundListenerMethod = void (TOwner::*)(const UserUnboundContext&);
 
     SocketServer(unsigned int port, Logger& logger);
 
@@ -47,13 +62,24 @@ public:
     const std::string* GetConnectionUserId(int clientSocket);
     void Init();
     void Listen();
+    void OnError(const EventErrorHandler& errorHandler);
+    void SendAll(const std::string& serializedSocketEvent);
+    void SendAllExcept(int exceptionClientSocket, const std::string& serializedSocketEvent);
+    void SendAllExcept(const std::unordered_set<int>& exceptionClientSockets, const std::string& serializedSocketEvent);
+    void SendTo(int clientSocket, const std::string& serializedSocketEvent);
+    void SendTo(const std::string& userId, const std::string& serializedSocketEvent);
+    void SendTo(const std::vector<int>& clientSockets, const std::string& serializedSocketEvent);
+    void UnbindConnectionUser(int clientSocket);
+    void Use(const EventMiddleware& middleware);
 
+    // NOTE: Owner by reference because it is only the object the method runs on (never null since there is no remove)
     template<typename TOwner>
     void On(SocketEventName socketEventName, TOwner& owner, EventHandlerMethod<TOwner> method)
     {
         On(socketEventName, {}, owner, method);
     }
 
+    // NOTE: Owner by reference because it is only the object the method runs on (never null since there is no remove)
     template<typename TOwner>
     void On(SocketEventName socketEventName, const std::vector<EventMiddleware>& middlewares, TOwner& owner, EventHandlerMethod<TOwner> method)
     {
@@ -77,15 +103,41 @@ public:
         AddRoute(socketEventName, middlewares, handler);
     }
 
-    void OnError(const EventErrorHandler& errorHandler);
-    void SendAll(const std::string& serializedSocketEvent);
-    void SendAllExcept(int exceptionClientSocket, const std::string& serializedSocketEvent);
-    void SendAllExcept(const std::unordered_set<int>& exceptionClientSockets, const std::string& serializedSocketEvent);
-    void SendTo(int clientSocket, const std::string& serializedSocketEvent);
-    void SendTo(const std::string& userId, const std::string& serializedSocketEvent);
-    void SendTo(const std::vector<int>& clientSockets, const std::string& serializedSocketEvent);
-    void UnbindConnectionUser(int clientSocket);
-    void Use(const EventMiddleware& middleware);
+    // NOTE: Owner by reference because it is only the object the method runs on (never null since there is no remove)
+    template<typename TOwner>
+    void OnUserBound(TOwner& owner, UserBoundListenerMethod<TOwner> method)
+    {
+        // NOTE: An empty listener lets AddUserBoundListener() reject a null method
+        if (method == nullptr)
+        {
+            AddUserBoundListener(nullptr);
+            return;
+        }
+
+        UserBoundListener listener = [&owner, method](const UserBoundContext& context) {
+            (owner.*method)(context);
+        };
+
+        AddUserBoundListener(listener);
+    }
+
+    // NOTE: Owner by reference because it is only the object the method runs on (never null since there is no remove)
+    template<typename TOwner>
+    void OnUserUnbound(TOwner& owner, UserUnboundListenerMethod<TOwner> method)
+    {
+        // NOTE: An empty listener lets AddUserUnboundListener() reject a null method
+        if (method == nullptr)
+        {
+            AddUserUnboundListener(nullptr);
+            return;
+        }
+
+        UserUnboundListener listener = [&owner, method](const UserUnboundContext& context) {
+            (owner.*method)(context);
+        };
+
+        AddUserUnboundListener(listener);
+    }
 
 private:
     struct Connection
@@ -101,27 +153,38 @@ private:
         std::string writeBuffer = "";
     };
 
+    using EventHandler = std::function<void(const EventContext&)>;
+
     struct EventRoute
     {
         std::vector<EventMiddleware> middlewares = {};
         EventHandler handler = nullptr;
     };
 
+    using ConnectionsMap = std::unordered_map<int, Connection>;
     using EventRoutesMap = std::unordered_map<SocketEventName, EventRoute>;
+    using UserBoundListener = std::function<void(const UserBoundContext&)>;
+    using UserClientSocketsMap = std::unordered_map<std::string, std::vector<int>>;
+    using UserUnboundListener = std::function<void(const UserUnboundContext&)>;
 
     int m_socket = -1;
     unsigned int m_port = 0;
     sockaddr_in m_address = {};
-    std::unordered_map<int, Connection> m_connectionsMap = {};
-    std::unordered_map<std::string, std::vector<int>> m_userClientSocketsMap = {};
-    // NOTE: The middlewares are globals
+    ConnectionsMap m_connectionsMap = {};
+    UserClientSocketsMap m_userClientSocketsMap = {};
+    // NOTE: These middlewares are globals
     std::vector<EventMiddleware> m_middlewares = {};
     EventRoutesMap m_routesMap = {};
     EventErrorHandler m_errorHandler = nullptr;
     SocketEventDeserializer m_socketEventDeserializer = {};
+    std::vector<UserBoundListener> m_userBoundListeners = {};
+    std::vector<UserUnboundListener> m_userUnboundListeners = {};
+
     Logger& m_logger;
 
     void AddRoute(SocketEventName socketEventName, const std::vector<EventMiddleware>& middlewares, const EventHandler& handler);
+    void AddUserBoundListener(const UserBoundListener& listener);
+    void AddUserUnboundListener(const UserUnboundListener& listener);
     void CloseClientSocket(int clientSocket);
     std::optional<SocketEvent<std::string>> DeserializeSocketEvent(int clientSocket, const std::string& serializedSocketEvent);
     void DispatchSocketEvent(int clientSocket, const std::string& serializedSocketEvent);
