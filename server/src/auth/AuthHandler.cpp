@@ -38,8 +38,8 @@ void AuthHandler::HandleAuthenticate(const SocketServer::EventContext& context)
     // Sends authenticated socket event
     m_socketServer.SendTo(context.clientSocket, serializedAuthenticatedSocketEvent);
 
-    // Sends user offline socket event to others
-    SendUserOnlineSocketEvent(context.clientSocket, authResult.data.user);
+    // Binds user to server
+    m_socketServer.BindConnectionUser(context.clientSocket, authResult.data.user.id);
 }
 
 void AuthHandler::HandleLogin(const SocketServer::EventContext& context)
@@ -67,8 +67,8 @@ void AuthHandler::HandleLogin(const SocketServer::EventContext& context)
     // Sends logged in socket event
     m_socketServer.SendTo(context.clientSocket, serializedLoggedinSocketEvent);
 
-    // Sends user offline socket event to others
-    SendUserOnlineSocketEvent(context.clientSocket, authResult.data.user);
+    // Binds user to server
+    m_socketServer.BindConnectionUser(context.clientSocket, authResult.data.user.id);
 }
 
 void AuthHandler::HandleLogout(const SocketServer::EventContext& context)
@@ -96,8 +96,8 @@ void AuthHandler::HandleLogout(const SocketServer::EventContext& context)
     // Sends logged out socket event
     m_socketServer.SendTo(context.clientSocket, serializedLoggedoutSocketEvent);
 
-    // Sends user offline socket event to others
-    SendUserOfflineSocketEvent(context.clientSocket, *context.userId);
+    // Unbinds user from server
+    m_socketServer.UnbindConnectionUser(context.clientSocket);
 }
 
 void AuthHandler::HandleRegister(const SocketServer::EventContext& context)
@@ -130,41 +130,13 @@ void AuthHandler::HandleRegister(const SocketServer::EventContext& context)
     // Sends registered socket event
     m_socketServer.SendTo(context.clientSocket, serializedRegisteredSocketEvent);
 
-    // Sends user offline socket event to others
-    SendUserOnlineSocketEvent(context.clientSocket, authResult.data.user);
+    // Binds user to server
+    m_socketServer.BindConnectionUser(context.clientSocket, authResult.data.user.id);
 }
 
 // ***********
 // * PRIVATE *
 // ***********
-void AuthHandler::SendUserOfflineSocketEvent(int clientSocket, const std::string& userId)
-{
-    // Unbinds user from server
-    m_socketServer.UnbindConnectionUser(clientSocket);
-    
-    // Serializes user offline socket events
-    const UserOfflineSocketEventPayload userOfflineSocketEventPayload(userId);
-    const UserOfflineSocketEvent userOfflineSocketEvent(userOfflineSocketEventPayload);
-    const std::string serializedUserOfflineSocketEvent = m_userOfflineSocketEventSerializer.Serialize(userOfflineSocketEvent);
-
-    // Sends user offline socket event to others
-    m_socketServer.SendAllExcept(clientSocket, serializedUserOfflineSocketEvent);
-}
-
-void AuthHandler::SendUserOnlineSocketEvent(int clientSocket, const UserView& user)
-{
-    // Binds user to server
-    m_socketServer.BindConnectionUser(clientSocket, user.id);
-
-    // Serializes user online socket event
-    const UserOnlineSocketEventPayload userOnlineSocketEventPayload(user);
-    const UserOnlineSocketEvent userOnlineSocketEvent(userOnlineSocketEventPayload);
-    const std::string serializedUserOnlineSocketEvent = m_userOnlineSocketEventSerializer.Serialize(userOnlineSocketEvent);
-
-    // Sends user authenticated socket event to others
-    m_socketServer.SendAllExcept(clientSocket, serializedUserOnlineSocketEvent);
-}
-
 SocketErrorCode AuthHandler::ConvertAuthResultCodeToSocketErrorCode(AuthService::AuthResultCode authResultCode)
 {
     switch (authResultCode)

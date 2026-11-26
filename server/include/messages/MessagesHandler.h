@@ -30,6 +30,7 @@ public:
 
 private:
     SocketServer& m_socketServer;
+    
     MessagesService& m_messagesService;
 
     // NOTE: Borrowed from the module, which owns it and outlives this handler

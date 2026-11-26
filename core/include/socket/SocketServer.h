@@ -35,6 +35,8 @@ public:
 
     struct UserBoundContext
     {
+        // NOTE: The socket thats was bound so listeners can skip it (user's own socket does not need its own USER_ONLINE)
+        int clientSocket = -1;
         std::string userId = "";
     };
 

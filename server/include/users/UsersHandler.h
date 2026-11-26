@@ -17,6 +17,7 @@ public:
 
 private:
     SocketServer& m_socketServer;
+    
     UsersService& m_usersService;
 
     // NOTE: Borrowed from the module, which owns it and outlives this handler

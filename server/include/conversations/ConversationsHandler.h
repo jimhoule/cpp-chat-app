@@ -26,6 +26,7 @@ public:
 
 private:
     SocketServer& m_socketServer;
+    
     ConversationsService& m_conversationsService;
 
     // NOTE: Borrowed from the module, which owns it and outlives this handler

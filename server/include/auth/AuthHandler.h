@@ -9,8 +9,6 @@
 #include "serializer/LoggedinSocketEventSerializer.h"
 #include "serializer/LoggedoutSocketEventSerializer.h"
 #include "serializer/RegisteredSocketEventSerializer.h"
-#include "serializer/UserOfflineSocketEventSerializer.h"
-#include "serializer/UserOnlineSocketEventSerializer.h"
 #include "socket/SocketErrorCode.h"
 #include "socket/SocketServer.h"
 
@@ -29,6 +27,7 @@ public:
 
 private:
     SocketServer& m_socketServer;
+    
     AuthService& m_authService;
 
     // NOTE: Borrowed from the module, which owns it and outlives this handler
@@ -46,11 +45,5 @@ private:
     RegisteredSocketEventSerializer m_registeredSocketEventSerializer = {};
     RegisterSocketEventPayloadDeserializer m_registerSocketEventPayloadDeserializer = {};
 
-    UserOfflineSocketEventSerializer m_userOfflineSocketEventSerializer = {};
-
-    UserOnlineSocketEventSerializer m_userOnlineSocketEventSerializer = {};
-
-    void SendUserOfflineSocketEvent(int clientSocket, const std::string& userId);
-    void SendUserOnlineSocketEvent(int clientSocket, const UserView& user);
     SocketErrorCode ConvertAuthResultCodeToSocketErrorCode(AuthService::AuthResultCode authResultCode);
 };

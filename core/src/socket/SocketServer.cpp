@@ -64,6 +64,7 @@ void SocketServer::BindConnectionUser(int clientSocket, const std::string& userI
 
 	// Calls all user bound listener
 	UserBoundContext context = {};
+	context.clientSocket = clientSocket;
 	context.userId = userId;
 	for (const UserBoundListener& listener : m_userBoundListeners)
 	{
