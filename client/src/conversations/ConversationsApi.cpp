@@ -1,7 +1,5 @@
 #include "conversations/ConversationsApi.h"
 
-#include "socket/SocketClient.h"
-
 // **********
 // * PUBLIC *
 // **********
@@ -9,42 +7,10 @@ ConversationsApi::ConversationsApi(SocketClient& socketClient, Logger& logger)
     : m_socketClient(socketClient)
     , m_logger(logger)
 {
-    SocketClient::EventHandler HandleAllOpenConversationsFound = [this](const SocketClient::EventContext& context) {
-        const AllOpenConversationsFoundByUserIdSocketEventPayload allOpenConversationsFoundByUserIdSocketEventPayload = m_allOpenConversationsFoundByUserIdSocketEventPayloadDeserializer.Deserialize(context.serializedPayload);
-
-        // Sends event to subcriptions
-        const AllOpenConversationsFoundEvent allOpenConversationsFoundEvent(allOpenConversationsFoundByUserIdSocketEventPayload.conversations);
-        m_allOpenConversationsFoundSubject.Notify(allOpenConversationsFoundEvent);
-    };
-
-    SocketClient::EventHandler HandleConversationClosed = [this](const SocketClient::EventContext& context) {
-        const ConversationClosedSocketEventPayload conversationClosedEventPayload = m_conversationClosedSocketEventPayloadDeserializer.Deserialize(context.serializedPayload);
-
-        // Sends event to subcriptions
-        const ConversationClosedEvent conversationClosedEvent(conversationClosedEventPayload.conversation);
-        m_conversationClosedSubject.Notify(conversationClosedEvent);
-    };
-
-    SocketClient::EventHandler HandleConversationOpened = [this](const SocketClient::EventContext& context) {
-        const ConversationOpenedSocketEventPayload conversationOpenedSocketEventPayload = m_conversationOpenedSocketEventPayloadDeserializer.Deserialize(context.serializedPayload);
-
-        // Sends event to subcriptions
-        const ConversationOpenedEvent conversationOpenedEvent(conversationOpenedSocketEventPayload.conversation);
-        m_conversationOpenedSubject.Notify(conversationOpenedEvent);
-    };
-
-    SocketClient::EventHandler HandleConversationReopened = [this](const SocketClient::EventContext& context) {
-        const ConversationReopenedSocketEventPayload conversationReopenedSocketEventPayload = m_conversationReopenedSocketEventPayloadDeserializer.Deserialize(context.serializedPayload);
-
-        // Sends event to subcriptions
-        const ConversationReopenedEvent conversationReopenedEvent(conversationReopenedSocketEventPayload.conversation);
-        m_conversationReopenedSubject.Notify(conversationReopenedEvent);
-    };
-
-    m_socketClient.On(SocketEventName::ALL_OPEN_CONVERSATIONS_FOUND_BY_USER_ID, this, HandleAllOpenConversationsFound);
-    m_socketClient.On(SocketEventName::CONVERSATION_CLOSED, this, HandleConversationClosed);
-    m_socketClient.On(SocketEventName::CONVERSATION_OPENED, this, HandleConversationOpened);
-    m_socketClient.On(SocketEventName::CONVERSATION_REOPENED, this, HandleConversationReopened);
+    m_socketClient.On(SocketEventName::ALL_OPEN_CONVERSATIONS_FOUND_BY_USER_ID, this, &ConversationsApi::HandleAllOpenConversationsFound);
+    m_socketClient.On(SocketEventName::CONVERSATION_CLOSED, this, &ConversationsApi::HandleConversationClosed);
+    m_socketClient.On(SocketEventName::CONVERSATION_OPENED, this, &ConversationsApi::HandleConversationOpened);
+    m_socketClient.On(SocketEventName::CONVERSATION_REOPENED, this, &ConversationsApi::HandleConversationReopened);
 }
 
 ConversationsApi::~ConversationsApi()
@@ -106,4 +72,43 @@ void ConversationsApi::Open(const OpenConversationParams& openConversationParams
 
     // Sends open conversation socket event
     m_socketClient.Send(serializedOpenConversationSocketEvent);
+}
+
+// ***********
+// * PRIVATE *
+// ***********
+void ConversationsApi::HandleAllOpenConversationsFound(const SocketClient::EventContext& context)
+{
+    const AllOpenConversationsFoundByUserIdSocketEventPayload allOpenConversationsFoundByUserIdSocketEventPayload = m_allOpenConversationsFoundByUserIdSocketEventPayloadDeserializer.Deserialize(context.serializedPayload);
+
+    // Sends event to subcriptions
+    const AllOpenConversationsFoundEvent allOpenConversationsFoundEvent(allOpenConversationsFoundByUserIdSocketEventPayload.conversations);
+    m_allOpenConversationsFoundSubject.Notify(allOpenConversationsFoundEvent);
+}
+
+void ConversationsApi::HandleConversationClosed(const SocketClient::EventContext& context)
+{
+    const ConversationClosedSocketEventPayload conversationClosedEventPayload = m_conversationClosedSocketEventPayloadDeserializer.Deserialize(context.serializedPayload);
+
+    // Sends event to subcriptions
+    const ConversationClosedEvent conversationClosedEvent(conversationClosedEventPayload.conversation);
+    m_conversationClosedSubject.Notify(conversationClosedEvent);
+}
+
+void ConversationsApi::HandleConversationOpened(const SocketClient::EventContext& context)
+{
+    const ConversationOpenedSocketEventPayload conversationOpenedSocketEventPayload = m_conversationOpenedSocketEventPayloadDeserializer.Deserialize(context.serializedPayload);
+
+    // Sends event to subcriptions
+    const ConversationOpenedEvent conversationOpenedEvent(conversationOpenedSocketEventPayload.conversation);
+    m_conversationOpenedSubject.Notify(conversationOpenedEvent);
+}
+
+void ConversationsApi::HandleConversationReopened(const SocketClient::EventContext& context)
+{
+    const ConversationReopenedSocketEventPayload conversationReopenedSocketEventPayload = m_conversationReopenedSocketEventPayloadDeserializer.Deserialize(context.serializedPayload);
+
+    // Sends event to subcriptions
+    const ConversationReopenedEvent conversationReopenedEvent(conversationReopenedSocketEventPayload.conversation);
+    m_conversationReopenedSubject.Notify(conversationReopenedEvent);
 }

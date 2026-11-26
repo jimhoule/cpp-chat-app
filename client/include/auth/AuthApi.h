@@ -17,6 +17,7 @@
 #include "serializer/LoginSocketEventSerializer.h"
 #include "serializer/LogoutSocketEventSerializer.h"
 #include "serializer/RegisterSocketEventSerializer.h"
+#include "socket/SocketClient.h"
 #include "views/UserView.h"
 
 #include <optional>
@@ -24,7 +25,6 @@
 // Forward declarations
 class Logger;
 class SessionStore;
-class SocketClient;
 
 class AuthApi
 {
@@ -50,9 +50,9 @@ public:
 
     // NOTE: Exposes observable view only so callers cannot notify
     IObservable<AuthenticatedEvent>& GetAuthenticatedSubject();
+    IObservable<AuthenticateFailedEvent>& GetAuthenticateFailedSubject();
     IObservable<LoggedInEvent>& GetLoggedInSubject();
     IObservable<LoggedOutEvent>& GetLoggedOutSubject();
-    IObservable<AuthenticateFailedEvent>& GetAuthenticateFailedSubject();
     IObservable<RegisteredEvent>& GetRegisteredSubject();
     IObservable<UserOnlineEvent>& GetUserOnlineSubject();
 
@@ -93,4 +93,11 @@ private:
     std::optional<UserView> m_currentUser = std::nullopt;
 
     Logger& m_logger;
+
+    void HandleAuthenticated(const SocketClient::EventContext& context);
+    void HandleError(const SocketClient::EventContext& context);
+    void HandleLoggedIn(const SocketClient::EventContext& context);
+    void HandleLoggedOut(const SocketClient::EventContext& context);
+    void HandleRegistered(const SocketClient::EventContext& context);
+    void HandleUserOnline(const SocketClient::EventContext& context);
 };

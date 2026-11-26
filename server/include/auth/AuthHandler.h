@@ -22,10 +22,10 @@ class AuthHandler
 public:
     AuthHandler(SocketServer& socketServer, AuthService& authService, Logger& logger);
 
-    SocketServer::EventHandler GetAuthenticateHandler();
-    SocketServer::EventHandler GetLoginHandler();
-    SocketServer::EventHandler GetLogoutHandler();
-    SocketServer::EventHandler GetRegisterHandler();
+    void HandleAuthenticate(const SocketServer::EventContext& context);
+    void HandleLogin(const SocketServer::EventContext& context);
+    void HandleLogout(const SocketServer::EventContext& context);
+    void HandleRegister(const SocketServer::EventContext& context);
 
 private:
     SocketServer& m_socketServer;

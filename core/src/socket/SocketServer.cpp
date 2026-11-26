@@ -215,34 +215,6 @@ void SocketServer::Listen()
 	}
 }
 
-void SocketServer::On(SocketEventName socketEventName, const EventHandler& handler)
-{
-    On(socketEventName, {}, handler);
-}
-
-void SocketServer::On(SocketEventName socketEventName, const std::vector<EventMiddleware>& middlewares, const EventHandler& handler)
-{
-	if (!handler)
-	{
-		m_logger.Error("Cannot register a route without a handler");
-		return;
-	}
-
-	EventRoutesMap::iterator routesMapIterator = m_routesMap.find(socketEventName);
-	if (routesMapIterator != m_routesMap.end())
-	{
-		m_logger.Warning("A route is already registered for this socket event. It will be replaced");
-	}
-
-	EventRoute route = {};
-	// NOTE: Global middlewares are put first so they run before the ones registered on the route
-	route.middlewares = m_middlewares;
-	route.middlewares.insert(route.middlewares.end(), middlewares.begin(), middlewares.end());
-	route.handler = handler;
-
-	m_routesMap.insert(std::pair(socketEventName, route));
-}
-
 void SocketServer::OnError(const EventErrorHandler& errorHandler)
 {
 	m_errorHandler = errorHandler;
@@ -391,7 +363,31 @@ void SocketServer::Use(const EventMiddleware& middleware)
 // ***********
 // * PRIVATE *
 // ***********
- void SocketServer::CloseClientSocket(int clientSocket)
+void SocketServer::AddRoute(SocketEventName socketEventName, const std::vector<EventMiddleware>& middlewares, const EventHandler& handler)
+{
+	if (!handler)
+	{
+		m_logger.Error("Cannot register a route without a handler");
+		return;
+	}
+
+	EventRoutesMap::iterator routesMapIterator = m_routesMap.find(socketEventName);
+	if (routesMapIterator != m_routesMap.end())
+	{
+		m_logger.Error("A route is already registered for this socket event. It will be ignored");
+		return;
+	}
+
+	EventRoute route = {};
+	// NOTE: Global middlewares are put first so they run before the ones registered on the route
+	route.middlewares = m_middlewares;
+	route.middlewares.insert(route.middlewares.end(), middlewares.begin(), middlewares.end());
+	route.handler = handler;
+
+	m_routesMap.insert(std::pair(socketEventName, route));
+}
+
+void SocketServer::CloseClientSocket(int clientSocket)
 {
 	close(clientSocket);
 

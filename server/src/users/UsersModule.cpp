@@ -17,7 +17,8 @@ UsersModule::UsersModule(SocketServer& socketServer, EncryptionService& encrypti
     socketServer.On(
         SocketEventName::SEARCH_USERS,
         { RequireAuthentication(socketServer) },
-        m_usersHandler.GetSearchUsersHandler()
+        m_usersHandler,
+        &UsersHandler::HandleSearchUsers
     );
 }
 

@@ -17,12 +17,12 @@
 #include "serializer/FindMessagesPageByConversationIdSocketEventSerializer.h"
 #include "serializer/FindMessagesReadStateByConversationIdSocketEventSerializer.h"
 #include "serializer/MarkMessagesReadSocketEventSerializer.h"
+#include "socket/SocketClient.h"
 
 #include <string>
 
 // Forward declarations
 class Logger;
-class SocketClient;
 
 class MessagesApi
 {
@@ -92,4 +92,10 @@ private:
     MessagesMarkedReadSocketEventPayloadDeserializer m_messagesMarkedReadSocketEventPayloadDeserializer = {};
 
     Logger& m_logger;
+
+    void HandleAllOpenMessagesReadStatesFound(const SocketClient::EventContext& context);
+    void HandleMessageCreated(const SocketClient::EventContext& context);
+    void HandleMessagesMarkedRead(const SocketClient::EventContext& context);
+    void HandleMessagesPageFound(const SocketClient::EventContext& context);
+    void HandleMessagesReadStateFound(const SocketClient::EventContext& context);
 };

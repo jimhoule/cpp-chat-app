@@ -13,7 +13,7 @@ class UsersHandler
 public:
     UsersHandler(SocketServer& socketServer, UsersService& usersService, Logger& logger);
 
-    SocketServer::EventHandler GetSearchUsersHandler();
+    void HandleSearchUsers(const SocketServer::EventContext& context);
 
 private:
     SocketServer& m_socketServer;

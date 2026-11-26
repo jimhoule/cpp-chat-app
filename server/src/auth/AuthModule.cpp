@@ -14,20 +14,24 @@ AuthModule::AuthModule(SocketServer& socketServer,  SessionsService& sessionsSer
 {
     socketServer.On(
         SocketEventName::AUTHENTICATE,
-        m_authHandler.GetAuthenticateHandler()
+        m_authHandler,
+        &AuthHandler::HandleAuthenticate
     );   
     socketServer.On(
         SocketEventName::LOGIN,
-        m_authHandler.GetLoginHandler()
+        m_authHandler,
+        &AuthHandler::HandleLogin
     );
     socketServer.On(
         SocketEventName::LOGOUT,
         { RequireAuthentication(socketServer) }, 
-        m_authHandler.GetLogoutHandler()
+        m_authHandler,
+        &AuthHandler::HandleLogout
     );
 	socketServer.On(
         SocketEventName::REGISTER,
-        m_authHandler.GetRegisterHandler()
+        m_authHandler,
+        &AuthHandler::HandleRegister
     );
 }
 

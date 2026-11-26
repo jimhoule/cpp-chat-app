@@ -17,27 +17,32 @@ MessagesModule::MessagesModule(SocketServer& socketServer, ConversationsService&
     socketServer.On(
         SocketEventName::CREATE_MESSAGE,
         { RequireAuthentication(socketServer) },
-        m_messagesHandler.GetCreateMessageHandler()
+        m_messagesHandler,
+        &MessagesHandler::HandleCreateMessage
     );
     socketServer.On(
         SocketEventName::FIND_ALL_OPEN_MESSAGES_READ_STATES_BY_USER_ID,
         { RequireAuthentication(socketServer) },
-        m_messagesHandler.GetFindAllOpenMessagesReadStatesByUserIdHandler()
+        m_messagesHandler,
+        &MessagesHandler::HandleFindAllOpenMessagesReadStatesByUserId
     );
     socketServer.On(
         SocketEventName::FIND_MESSAGES_PAGE_BY_CONVERSATION_ID,
         { RequireAuthentication(socketServer) },
-        m_messagesHandler.GetFindMessagesPageByConversationIdHandler()
+        m_messagesHandler,
+        &MessagesHandler::HandleFindMessagesPageByConversationId
     );
     socketServer.On(
         SocketEventName::FIND_MESSAGES_READ_STATE_BY_CONVERSATION_ID,
         { RequireAuthentication(socketServer) },
-        m_messagesHandler.GetFindMessagesReadStateByConversationIdHandler()
+        m_messagesHandler,
+        &MessagesHandler::HandleFindMessagesReadStateByConversationId
     );
     socketServer.On(
         SocketEventName::MARK_MESSAGES_READ,
         { RequireAuthentication(socketServer) },
-        m_messagesHandler.GetMarkMessagesReadHandler()
+        m_messagesHandler,
+        &MessagesHandler::HandleMarkMessagesRead
     );
 }
 

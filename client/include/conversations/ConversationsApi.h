@@ -13,13 +13,13 @@
 #include "serializer/CloseConversationSocketEventSerializer.h"
 #include "serializer/FindAllOpenConversationsByUserIdSocketEventSerializer.h"
 #include "serializer/OpenConversationSocketEventSerializer.h"
+#include "socket/SocketClient.h"
 
 #include <string>
 #include <vector>
 
 // Forward declarations
 class Logger;
-class SocketClient;
 
 class ConversationsApi
 {
@@ -67,4 +67,9 @@ private:
     ConversationReopenedSocketEventPayloadDeserializer m_conversationReopenedSocketEventPayloadDeserializer = {};
 
     Logger& m_logger;
+
+    void HandleAllOpenConversationsFound(const SocketClient::EventContext& context);
+    void HandleConversationClosed(const SocketClient::EventContext& context);
+    void HandleConversationOpened(const SocketClient::EventContext& context);
+    void HandleConversationReopened(const SocketClient::EventContext& context);
 };

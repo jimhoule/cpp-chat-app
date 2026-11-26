@@ -36,6 +36,9 @@ public:
 
     using EventErrorHandler = std::function<void(const std::exception&, EventErrorContext&)>;
     using EventHandler = std::function<void(const EventContext&)>;
+    // NOTE: Pointer to a TOwner method that handles a socket event (ex: &UsersHandler::HandleSearchUsers)
+    template<typename TOwner>
+    using EventHandlerMethod = void (TOwner::*)(const EventContext&);
     using EventMiddleware = std::function<void(EventContext&)>;
 
     SocketServer(unsigned int port, Logger& logger);
@@ -45,8 +48,36 @@ public:
     const UserView* GetConnectionUser(int clientSocket);
     void Init();
     void Listen();
-    void On(SocketEventName socketEventName, const EventHandler& handler);
-    void On(SocketEventName socketEventName, const std::vector<EventMiddleware>& middlewares, const EventHandler& handler);
+
+    template<typename TOwner>
+    void On(SocketEventName socketEventName, TOwner& owner, EventHandlerMethod<TOwner> method)
+    {
+        On(socketEventName, {}, owner, method);
+    }
+
+    template<typename TOwner>
+    void On(SocketEventName socketEventName, const std::vector<EventMiddleware>& middlewares, TOwner& owner, EventHandlerMethod<TOwner> method)
+    {
+        // NOTE: An empty handler lets AddRoute() reject a null method
+        if (method == nullptr)
+        {
+            AddRoute(socketEventName, middlewares, nullptr);
+            return;
+        }
+
+        /**
+         * NOTES:
+         *  - Wraps owner + method into an EventHandler so routing, middlewares and dispatch stay unchanged
+         *  - Owner is only the object the method runs on (captured as a reference and never stored as a key)
+         *  - Safe because modules (owners) live as long as the server
+         */
+        EventHandler handler = [&owner, method](const EventContext& context) {
+            (owner.*method)(context);
+        };
+
+        AddRoute(socketEventName, middlewares, handler);
+    }
+
     void OnError(const EventErrorHandler& errorHandler);
     void SendAll(const std::string& serializedSocketEvent);
     void SendAllExcept(int exceptionClientSocket, const std::string& serializedSocketEvent);
@@ -91,6 +122,7 @@ private:
     SocketEventDeserializer m_socketEventDeserializer = {};
     Logger& m_logger;
 
+    void AddRoute(SocketEventName socketEventName, const std::vector<EventMiddleware>& middlewares, const EventHandler& handler);
     void CloseClientSocket(int clientSocket);
     std::optional<SocketEvent<std::string>> DeserializeSocketEvent(int clientSocket, const std::string& serializedSocketEvent);
     void DispatchSocketEvent(int clientSocket, const std::string& serializedSocketEvent);

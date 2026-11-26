@@ -18,6 +18,7 @@ Chat client and server built using C++.
 | `gui/` | ImGui wrapper (`Gui`) and GUI helpers (`ScrollAnchor`) used by the client layers |
 | `vendor/` | Submodules (GLFW, GLAD, ImGui, glm, nlohmann_json, libsodium, stduuid, stb, epoll-shim) |
 | `test/` | CTest suite (currently a placeholder) |
+| `dashboard/` | Planned, not created yet: standalone Unreal Slate telemetry dashboard (see "Planned: telemetry dashboard") |
 
 ## Build and run
 
@@ -62,6 +63,11 @@ SocketServer  →  route (middlewares + handler)  →  Service  →  Repository
 - **Views** are what services return: `Dto` in, `View` out. Repositories return models (`User`, `Conversation`, `Message`), every public service method returns views (`UserView`, `ConversationView`, `MessageView`), so handlers and serializers never see a password. Each view has its JSON conversion in `core/json` (`UserJson`, `ConversationJson`, `MessageJson`), shared by every serializer and deserializer that carries it.
 - **Repositories** are behind interfaces (`ISessionsRepository`, `IUsersRepository`, …) with in-memory implementations today, so storage can be swapped without touching services.
 - **Middlewares** run before a handler and stop the route by throwing. `RequireAuthentication` rejects unauthenticated sockets and populates `context.user`.
+- **Handler binding.** Handlers are bound as an object and a method, the way the client's `Observer` binds `(*this, &ChatLayer::HandleX)`. A module registers `socketServer.On(SocketEventName::SEARCH_USERS, { RequireAuthentication(socketServer) }, m_usersHandler, &UsersHandler::HandleSearchUsers)`.
+  - **How:** two `On` templates (with and without middlewares) wrap the object and method into an `EventHandler` and pass it to the private `AddRoute`. Routing, middlewares and dispatch didn't change. There is no public `std::function` overload, so every route is a named method.
+  - **Why:** handlers are plain public `Handle*` methods. Stack traces name them, tests can call them directly, and the naming matches the client.
+  - **Safety:** `AddRoute` refuses a second route for the same event (Error log, the first one stays) and rejects a null method.
+  - **No owner and no `Off` on the server:** it stores one route per event name and never removes one. Routes live as long as the process, and at shutdown the modules are destroyed after the event loop has stopped.
 - **`HandleErrors`** is the single error sink: it catches `ExpectedException` (client at fault), `JsonException` (malformed payload) and anything else (server at fault), logs at the right level, and replies with an `ERROR` event.
 
 **Naming.** Every Find and Count method in a repository or service ends in `By<Key>`, where `Key` is the name of its main parameter. Other parameters stay out of the name: `MessagesService::FindPageByConversationId` takes `{ conversationId, userId, cursor }`. A module calls its own entity's id `id`, so it writes `ById` (`ConversationsService::FindById`, `FindLastReadMessagePositionById(id, userId)`). It calls another module's entity `<entity>Id` and writes `By<Entity>Id` (`MessagesService::FindReadStateByConversationId`). Other verbs take no `By` (`AdvanceLastReadMessagePosition`, `IsConversationUser`, `UpdateIsOpen`, `MarkRead`). Each `Dto` is named after its method and ends in `Dto`.
@@ -95,7 +101,7 @@ Services never call their own public methods — shared logic goes into a privat
 - **Layers** are screens (`SplashLayer`, `LoginLayer`, `RegisterLayer`, `ChatLayer`) with an `OnAttach` / `OnUpdate` / `OnRender` / `OnDetach` lifecycle, held in a `LayerStack`.
 - **Navigation** owns the layers for the app's lifetime and pushes them onto the stack.
 - **APIs** (`AuthApi`, `ConversationsApi`, `MessagesApi`, `UsersApi`) are transport: they serialize and send, register socket handlers, and notify a `Subject<TEvent>` so layers can subscribe without knowing about sockets.
-- **`SocketClient`** allows several handlers per event name. Each handler is registered with an owner (the API's `this`), and `Off` removes only that owner's handler. Handlers receive a `SocketClient::EventContext`, the same shape as the server's (only `serializedPayload` today), so new per-event data can be added without changing every handler's signature.
+- **`SocketClient`** allows several handlers per event name. Each handler is registered as an owner and a method, `On(name, this, &UsersApi::HandleUsersSearched)`, and each Api's handlers are private `Handle*` methods. The owner is a pointer because it is also the key: `Off(name, this)` removes only that owner's handler. The private `AddHandler` rejects a null method and logs an Error when the same owner registers the same event twice. `SocketClient` takes a `Logger`. Handlers receive a `SocketClient::EventContext`, the same shape as the server's (only `serializedPayload` today), so new per-event data can be added without changing every handler's signature.
 - **Stores** are local persistence. `SessionStore` is the only one so far.
 - **`MessageHistories`** (`client/messages/`) holds the loaded messages, next cursor and loading flag of each conversation, keyed by conversation id. It has no GUI or network dependency: `ChatLayer` decides when to fetch and calls `Has` / `Add` / `AppendLiveMessage` / `StartLoading` / `MergePage` / `Remove` / `Find`, so the history rules live in one place.
 - **`MessagesReadStates`** (`client/messages/`) holds the read state of each open conversation, keyed by conversation id, with the same shape and no GUI or network dependency. `SetAll` (login) and `Set` (one conversation) store what the server sends. `ApplyLiveMessage(message, isUnread)` applies a `MESSAGE_CREATED` message: it raises `latestMessagePosition` and adds 1 to the count only if `ChatLayer` says the message is unread. It stores no message, which is why it isn't called `AppendLiveMessage` like the `MessageHistories` method. `Find` returns `nullptr` when there's no read state yet. `Remove` and `Clear` are called on close and logout.
@@ -105,6 +111,8 @@ Services never call their own public methods — shared logic goes into a privat
 **UI sizes derived from another value are always multiplied.** When a layer makes a size or position smaller or bigger than another value, it writes `value * 0.75f`, never `value / 1.33f`. The factor then reads directly as the percentage (75% of the value), and every derived size in a layer reads the same way. Example: the unread badge is `conversationContainerAvailableSpace.y * 0.75f`, not `/ 1.33f`.
 
 Layers follow one shape: call an API method, subscribe to the matching subject, navigate when it fires. Subjects live only on the Api classes and fire on server events. State classes such as `MessageHistories` have none, so a follow-up to a server event (for example marking messages read once the first history page is merged) runs in the layer's handler for that event, right after it updates the state.
+
+**Chat state lives in `ChatLayer`, not in a shared client state object** (decided 2026-11-25). `ChatLayer` owns the conversations list, the selection, `MessageHistories` and `MessagesReadStates`, and `AuthApi` holds the current user. `ChatLayer` is the only code that reads this state. Extracting it now would mean designing a shared object without knowing what a second reader needs, such as observers or read-only access. That will be decided when a second reader actually arrives. The expected one is local OS notifications, which need the sender's name and so need the conversations list outside `ChatLayer`. The rules already live in their own classes, so moving them later is mostly moving members. The cost is accepted: `ChatLayer.cpp` stays large. If a shared object is introduced, it won't be called a "store", because that word means disk persistence in this codebase (`SessionStore`).
 
 ## Auth and sessions
 
@@ -153,6 +161,12 @@ Status: the server side is built: storage, message positions, the repository cou
 `0` is never a real position, because positions start at 1. That's why it can safely mean "nothing read" and "no messages".
 
 **Unread** = messages in the conversation with a position **greater than** `lastReadMessagePosition`, not sent by the user themselves.
+
+**Why messages have no `readAt`.** Read state is one bookmark per user per conversation (`lastReadMessagePosition` on `ConversationUser`), never a field on each message. Everything at or below the bookmark is read for that user. The unread count, the divider and `MarkRead` all work from it, the same way as Slack's `last_read`. A `readAt` on `Message` doesn't work:
+  - **Several readers:** in a group conversation, some participants have read a message and others haven't, so one field can't hold it. It would take a read record per user per message.
+  - **Writes:** opening a conversation with 50 unread messages would cost 50 writes instead of one bookmark move.
+
+**Read receipts** ("Seen" under a message, like WhatsApp or iMessage) don't need a per-message field either. A message is seen by Bob if its position is at or below Bob's bookmark. A "Seen at 3:42" time would be one `lastReadAt` next to the bookmark on `ConversationUser`, not a timestamp on every message. Read receipts are a product decision for later. Slack doesn't show them, so the Slack-style feature doesn't need them. Until then, read positions stay off `ConversationUserView`, because that view goes to every participant and sending positions in it would amount to read receipts.
 
 ### Worked example
 
@@ -358,6 +372,30 @@ One edge case is known and not fixed. Suppose there are more unread messages tha
 
 **JSON for the session file even though it holds one field.** Consistency with the settings store that will hold several.
 
+## Planned: telemetry dashboard
+
+Once the chat is done, the repo gets a fourth app: `dashboard/`, a standalone insights and telemetry dashboard for the chat server, built with Unreal Engine's Slate UI framework. It's planned, not started. The full plan is in `NEXT_STEPS.txt`.
+
+**What it is:**
+  - **A standalone Slate program,** like the engine's own tool programs, not an editor plugin. It runs without the Unreal editor.
+  - **Its own client of the server.** It has its own `MetricsApi` and uses `core` for framing, JSON, socket events, `SocketClient` and the observer. It doesn't use `gui/`, which is ImGui (Slate replaces it), or `client/`.
+  - **Fed by a server `metrics` module** in the usual handler, service and repository pattern. The first metrics are connections and sessions, messages per second, latency per route and error counts by code, later per instance.
+  - **Aggregate data only.** Counts, rates and latencies. No message text, names or user ids ever reach the dashboard.
+
+**How it builds:**
+  - **Unreal's build tool, driven from CMake.** Slate programs are built by UnrealBuildTool, not CMake, and it expects them inside the engine's `Engine/Source/Programs/`. A symlink makes `dashboard/` appear there.
+  - **An optional engine path.** `cmake .. -DUE_ROOT=/path/to/UnrealEngine` adds a `Dashboard` target. It recreates the symlink, builds `Core` first, then runs the engine's `Build.sh ChatDashboard`. The paths to `core` reach the dashboard's `Build.cs` as environment variables.
+  - **Not part of the normal build.** It's not in `ALL`, so `make` doesn't wait on Unreal. Run `make Dashboard`. Without `UE_ROOT` the target doesn't exist and the rest of the repo builds without Unreal.
+  - **The engine version is pinned by a check, not a submodule.** CMake reads the engine's `Build.version` and stops with an error if it isn't the supported version. The UnrealEngine repository is private, so a submodule would fail to clone for anyone without Epic access.
+  - **An engine built from source.** The Epic Games Launcher's prebuilt engine can't build standalone programs. Only the `ChatDashboard` target is built, never the editor, which keeps the build much smaller than a full engine build.
+  - **`core` in Unreal.** It's linked as a third-party module wrapping `libCore.a`. The module turns exceptions on (`bEnableExceptions = true`), because `core` throws and Unreal modules have exceptions off by default.
+
+**Splitting `core` first:**
+  - **One library per subfolder.** `core` stays a toolset, graphics included, and a GLFW `Window` class is coming. So it gets subfolders that each build their own library: `base` (`Core`, plain C++ plus nlohmann_json) and `graphics` (`CoreGraphics`: `Texture`, `Window`).
+  - **The rule.** A file leaves `base` only if it needs a library `base` doesn't have. That's why `Layer`, `LayerStack` and the observer stay in `base`.
+  - **Who links what.** The dashboard links `Core` only.
+  - **Not decided yet.** Whether `SocketServer`, which needs epoll-shim on macOS, gets its own `server` library.
+
 ## Known gaps
 
 - `SocketClient::Connect` and `SocketServer`'s setup call `exit()` instead of reporting the failure.
@@ -365,6 +403,6 @@ One edge case is known and not fixed. Suppose there are more unread messages tha
 - Group conversations exist on the server (up to 9 users) but the client can only start one-on-one conversations, one search result at a time. If participants can ever leave, the client's sender lookup needs a null check (a former participant's old messages would point to a missing user).
 - Expired and orphaned sessions are never deleted from the repository.
 - The in-memory repositories have no locks (plain vectors). Each one needs a mutex before the server goes multithreaded.
-- Presence is login-based and wrong with several devices: logging out on one sends `USER_OFFLINE` while another is still connected, and closing the app sends nothing. Planned: presence based on authenticated connections (online when a user's first socket is bound to them at login, offline when their last one is unbound), not on raw TCP connections, which exist before login.
+- Presence is login-based and wrong with several devices: logging out on one sends `USER_OFFLINE` while another is still connected, and closing the app sends nothing. Planned: presence based on authenticated connections (online when a user's first socket is bound to them at login, offline when their last one is unbound), not on raw TCP connections, which exist before login. `SocketServer` will expose `OnUserBound` / `OnUserUnbound` listener lists. A `UsersPresenceNotifier` in the users module will send the presence events. It's not a handler, because no client request triggers it. It's given `SocketServer` to send, and `UsersModule` binds its `HandleUserBound` / `HandleUserUnbound` methods next to its route, the same way handlers are wired.
 
 See `NEXT_STEPS.txt`.

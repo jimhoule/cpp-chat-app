@@ -19,10 +19,10 @@ class ConversationsHandler
 public:
     ConversationsHandler(SocketServer& socketServer, ConversationsService& conversationsService, Logger& logger);
 
-    SocketServer::EventHandler GetFindAllOpenConversationsByUserIdHandler();
-    SocketServer::EventHandler GetFindConversationByUserIdsHandler();
-    SocketServer::EventHandler GetCloseConversationHandler();
-    SocketServer::EventHandler GetOpenConversationHandler();
+    void HandleCloseConversation(const SocketServer::EventContext& context);
+    void HandleFindAllOpenConversationsByUserId(const SocketServer::EventContext& context);
+    void HandleFindConversationByUserIds(const SocketServer::EventContext& context);
+    void HandleOpenConversation(const SocketServer::EventContext& context);
 
 private:
     SocketServer& m_socketServer;

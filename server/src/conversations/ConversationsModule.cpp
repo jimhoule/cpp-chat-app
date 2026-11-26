@@ -15,24 +15,28 @@ ConversationsModule::ConversationsModule(SocketServer& socketServer, UsersServic
     , m_conversationsHandler(socketServer, m_conversationsService, m_conversationsHandlerLogger)
 {
     socketServer.On(
+        SocketEventName::CLOSE_CONVERSATION,
+        { RequireAuthentication(socketServer) },
+        m_conversationsHandler,
+        &ConversationsHandler::HandleCloseConversation
+    );
+    socketServer.On(
         SocketEventName::FIND_ALL_OPEN_CONVERSATIONS_BY_USER_ID,
         { RequireAuthentication(socketServer) },
-        m_conversationsHandler.GetFindAllOpenConversationsByUserIdHandler()
+        m_conversationsHandler,
+        &ConversationsHandler::HandleFindAllOpenConversationsByUserId
     );
     socketServer.On(
         SocketEventName::FIND_CONVERSATION_BY_USER_IDS,
         { RequireAuthentication(socketServer) },
-        m_conversationsHandler.GetFindConversationByUserIdsHandler()
-    );
-    socketServer.On(
-        SocketEventName::CLOSE_CONVERSATION,
-        { RequireAuthentication(socketServer) },
-        m_conversationsHandler.GetCloseConversationHandler()
+        m_conversationsHandler,
+        &ConversationsHandler::HandleFindConversationByUserIds
     );
     socketServer.On(
         SocketEventName::OPEN_CONVERSATION,
         { RequireAuthentication(socketServer) },
-        m_conversationsHandler.GetOpenConversationHandler()
+        m_conversationsHandler,
+        &ConversationsHandler::HandleOpenConversation
     );
 }
 

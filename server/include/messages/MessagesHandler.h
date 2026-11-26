@@ -22,11 +22,11 @@ class MessagesHandler
 public:
     MessagesHandler(SocketServer& socketServer, MessagesService& messagesService, Logger& logger);
 
-    SocketServer::EventHandler GetFindAllOpenMessagesReadStatesByUserIdHandler();
-    SocketServer::EventHandler GetFindMessagesPageByConversationIdHandler();
-    SocketServer::EventHandler GetFindMessagesReadStateByConversationIdHandler();
-    SocketServer::EventHandler GetCreateMessageHandler();
-    SocketServer::EventHandler GetMarkMessagesReadHandler();
+    void HandleCreateMessage(const SocketServer::EventContext& context);
+    void HandleFindAllOpenMessagesReadStatesByUserId(const SocketServer::EventContext& context);
+    void HandleFindMessagesPageByConversationId(const SocketServer::EventContext& context);
+    void HandleFindMessagesReadStateByConversationId(const SocketServer::EventContext& context);
+    void HandleMarkMessagesRead(const SocketServer::EventContext& context);
 
 private:
     SocketServer& m_socketServer;

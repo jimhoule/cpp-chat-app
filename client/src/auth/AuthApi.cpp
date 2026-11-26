@@ -2,7 +2,6 @@
 
 #include "log/Logger.h"
 #include "sessions/SessionStore.h"
-#include "socket/SocketClient.h"
 
 // **********
 // * PUBLIC *
@@ -12,117 +11,32 @@ AuthApi::AuthApi(SocketClient& socketClient, SessionStore& sessionStore, Logger&
     , m_sessionStore(sessionStore)
     , m_logger(logger)
 {
-    SocketClient::EventHandler HandleAuthenticated = [this](const SocketClient::EventContext& context) {
-        // Gets authenticated socket event payload
-        const AuthenticatedSocketEventPayload authenticatedSocketEventPayload = m_authenticatedSocketEventPayloadDeserializer.Deserialize(context.serializedPayload);
-        m_logger.Info("Authenticated user email: " + authenticatedSocketEventPayload.user.email);
-
-        // Sets current user
-        m_currentUser = authenticatedSocketEventPayload.user;
-
-        // Sends authenticated event to subsciptions
-        const AuthenticatedEvent authenticatedEvent(authenticatedSocketEventPayload.user);
-        m_authenticatedSubject.Notify(authenticatedEvent);
-    };
-
-    SocketClient::EventHandler HandleLoggedIn = [this](const SocketClient::EventContext& context) {
-        // Gets logged in socket event payload
-        const LoggedinSocketEventPayload loggedinSocketEventPayload = m_loggedinSocketEventPayloadDeserializer.Deserialize(context.serializedPayload);
-        m_logger.Info("Logged in session id: " + loggedinSocketEventPayload.sessionId);
-
-        // Saves session id in dedicated store
-        m_sessionStore.Save(loggedinSocketEventPayload.sessionId);
-
-        // Sets current user
-        m_currentUser = loggedinSocketEventPayload.user;
-
-        // Sends logged in event to subsciptions
-        const LoggedInEvent loggedInEvent(loggedinSocketEventPayload.sessionId);
-        m_loggedInSubject.Notify(loggedInEvent);
-    };
-
-    SocketClient::EventHandler HandleLoggedOut = [this](const SocketClient::EventContext&) {
-        // Removes session id from dedicated store
-        m_sessionStore.Clear();
-
-        // Removes current user
-        m_currentUser.reset();
-
-        // Sends logged out event to subsciptions
-        const LoggedOutEvent loggedOutEvent;
-        m_loggedOutSubject.Notify(loggedOutEvent);
-    };
-
-    SocketClient::EventHandler HandleRegistered = [this](const SocketClient::EventContext& context) {
-        // Gets registered socket event payload
-        const RegisteredSocketEventPayload registeredSocketEventPayload = m_registeredSocketEventPayloadDeserializer.Deserialize(context.serializedPayload);
-        m_logger.Info("Registered session id: " + registeredSocketEventPayload.sessionId);
-
-        // Saves session id in dedicated store
-        m_sessionStore.Save(registeredSocketEventPayload.sessionId);
-
-        // Sets current user
-        m_currentUser = registeredSocketEventPayload.user;
-
-        // Sends registered event to subscriptions
-        const RegisteredEvent registeredEvent(registeredSocketEventPayload.sessionId);
-        m_registeredSubject.Notify(registeredEvent);
-    };
-
-    SocketClient::EventHandler HandleUserOnline = [this](const SocketClient::EventContext& context) {
-        // Gets user authenticated socket event payload
-        const UserOnlineSocketEventPayload& userOnlineSocketEventPayload = m_userOnlineSocketEventPayloadDeserializer.Deserialize(context.serializedPayload);
-        m_logger.Info("Online user email: " + userOnlineSocketEventPayload.user.email);
-
-        // Sends user online event to subscriptions
-        const UserOnlineEvent userOnlineEvent(userOnlineSocketEventPayload.user);
-        m_userOnlineSubject.Notify(userOnlineEvent);
-    };
-
-    SocketClient::EventHandler HandleError = [this](const SocketClient::EventContext& context) {
-        // Gets error socket event payload
-        const ErrorSocketEventPayload& errorSocketEventPayload = m_errorSocketEventPayloadDeserializer.Deserialize(context.serializedPayload);
-
-        if (errorSocketEventPayload.failedEventName != SocketEventName::AUTHENTICATE)
-        {
-            return;
-        }
-
-        const std::string socketErrorCodeString = ConvertSocketErrorCodeToString(errorSocketEventPayload.code);
-        m_logger.Warning("Authenticate failed: " + socketErrorCodeString);
-
-        if (errorSocketEventPayload.code == SocketErrorCode::EXPIRED_SESSION || errorSocketEventPayload.code == SocketErrorCode::UNKNOWN_SESSION)
-        {
-            // Removes session id from dedicated store
-            m_sessionStore.Clear();
-        }
-
-        // Sends authenticate failed event to subscriptions
-        const AuthenticateFailedEvent authenticateFailedEvent;
-        m_authenticateFailedSubject.Notify(authenticateFailedEvent);
-    };
-
-    m_socketClient.On(SocketEventName::AUTHENTICATED, this, HandleAuthenticated);
-    m_socketClient.On(SocketEventName::LOGGEDIN, this, HandleLoggedIn);
-    m_socketClient.On(SocketEventName::LOGGEDOUT, this, HandleLoggedOut);
-    m_socketClient.On(SocketEventName::REGISTERED, this, HandleRegistered);
-    m_socketClient.On(SocketEventName::USER_ONLINE, this, HandleUserOnline);
-    m_socketClient.On(SocketEventName::ERROR, this, HandleError);
+    m_socketClient.On(SocketEventName::AUTHENTICATED, this, &AuthApi::HandleAuthenticated);
+    m_socketClient.On(SocketEventName::ERROR, this, &AuthApi::HandleError);
+    m_socketClient.On(SocketEventName::LOGGEDIN, this, &AuthApi::HandleLoggedIn);
+    m_socketClient.On(SocketEventName::LOGGEDOUT, this, &AuthApi::HandleLoggedOut);
+    m_socketClient.On(SocketEventName::REGISTERED, this, &AuthApi::HandleRegistered);
+    m_socketClient.On(SocketEventName::USER_ONLINE, this, &AuthApi::HandleUserOnline);
 }
 
 AuthApi::~AuthApi()
 {
     m_socketClient.Off(SocketEventName::AUTHENTICATED, this);
+    m_socketClient.Off(SocketEventName::ERROR, this);
     m_socketClient.Off(SocketEventName::LOGGEDIN, this);
     m_socketClient.Off(SocketEventName::LOGGEDOUT, this);
     m_socketClient.Off(SocketEventName::REGISTERED, this);
     m_socketClient.Off(SocketEventName::USER_ONLINE, this);
-    m_socketClient.Off(SocketEventName::ERROR, this);
 }
 
 IObservable<AuthenticatedEvent>& AuthApi::GetAuthenticatedSubject()
 {
     return m_authenticatedSubject;
+}
+
+IObservable<AuthenticateFailedEvent>& AuthApi::GetAuthenticateFailedSubject()
+{
+    return m_authenticateFailedSubject;
 }
 
 IObservable<LoggedInEvent>& AuthApi::GetLoggedInSubject()
@@ -133,11 +47,6 @@ IObservable<LoggedInEvent>& AuthApi::GetLoggedInSubject()
 IObservable<LoggedOutEvent>& AuthApi::GetLoggedOutSubject()
 {
     return m_loggedOutSubject;
-}
-
-IObservable<AuthenticateFailedEvent>& AuthApi::GetAuthenticateFailedSubject()
-{
-    return m_authenticateFailedSubject;
 }
 
 IObservable<RegisteredEvent>& AuthApi::GetRegisteredSubject()
@@ -229,4 +138,103 @@ bool AuthApi::HasStoredSession() const
     const std::optional<std::string> sessionId = m_sessionStore.Load();
 
     return sessionId.has_value();
+}
+
+// ***********
+// * PRIVATE *
+// ***********
+void AuthApi::HandleAuthenticated(const SocketClient::EventContext& context)
+{
+    // Gets authenticated socket event payload
+    const AuthenticatedSocketEventPayload authenticatedSocketEventPayload = m_authenticatedSocketEventPayloadDeserializer.Deserialize(context.serializedPayload);
+    m_logger.Info("Authenticated user email: " + authenticatedSocketEventPayload.user.email);
+
+    // Sets current user
+    m_currentUser = authenticatedSocketEventPayload.user;
+
+    // Sends authenticated event to subsciptions
+    const AuthenticatedEvent authenticatedEvent(authenticatedSocketEventPayload.user);
+    m_authenticatedSubject.Notify(authenticatedEvent);
+}
+
+void AuthApi::HandleError(const SocketClient::EventContext& context)
+{
+    // Gets error socket event payload
+    const ErrorSocketEventPayload& errorSocketEventPayload = m_errorSocketEventPayloadDeserializer.Deserialize(context.serializedPayload);
+
+    if (errorSocketEventPayload.failedEventName != SocketEventName::AUTHENTICATE)
+    {
+        return;
+    }
+
+    const std::string socketErrorCodeString = ConvertSocketErrorCodeToString(errorSocketEventPayload.code);
+    m_logger.Warning("Authenticate failed: " + socketErrorCodeString);
+
+    if (errorSocketEventPayload.code == SocketErrorCode::EXPIRED_SESSION || errorSocketEventPayload.code == SocketErrorCode::UNKNOWN_SESSION)
+    {
+        // Removes session id from dedicated store
+        m_sessionStore.Clear();
+    }
+
+    // Sends authenticate failed event to subscriptions
+    const AuthenticateFailedEvent authenticateFailedEvent;
+    m_authenticateFailedSubject.Notify(authenticateFailedEvent);
+}
+
+void AuthApi::HandleLoggedIn(const SocketClient::EventContext& context)
+{
+    // Gets logged in socket event payload
+    const LoggedinSocketEventPayload loggedinSocketEventPayload = m_loggedinSocketEventPayloadDeserializer.Deserialize(context.serializedPayload);
+    m_logger.Info("Logged in session id: " + loggedinSocketEventPayload.sessionId);
+
+    // Saves session id in dedicated store
+    m_sessionStore.Save(loggedinSocketEventPayload.sessionId);
+
+    // Sets current user
+    m_currentUser = loggedinSocketEventPayload.user;
+
+    // Sends logged in event to subsciptions
+    const LoggedInEvent loggedInEvent(loggedinSocketEventPayload.sessionId);
+    m_loggedInSubject.Notify(loggedInEvent);
+}
+
+void AuthApi::HandleLoggedOut(const SocketClient::EventContext& context)
+{
+    // Removes session id from dedicated store
+    m_sessionStore.Clear();
+
+    // Removes current user
+    m_currentUser.reset();
+
+    // Sends logged out event to subsciptions
+    const LoggedOutEvent loggedOutEvent;
+    m_loggedOutSubject.Notify(loggedOutEvent);
+}
+
+void AuthApi::HandleRegistered(const SocketClient::EventContext& context)
+{
+    // Gets registered socket event payload
+    const RegisteredSocketEventPayload registeredSocketEventPayload = m_registeredSocketEventPayloadDeserializer.Deserialize(context.serializedPayload);
+    m_logger.Info("Registered session id: " + registeredSocketEventPayload.sessionId);
+
+    // Saves session id in dedicated store
+    m_sessionStore.Save(registeredSocketEventPayload.sessionId);
+
+    // Sets current user
+    m_currentUser = registeredSocketEventPayload.user;
+
+    // Sends registered event to subscriptions
+    const RegisteredEvent registeredEvent(registeredSocketEventPayload.sessionId);
+    m_registeredSubject.Notify(registeredEvent);
+}
+
+void AuthApi::HandleUserOnline(const SocketClient::EventContext& context)
+{
+    // Gets user authenticated socket event payload
+    const UserOnlineSocketEventPayload& userOnlineSocketEventPayload = m_userOnlineSocketEventPayloadDeserializer.Deserialize(context.serializedPayload);
+    m_logger.Info("Online user email: " + userOnlineSocketEventPayload.user.email);
+
+    // Sends user online event to subscriptions
+    const UserOnlineEvent userOnlineEvent(userOnlineSocketEventPayload.user);
+    m_userOnlineSubject.Notify(userOnlineEvent);
 }

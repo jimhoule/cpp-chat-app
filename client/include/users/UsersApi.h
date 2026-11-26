@@ -5,10 +5,10 @@
 #include "observer/IObservable.h"
 #include "observer/Subject.h"
 #include "serializer/SearchUsersSocketEventSerializer.h"
+#include "socket/SocketClient.h"
 
 // Forward declarations
 class Logger;
-class SocketClient;
 
 class UsersApi
 {
@@ -35,4 +35,6 @@ private:
     UsersSearchedSocketEventPayloadDeserializer m_usersSearchedSocketEventPayloadDeserializer = {};
 
     Logger& m_logger;
+
+    void HandleUsersSearched(const SocketClient::EventContext& context);
 };

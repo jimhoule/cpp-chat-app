@@ -1,11 +1,12 @@
 #include "socket/SocketClient.h"
 
+#include "log/Logger.h"
+
 #include <arpa/inet.h>
 #include <array>
 #include <cerrno>
 #include <cstdlib>
 #include <fcntl.h>
-#include <iostream>
 #include <stdexcept>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -26,6 +27,10 @@ constexpr int SEND_FLAGS = 0;
 // **********
 // * PUBLIC *
 // **********
+SocketClient::SocketClient(Logger& logger)
+	: m_logger(logger)
+{}
+
 void SocketClient::Close()
 {
 	close(m_connection.socket);
@@ -85,7 +90,7 @@ void SocketClient::Off(SocketEventName socketEventName, EventHandlerOwner owner)
 	EventHandlersMap::iterator handlersMapIterator = m_handlersMap.find(socketEventName);
 	if (handlersMapIterator == m_handlersMap.end())
 	{
-		std::cout << "No handler registered for socket event " << socketEventName << std::endl;
+		m_logger.Warning("No handler registered for socket event " + socketEventName);
 		return;
 	}
 
@@ -99,29 +104,6 @@ void SocketClient::Off(SocketEventName socketEventName, EventHandlerOwner owner)
 			return;
 		}
 	}
-}
-
-void SocketClient::On(SocketEventName socketEventName, EventHandlerOwner owner, const EventHandler& handler)
-{
-    EventHandlerEntries& handlerEntries = m_handlersMap[socketEventName];
-	/**
-	 * NOTES:
-	 * 	- Checks if owner already registered the event
-	 * 	- A owner cannot register the same event twice
-	 */
-	for (std::size_t index = 0; index < handlerEntries.size(); index++)
-	{
-		const EventHandlerEntry& handlerEntry = handlerEntries[index];
-		if (handlerEntry.owner == owner)
-		{
-			return;
-		}
-	}
-
-	EventHandlerEntry handlerEntry = {};
-	handlerEntry.handler = handler;
-	handlerEntry.owner = owner;
-	handlerEntries.push_back(handlerEntry);
 }
 
 void SocketClient::Send(const std::string &serializedSocketEvent)
@@ -149,6 +131,36 @@ void SocketClient::Update()
 // ***********
 // * PRIVATE *
 // ***********
+void SocketClient::AddHandler(SocketEventName socketEventName, EventHandlerOwner owner, const EventHandler& handler)
+{
+	if (!handler)
+	{
+		m_logger.Error("Null handler for socket event " + socketEventName + ". It will be ignored");
+		return;
+	}
+
+	EventHandlerEntries& handlerEntries = m_handlersMap[socketEventName];
+	/**
+	 * NOTES:
+	 * 	- Checks if owner already registered the event
+	 * 	- A owner cannot register the same event twice
+	 */
+	for (std::size_t index = 0; index < handlerEntries.size(); index++)
+	{
+		const EventHandlerEntry& handlerEntry = handlerEntries[index];
+		if (handlerEntry.owner == owner)
+		{
+			m_logger.Error("Owner already registered a handler for socket event " + socketEventName + ". It will be ignored");
+			return;
+		}
+	}
+
+	EventHandlerEntry handlerEntry = {};
+	handlerEntry.handler = handler;
+	handlerEntry.owner = owner;
+	handlerEntries.push_back(handlerEntry);
+}
+
 void SocketClient::DispatchSocketEvent(const std::string& serializedSocketEvent)
 {
 	SocketEvent<std::string> socketEvent = m_socketEventDeserializer.Deserialize(serializedSocketEvent);
@@ -157,7 +169,7 @@ void SocketClient::DispatchSocketEvent(const std::string& serializedSocketEvent)
 	EventHandlersMap::iterator handlersMapIterator = m_handlersMap.find(socketEvent.name);
 	if (handlersMapIterator == m_handlersMap.end())
 	{
-		std::cout << "No handler registered for socket event " << socketEvent.name << std::endl;
+		m_logger.Warning("No handler registered for socket event " + socketEvent.name);
 		return;
 	}
 
@@ -200,7 +212,7 @@ void SocketClient::Read()
 		// NOTE: Server is closed
 		if (readResult == 0)
 		{
-			std::cout << "Server closed" << std::endl;
+			m_logger.Info("Server closed");
 			Close();
 			
 			return;
@@ -234,7 +246,7 @@ void SocketClient::Read()
 	}
 	catch(const std::length_error& exception)
 	{
-		std::cout << "Invalid frame from server, " << exception.what() << std::endl;
+		m_logger.Error("Invalid frame from server, " + std::string(exception.what()));
 		Close();
 
 		return;

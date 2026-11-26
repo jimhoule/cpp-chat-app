@@ -62,11 +62,6 @@ int main()
 
     glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
 
-    // Socket client
-    SocketClient socketClient = {};
-    const int SERVER_PORT = 5000;
-    socketClient.Connect(SERVER_PORT, "127.0.0.1");
-
     // Gui
     Gui gui = {};
     gui.Init(glfwWindow);
@@ -84,10 +79,16 @@ int main()
     Logger usersApiLogger("USERS", "client/src/users/UsersApi");
     Logger navigationLogger("NAVIGATION", "client/src/navigation/Navigation");
     Logger sessionStoreLogger("SESSION", "client/src/sessions/SessionStore");
+    Logger socketClientLogger("CLIENT", "core/src/socket/SocketClient");
     DebugLogger chatLogger("CHAT", "client/src/layer/ChatLayer", debugOverlay);
     DebugLogger loginLogger("LOGIN", "client/src/layer/LoginLayer", debugOverlay);
     DebugLogger registerLogger("REGISTER", "client/src/layer/RegisterLayer", debugOverlay);
     DebugLogger splashLogger("SPLASH", "client/src/layer/SplashLayer", debugOverlay);
+
+    // Socket client
+    SocketClient socketClient(socketClientLogger);
+    const int SERVER_PORT = 5000;
+    socketClient.Connect(SERVER_PORT, "127.0.0.1");
 
     // Stores
     SessionStore sessionStore(sessionStoreLogger);

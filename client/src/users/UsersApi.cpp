@@ -1,7 +1,5 @@
 #include "users/UsersApi.h"
 
-#include "socket/SocketClient.h"
-
 // **********
 // * PUBLIC *
 // **********
@@ -9,15 +7,7 @@ UsersApi::UsersApi(SocketClient& socketClient, Logger& logger)
     : m_socketClient(socketClient)
     , m_logger(logger)
 {
-    SocketClient::EventHandler HandleUsersSearched = [this](const SocketClient::EventContext& context) {
-        const UsersSearchedSocketEventPayload usersSearchedSocketEventPayload = m_usersSearchedSocketEventPayloadDeserializer.Deserialize(context.serializedPayload);
-
-        // Sends event to subcriptions
-        const UsersSearchedEvent usersSearchedEvent(usersSearchedSocketEventPayload.users);
-        m_usersSearchedSubject.Notify(usersSearchedEvent);
-    };
-
-    m_socketClient.On(SocketEventName::USERS_SEARCHED, this, HandleUsersSearched);
+    m_socketClient.On(SocketEventName::USERS_SEARCHED, this, &UsersApi::HandleUsersSearched);
 }
 
 UsersApi::~UsersApi()
@@ -39,4 +29,16 @@ void UsersApi::Search(const SearchUsersParams& searchUsersParams)
 
     // Sends search users socket event
     m_socketClient.Send(serializedSearchUsersSocketEvent);
+}
+
+// ***********
+// * PRIVATE *
+// ***********
+void UsersApi::HandleUsersSearched(const SocketClient::EventContext& context)
+{
+    const UsersSearchedSocketEventPayload usersSearchedSocketEventPayload = m_usersSearchedSocketEventPayloadDeserializer.Deserialize(context.serializedPayload);
+
+    // Sends event to subcriptions
+    const UsersSearchedEvent usersSearchedEvent(usersSearchedSocketEventPayload.users);
+    m_usersSearchedSubject.Notify(usersSearchedEvent);
 }
