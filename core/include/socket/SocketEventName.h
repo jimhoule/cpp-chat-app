@@ -1,7 +1,7 @@
 #pragma once
 
-#include <iostream>
 #include <nlohmann/json.hpp>
+#include <ostream>
 #include <string>
 
 enum class SocketEventName
@@ -99,7 +99,7 @@ NLOHMANN_JSON_SERIALIZE_ENUM(SocketEventName, {
 
 std::string ConvertSocketEventNameToString(SocketEventName socketEventName);
 
-// NOTE: Overloads the stream insertion operator (<<) for the SocketEventName enum class
+// NOTE: Overloads the stream insertion operator (<<)
 std::ostream& operator<<(std::ostream& Os, SocketEventName SocketEventName);
 
 // NOTE:  Overloads concatenation operator for std::string on the left side

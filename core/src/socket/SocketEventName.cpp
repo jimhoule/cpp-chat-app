@@ -115,7 +115,7 @@ std::string ConvertSocketEventNameToString(SocketEventName socketEventName)
     }
 }
 
-// NOTE: Overloads the stream insertion operator (<<) for the SocketEventName enum class
+// NOTE: Overloads the stream insertion operator (<<)
 std::ostream& operator<<(std::ostream& Os, SocketEventName SocketEventName)
 {
     Os << ConvertSocketEventNameToString(SocketEventName);

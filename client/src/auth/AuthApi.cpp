@@ -167,8 +167,7 @@ void AuthApi::HandleError(const SocketClient::EventContext& context)
         return;
     }
 
-    const std::string socketErrorCodeString = ConvertSocketErrorCodeToString(errorSocketEventPayload.code);
-    m_logger.Warning("Authenticate failed: " + socketErrorCodeString);
+    m_logger.Warning("Authenticate failed: " + errorSocketEventPayload.code);
 
     if (errorSocketEventPayload.code == SocketErrorCode::EXPIRED_SESSION || errorSocketEventPayload.code == SocketErrorCode::UNKNOWN_SESSION)
     {

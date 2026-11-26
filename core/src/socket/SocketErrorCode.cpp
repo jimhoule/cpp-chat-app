@@ -33,3 +33,36 @@ std::string ConvertSocketErrorCodeToString(SocketErrorCode socketErrorCode)
             return "Unknown socket error code";
     }
 }
+
+// NOTE: Overloads the stream insertion operator (<<)
+std::ostream& operator<<(std::ostream& Os, SocketErrorCode socketErrorCode)
+{
+    Os << ConvertSocketErrorCodeToString(socketErrorCode);
+
+    // NOTE: Enables chaining
+    return Os;
+}
+
+// NOTE: Overloads concatenation operator for std::string on the left side
+std::string operator+(const std::string& string, SocketErrorCode socketErrorCode)
+{
+    return string + ConvertSocketErrorCodeToString(socketErrorCode);
+}
+
+// NOTE: Overloads concatenation operator for std::string on the right side
+std::string operator+(SocketErrorCode socketErrorCode, const std::string& string)
+{
+    return ConvertSocketErrorCodeToString(socketErrorCode) + string;
+}
+
+// NOTE: Overloads concatenation operator for c style string on the left side
+std::string operator+(const char* cString, SocketErrorCode socketErrorCode)
+{
+    return std::string(cString) + ConvertSocketErrorCodeToString(socketErrorCode);
+}
+
+// NOTE: Overloads concatenation operator for c style string on the right side
+std::string operator+(SocketErrorCode socketErrorCode, const char* cString)
+{
+    return ConvertSocketErrorCodeToString(socketErrorCode) + cString;
+}

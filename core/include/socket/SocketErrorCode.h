@@ -1,6 +1,7 @@
 #pragma once
 
 #include <nlohmann/json.hpp>
+#include <ostream>
 #include <string>
 
 enum class SocketErrorCode
@@ -32,3 +33,15 @@ NLOHMANN_JSON_SERIALIZE_ENUM(SocketErrorCode, {
 });
 
 std::string ConvertSocketErrorCodeToString(SocketErrorCode socketErrorCode);
+
+// NOTE: Overloads the stream insertion operator (<<)
+std::ostream& operator<<(std::ostream& Os, SocketErrorCode socketErrorCode);
+
+// NOTE:  Overloads concatenation operator for std::string on the left side
+std::string operator+(const std::string& string, SocketErrorCode socketErrorCode);
+// NOTE: Overloads concatenation operator for std::string on the right side
+std::string operator+(SocketErrorCode socketErrorCode, const std::string& string);
+// NOTE: Overloads concatenation operator for c style string on the left side
+std::string operator+(const char* cString, SocketErrorCode socketErrorCode);
+// NOTE: Overloads concatenation operator for c style string on the right side
+std::string operator+(SocketErrorCode socketErrorCode, const char* cString);
